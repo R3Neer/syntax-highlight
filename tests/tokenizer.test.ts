@@ -7,16 +7,48 @@ function compact(source: string): Array<[string, string]> {
 }
 
 describe("tokenizeMud", () => {
-  it("classifies declarations, reserved words, types and properties", () => {
-    expect(compact("ordered family Color { value: Character }")).toEqual([
+  it("leaves fields plain and highlights their types", () => {
+    expect(
+      compact(
+        "ordered family Color { value: Character owner: PlayerName owner = owner }",
+      ),
+    ).toEqual([
       ["ordered", "keyword"],
       ["family", "keyword"],
       ["Color", "declaration"],
       ["{", "brace"],
-      ["value", "property"],
       [":", "punctuation"],
       ["Character", "builtin"],
+      [":", "punctuation"],
+      ["PlayerName", "type"],
+      ["=", "operator"],
       ["}", "brace"],
+    ]);
+  });
+
+  it("highlights inherited things like the thing being declared", () => {
+    expect(compact("thing A as B, C {}")).toEqual([
+      ["thing", "keyword"],
+      ["A", "declaration"],
+      ["as", "keyword"],
+      ["B", "declaration"],
+      [",", "punctuation"],
+      ["C", "declaration"],
+      ["{", "brace"],
+      ["}", "brace"],
+    ]);
+  });
+
+  it("recognises user types in conversions and alias definitions", () => {
+    expect(compact("alias Names := PlayerName -> Score\nraw to PlayerName")).toEqual([
+      ["alias", "keyword"],
+      ["Names", "declaration"],
+      [":=", "operator"],
+      ["PlayerName", "type"],
+      ["->", "operator"],
+      ["Score", "type"],
+      ["to", "operator"],
+      ["PlayerName", "type"],
     ]);
   });
 

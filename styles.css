@@ -6,7 +6,7 @@
   --mud-color-builtin: #89dceb;
   --mud-color-constant: #fab387;
   --mud-color-declaration: #f9e2af;
-  --mud-color-property: #89b4fa;
+  --mud-color-type: #89dceb;
   --mud-color-string: #a6e3a1;
   --mud-color-number: #fab387;
   --mud-color-operator: #f5e0dc;
@@ -45,8 +45,8 @@
   font-weight: 600;
 }
 
-.mud-token-property {
-  color: var(--mud-color-property);
+.mud-token-type {
+  color: var(--mud-color-type);
 }
 
 .mud-token-function {

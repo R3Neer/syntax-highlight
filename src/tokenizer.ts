@@ -4,7 +4,7 @@ export type MudTokenKind =
   | "builtin"
   | "constant"
   | "declaration"
-  | "property"
+  | "type"
   | "function"
   | "string"
   | "character"
@@ -246,9 +246,42 @@ function classifyWord(
   if (previous !== undefined && config.declarationHeads.has(previous.text)) {
     return "declaration";
   }
-  if (next?.text === ":") return "property";
+  if (isInheritedThing(tokens, index)) return "declaration";
+  if (isTypeReference(tokens, index)) return "type";
   if (next?.text === "(") return "function";
   return undefined;
+}
+
+function isInheritedThing(tokens: RawToken[], index: number): boolean {
+  let cursor = index - 1;
+  if (tokens[cursor]?.text === "as") return true;
+  if (tokens[cursor]?.text !== ",") return false;
+  cursor -= 1;
+
+  while (cursor >= 0) {
+    const token = tokens[cursor];
+    if (token?.text === "as") return true;
+    if (token?.kind === "word" || token?.text === ",") {
+      cursor -= 1;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+function isTypeReference(tokens: RawToken[], index: number): boolean {
+  const previous = tokens[index - 1]?.text;
+  if (previous === ":" || previous === "to" || previous === "over") return true;
+  if (previous === "->") return true;
+
+  if (previous !== ":=") return false;
+  const declarationName = tokens[index - 2];
+  const declarationHead = tokens[index - 3]?.text;
+  return (
+    declarationName?.kind === "word" &&
+    (declarationHead === "alias" || declarationHead === "magnitude")
+  );
 }
 
 export function tokenizeMud(

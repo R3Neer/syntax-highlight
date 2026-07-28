@@ -27,7 +27,8 @@ Ambas superficies comparten `src/tokenizer.ts`. El tokenizador sigue el léxico 
 
 La paleta pastel viva está inspirada en Catppuccin Mocha: palabras reservadas
 rosas, cadenas verdes, números melocotón, declaraciones amarillas, tipos cian y
-propiedades azules. Llaves, paréntesis y corchetes reciben colores distintos.
+comentarios lavanda. Los campos conservan el color normal tanto al declararse
+como al usarse. Llaves, paréntesis y corchetes reciben colores distintos.
 
 El plugin no impone ninguna tipografía: respeta la fuente de código configurada
 por Obsidian o por el tema activo. Las variables `--mud-color-*` de `styles.css`
@@ -83,7 +84,7 @@ manualmente `MUD Syntax Highlight` en los ajustes comunitarios.
 
 ## Alcance
 
-El resaltado es léxico y contextual ligero; no reemplaza al futuro parser o LSP. Marca declaraciones, propiedades, tipos, palabras reservadas, algunos términos contextuales, literales, comentarios, números, operadores y puntuación.
+El resaltado es léxico y contextual ligero; no reemplaza al futuro parser o LSP. Marca declaraciones, referencias de tipo reconocibles por su posición, palabras reservadas, algunos términos contextuales, literales, comentarios, números, operadores y puntuación.
 
 No diagnostica:
 
