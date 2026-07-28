@@ -1,0 +1,52 @@
+.mud-syntax-block {
+  overflow-x: auto;
+  tab-size: 4;
+}
+
+.mud-token-comment {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.mud-token-keyword {
+  color: var(--color-purple);
+  font-weight: 600;
+}
+
+.mud-token-builtin {
+  color: var(--color-cyan);
+}
+
+.mud-token-constant {
+  color: var(--color-orange);
+}
+
+.mud-token-declaration {
+  color: var(--color-yellow);
+  font-weight: 600;
+}
+
+.mud-token-property {
+  color: var(--color-blue);
+}
+
+.mud-token-function {
+  color: var(--color-yellow);
+}
+
+.mud-token-string,
+.mud-token-character {
+  color: var(--color-green);
+}
+
+.mud-token-number {
+  color: var(--color-orange);
+}
+
+.mud-token-operator {
+  color: var(--color-pink);
+}
+
+.mud-token-punctuation {
+  color: var(--text-muted);
+}

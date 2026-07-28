@@ -1,0 +1,9 @@
+{
+  "id": "mud-syntax-highlighter",
+  "name": "MUD Syntax Highlight",
+  "version": "0.1.0",
+  "minAppVersion": "1.7.2",
+  "description": "Highlights MUD code blocks in Obsidian reading, Source and Live Preview modes.",
+  "author": "Samuel",
+  "isDesktopOnly": false
+}
