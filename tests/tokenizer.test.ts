@@ -108,6 +108,41 @@ describe("tokenizeMud", () => {
     ]);
   });
 
+  it("highlights complete unit expressions attached to quantities", () => {
+    expect(compact("10 m/s + 90 km/h + 3 Mm/ps + 30 people")).toEqual([
+      ["10", "number"],
+      ["m", "unit"],
+      ["/", "unit"],
+      ["s", "unit"],
+      ["+", "operator"],
+      ["90", "number"],
+      ["km", "unit"],
+      ["/", "unit"],
+      ["h", "unit"],
+      ["+", "operator"],
+      ["3", "number"],
+      ["Mm", "unit"],
+      ["/", "unit"],
+      ["ps", "unit"],
+      ["+", "operator"],
+      ["30", "number"],
+      ["people", "unit"],
+    ]);
+  });
+
+  it("distinguishes compound unit conversion from ordinary arithmetic", () => {
+    expect(compact("speed in km/h + 10 * count")).toEqual([
+      ["in", "operator"],
+      ["km", "unit"],
+      ["/", "unit"],
+      ["h", "unit"],
+      ["+", "operator"],
+      ["10", "number"],
+      ["*", "operator"],
+      ["count", "keyword"],
+    ]);
+  });
+
   it("distinguishes braces, parentheses and brackets", () => {
     expect(compact("rule R(A) { values[0] }")).toEqual([
       ["rule", "keyword"],

@@ -5,6 +5,7 @@ export type MudTokenKind =
   | "constant"
   | "declaration"
   | "type"
+  | "unit"
   | "function"
   | "string"
   | "character"
@@ -357,17 +358,100 @@ function isTypeReference(
   );
 }
 
+function parseUnitFactor(tokens: RawToken[], start: number): number | undefined {
+  const token = tokens[start];
+  if (token?.kind === "word") return start + 1;
+  if (token?.text !== "(") return undefined;
+  const end = parseUnitExpression(tokens, start + 1);
+  if (end === undefined || tokens[end]?.text !== ")") return undefined;
+  return end + 1;
+}
+
+function parseUnitExpression(
+  tokens: RawToken[],
+  start: number,
+): number | undefined {
+  let cursor = parseUnitFactor(tokens, start);
+  if (cursor === undefined) return undefined;
+  while (tokens[cursor]?.text === "*" || tokens[cursor]?.text === "/") {
+    const next = parseUnitFactor(tokens, cursor + 1);
+    if (next === undefined) break;
+    cursor = next;
+  }
+  return cursor;
+}
+
+function markUnitRange(
+  tokens: RawToken[],
+  from: number,
+  to: number,
+  result: Set<number>,
+): void {
+  for (let index = from; index < to; index += 1) {
+    const token = tokens[index];
+    if (
+      token?.kind === "word" ||
+      token?.text === "*" ||
+      token?.text === "/"
+    ) {
+      result.add(index);
+    }
+  }
+}
+
+function beginsOnSameLine(
+  source: string,
+  anchor: RawToken,
+  firstUnitToken: RawToken | undefined,
+): boolean {
+  return (
+    firstUnitToken !== undefined &&
+    !/[\r\n]/.test(source.slice(anchor.to, firstUnitToken.from))
+  );
+}
+
+function unitTokenIndices(
+  source: string,
+  tokens: RawToken[],
+): ReadonlySet<number> {
+  const result = new Set<number>();
+  tokens.forEach((token, index) => {
+    if (token.kind === "number") {
+      const start = index + 1;
+      if (!beginsOnSameLine(source, token, tokens[start])) return;
+      const end = parseUnitExpression(tokens, start);
+      if (end !== undefined) markUnitRange(tokens, start, end, result);
+      return;
+    }
+
+    if (token.text === "in") {
+      const start = index + 1;
+      if (!beginsOnSameLine(source, token, tokens[start])) return;
+      const end = parseUnitExpression(tokens, start);
+      if (end === undefined) return;
+      const isCompound = tokens
+        .slice(start, end)
+        .some((part) => part.text === "*" || part.text === "/");
+      if (isCompound) markUnitRange(tokens, start, end, result);
+    }
+  });
+  return result;
+}
+
 export function tokenizeMud(
   source: string,
   config: MudHighlightConfig = DEFAULT_HIGHLIGHT_CONFIG,
 ): MudToken[] {
   const prepared = preparedConfig(config);
   const raw = scanRaw(source, prepared);
+  const units = unitTokenIndices(source, raw);
   const result: MudToken[] = [];
 
   raw.forEach((token, index) => {
     const kind =
-      token.kind === "word"
+      units.has(index)
+        ? "unit"
+        : token.kind === "word"
         ? classifyWord(source, raw, index, prepared)
         : token.kind;
     if (kind !== undefined) result.push({ ...token, kind });

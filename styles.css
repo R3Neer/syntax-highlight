@@ -7,6 +7,7 @@
   --mud-color-constant: #fab387;
   --mud-color-declaration: #f9e2af;
   --mud-color-type: #89dceb;
+  --mud-color-unit: #94e2d5;
   --mud-color-string: #a6e3a1;
   --mud-color-number: #fab387;
   --mud-color-operator: #f5e0dc;
@@ -47,6 +48,11 @@
 
 .mud-token-type {
   color: var(--mud-color-type);
+}
+
+.mud-token-unit {
+  color: var(--mud-color-unit);
+  font-weight: 600;
 }
 
 .mud-token-function {

@@ -90,6 +90,11 @@ También reconoce los miembros nominales declarados dentro de una `family` y
 todas las referencias de magnitud que forman la expresión dimensional situada
 tras `:=`.
 
+Las formas de unidad y los operadores que las componen se colorean como una
+unidad visual en cantidades como `10 m/s`, `90 km/h` o `30 people`. Una
+conversión compuesta como `speed in km/h` también se reconoce sin confundir
+`10 * count` con una unidad.
+
 No diagnostica:
 
 - Tipos incompatibles.
