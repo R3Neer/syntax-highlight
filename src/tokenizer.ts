@@ -22,6 +22,13 @@ export interface MudToken {
   text: string;
 }
 
+import {
+  DEFAULT_HIGHLIGHT_CONFIG,
+  prepareHighlightConfig,
+  type MudHighlightConfig,
+  type PreparedHighlightConfig,
+} from "./config";
+
 interface RawToken {
   from: number;
   to: number;
@@ -29,122 +36,17 @@ interface RawToken {
   text: string;
 }
 
-const HARD_KEYWORDS = new Set([
-  "using",
-  "thing",
-  "as",
-  "alias",
-  "family",
-  "magnitude",
-  "rule",
-  "action",
-  "look",
-  "message",
-  "test",
-  "for",
-  "on",
-  "given",
-  "when",
-  "changes",
-  "if",
-  "then",
-  "after",
-  "with",
-  "otherwise",
-  "mut",
-  "unique",
-  "ordered",
-  "create",
-  "destroy",
-  "add",
-  "remove",
-  "from",
-  "each",
-  "by",
-  "through",
-  "exists",
-  "forall",
-  "count",
-  "sum",
-  "min",
-  "max",
-]);
+const DEFAULT_PREPARED_CONFIG = prepareHighlightConfig(DEFAULT_HIGHLIGHT_CONFIG);
+const PREPARED_CONFIGS = new WeakMap<object, PreparedHighlightConfig>();
 
-const WORD_OPERATORS = new Set([
-  "to",
-  "eventually",
-  "allowed",
-  "old",
-  "is",
-  "in",
-  "not",
-  "and",
-  "or",
-  "xor",
-  "implies",
-  "iff",
-  "intersection",
-  "union",
-  "except",
-]);
-
-const BUILTINS = new Set([
-  "Text",
-  "Character",
-  "Bool",
-  "Natural",
-  "Integer",
-  "Number",
-  "Rumber",
-  "Money",
-  "Rand",
-]);
-
-const CONSTANTS = new Set(["true", "false", "empty"]);
-const DECLARATION_HEADS = new Set([
-  "thing",
-  "alias",
-  "family",
-  "magnitude",
-  "rule",
-  "action",
-  "look",
-  "message",
-  "test",
-]);
-const MULTI_OPERATORS = [
-  "<=>",
-  ":=",
-  "->",
-  "..",
-  "==",
-  "!=",
-  "<=",
-  ">=",
-  "=>",
-  "+=",
-  "-=",
-  "*=",
-  "/=",
-];
-const OPERATOR_CHARACTERS = new Set([
-  "=",
-  "+",
-  "-",
-  "*",
-  "/",
-  "%",
-  "<",
-  ">",
-  "!",
-  "&",
-  "|",
-  "^",
-]);
-const BRACES = new Set(["{", "}"]);
-const PARENTHESES = new Set(["(", ")"]);
-const BRACKETS = new Set(["[", "]"]);
-const PUNCTUATION = new Set([",", ".", ":", ";"]);
+function preparedConfig(config: MudHighlightConfig): PreparedHighlightConfig {
+  if (config === DEFAULT_HIGHLIGHT_CONFIG) return DEFAULT_PREPARED_CONFIG;
+  const cached = PREPARED_CONFIGS.get(config);
+  if (cached !== undefined) return cached;
+  const prepared = prepareHighlightConfig(config);
+  PREPARED_CONFIGS.set(config, prepared);
+  return prepared;
+}
 
 function lineEnd(source: string, offset: number): number {
   const lf = source.indexOf("\n", offset);
@@ -222,7 +124,7 @@ function addRaw(
   tokens.push({ from, to, kind, text: source.slice(from, to) });
 }
 
-function scanRaw(source: string): RawToken[] {
+function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
   const tokens: RawToken[] = [];
   let cursor = 0;
 
@@ -295,37 +197,12 @@ function scanRaw(source: string): RawToken[] {
       continue;
     }
 
-    const multiOperator = MULTI_OPERATORS.find((operator) =>
-      source.startsWith(operator, cursor),
+    const symbol = config.symbols.find(({ text }) =>
+      source.startsWith(text, cursor),
     );
-    if (multiOperator !== undefined) {
-      addRaw(tokens, source, cursor, cursor + multiOperator.length, "operator");
-      cursor += multiOperator.length;
-      continue;
-    }
-
-    if (OPERATOR_CHARACTERS.has(character)) {
-      addRaw(tokens, source, cursor, cursor + 1, "operator");
-      cursor += 1;
-      continue;
-    }
-
-    const delimiterKind = BRACES.has(character)
-      ? "brace"
-      : PARENTHESES.has(character)
-        ? "parenthesis"
-        : BRACKETS.has(character)
-          ? "bracket"
-          : undefined;
-    if (delimiterKind !== undefined) {
-      addRaw(tokens, source, cursor, cursor + 1, delimiterKind);
-      cursor += 1;
-      continue;
-    }
-
-    if (PUNCTUATION.has(character)) {
-      addRaw(tokens, source, cursor, cursor + 1, "punctuation");
-      cursor += 1;
+    if (symbol !== undefined) {
+      addRaw(tokens, source, cursor, cursor + symbol.text.length, symbol.kind);
+      cursor += symbol.text.length;
       continue;
     }
 
@@ -335,47 +212,38 @@ function scanRaw(source: string): RawToken[] {
   return tokens;
 }
 
-function contextualKeyword(tokens: RawToken[], index: number): boolean {
+function contextualKeyword(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): boolean {
   const token = tokens[index];
   if (token === undefined) return false;
   const previous = tokens[index - 1]?.text;
   const next = tokens[index + 1]?.text;
 
-  switch (token.text) {
-    case "abstract":
-      return next === "thing";
-    case "always":
-      return next === "rule";
-    case "start":
-      return next === "with";
-    case "point":
-      return next === "over";
-    case "over":
-      return previous === "point";
-    case "root":
-      return next === "unit";
-    case "unit":
-      return previous === "root" || next === ":=";
-    case "cycle":
-      return next === ")";
-    default:
-      return false;
-  }
+  return config.contextualKeywords.some(
+    (entry) =>
+      entry.word === token.text &&
+      (entry.previous === undefined || entry.previous === previous) &&
+      (entry.next === undefined || entry.next === next),
+  );
 }
 
-function classifyWord(tokens: RawToken[], index: number): MudTokenKind | undefined {
+function classifyWord(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): MudTokenKind | undefined {
   const token = tokens[index];
   if (token === undefined || token.kind !== "word") return undefined;
-  if (BUILTINS.has(token.text)) return "builtin";
-  if (CONSTANTS.has(token.text)) return "constant";
-  if (WORD_OPERATORS.has(token.text)) return "operator";
-  if (HARD_KEYWORDS.has(token.text) || contextualKeyword(tokens, index)) {
-    return "keyword";
-  }
+  const configuredKind = config.words.get(token.text);
+  if (configuredKind !== undefined) return configuredKind;
+  if (contextualKeyword(tokens, index, config)) return "keyword";
 
   const previous = tokens[index - 1];
   const next = tokens[index + 1];
-  if (previous !== undefined && DECLARATION_HEADS.has(previous.text)) {
+  if (previous !== undefined && config.declarationHeads.has(previous.text)) {
     return "declaration";
   }
   if (next?.text === ":") return "property";
@@ -383,12 +251,17 @@ function classifyWord(tokens: RawToken[], index: number): MudTokenKind | undefin
   return undefined;
 }
 
-export function tokenizeMud(source: string): MudToken[] {
-  const raw = scanRaw(source);
+export function tokenizeMud(
+  source: string,
+  config: MudHighlightConfig = DEFAULT_HIGHLIGHT_CONFIG,
+): MudToken[] {
+  const prepared = preparedConfig(config);
+  const raw = scanRaw(source, prepared);
   const result: MudToken[] = [];
 
   raw.forEach((token, index) => {
-    const kind = token.kind === "word" ? classifyWord(raw, index) : token.kind;
+    const kind =
+      token.kind === "word" ? classifyWord(raw, index, prepared) : token.kind;
     if (kind !== undefined) result.push({ ...token, kind });
   });
 

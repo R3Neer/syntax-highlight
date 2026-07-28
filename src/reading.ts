@@ -1,6 +1,11 @@
+import type { MudHighlightConfig } from "./config";
 import { tokenClass, tokenizeMud } from "./tokenizer";
 
-export function renderMudCode(source: string, container: HTMLElement): void {
+export function renderMudCode(
+  source: string,
+  container: HTMLElement,
+  config?: MudHighlightConfig,
+): void {
   container.replaceChildren();
   const pre = document.createElement("pre");
   const code = document.createElement("code");
@@ -8,7 +13,7 @@ export function renderMudCode(source: string, container: HTMLElement): void {
   code.className = "language-mud";
 
   let cursor = 0;
-  for (const token of tokenizeMud(source)) {
+  for (const token of tokenizeMud(source, config)) {
     if (token.from > cursor) {
       code.append(document.createTextNode(source.slice(cursor, token.from)));
     }

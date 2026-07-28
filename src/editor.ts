@@ -8,6 +8,7 @@ import {
 } from "@codemirror/view";
 
 import { findMudCodeBlocks } from "./blocks";
+import type { MudHighlightConfig } from "./config";
 import { tokenClass, tokenizeMud, type MudToken } from "./tokenizer";
 
 function addTokenRanges(
@@ -33,31 +34,40 @@ function addTokenRanges(
   }
 }
 
-export function buildMudDecorations(view: EditorView): DecorationSet {
+export function buildMudDecorations(
+  view: EditorView,
+  config?: MudHighlightConfig,
+): DecorationSet {
   const source = view.state.doc.toString();
   const builder = new RangeSetBuilder<Decoration>();
 
   for (const block of findMudCodeBlocks(source)) {
     const body = source.slice(block.from, block.to);
-    for (const token of tokenizeMud(body)) addTokenRanges(builder, token, block.from);
+    for (const token of tokenizeMud(body, config)) {
+      addTokenRanges(builder, token, block.from);
+    }
   }
 
   return builder.finish();
 }
 
-export const mudEditorHighlighter = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
+export function createMudEditorHighlighter(config: MudHighlightConfig) {
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
 
-    constructor(view: EditorView) {
-      this.decorations = buildMudDecorations(view);
-    }
+      constructor(view: EditorView) {
+        this.decorations = buildMudDecorations(view, config);
+      }
 
-    update(update: ViewUpdate): void {
-      if (update.docChanged) this.decorations = buildMudDecorations(update.view);
-    }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+      update(update: ViewUpdate): void {
+        if (update.docChanged) {
+          this.decorations = buildMudDecorations(update.view, config);
+        }
+      }
+    },
+    {
+      decorations: (plugin) => plugin.decorations,
+    },
+  );
+}

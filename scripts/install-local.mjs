@@ -1,9 +1,26 @@
-import { copyFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import {
+  constants,
+  copyFile,
+  mkdir,
+  readFile,
+  rename,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 export const PLUGIN_ID = "mud-syntax-highlighter";
+
+export async function copyFileIfMissing(source, target) {
+  try {
+    await copyFile(source, target, constants.COPYFILE_EXCL);
+    return true;
+  } catch (error) {
+    if (error?.code === "EEXIST") return false;
+    throw error;
+  }
+}
 
 export async function activatePlugin(communityFile) {
   let active = [];
@@ -36,6 +53,10 @@ export async function installLocal(pluginRoot) {
       path.join(target, "JetBrainsMono-Regular.woff2"),
     ),
     copyFile(path.join(pluginRoot, "assets", "OFL.txt"), path.join(target, "OFL.txt")),
+    copyFileIfMissing(
+      path.join(pluginRoot, "mud-highlight.json"),
+      path.join(target, "mud-highlight.json"),
+    ),
   ]);
   const active = await activatePlugin(path.join(configDirectory, "community-plugins.json"));
   return { target, active };

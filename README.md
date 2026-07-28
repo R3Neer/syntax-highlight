@@ -38,6 +38,31 @@ y recargarse Obsidian.
 JetBrains Mono se distribuye bajo SIL Open Font License 1.1. Su licencia se
 conserva en `assets/OFL.txt`.
 
+## Configuración léxica editable
+
+`mud-highlight.json` decide qué palabras y símbolos pertenecen a cada categoría
+visual. Permite editar:
+
+- `words`: palabras reservadas, operadores verbales, tipos básicos y constantes.
+- `symbols`: operadores y signos clasificados como llaves, paréntesis, corchetes
+  o puntuación.
+- `declarationHeads`: palabras tras las que se colorea un nombre declarado.
+- `contextualKeywords`: palabras que solo se reservan junto a otra palabra o
+  símbolo.
+
+La copia utilizada por Obsidian está en:
+
+```text
+.obsidian/plugins/mud-syntax-highlighter/mud-highlight.json
+```
+
+Tras editarla basta con recargar el plugin o usar `Reload app without saving`.
+No es necesario recompilar. Si el JSON es inválido, el plugin muestra un aviso y
+usa la configuración predeterminada incluida en `main.js`.
+
+`npm run install-local` crea el archivo cuando no existe, pero no sobrescribe una
+configuración local ya personalizada.
+
 ## Desarrollo
 
 Requiere Node.js y npm:

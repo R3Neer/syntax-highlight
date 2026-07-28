@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { activatePlugin, PLUGIN_ID } from "../scripts/install-local.mjs";
+import {
+  activatePlugin,
+  copyFileIfMissing,
+  PLUGIN_ID,
+} from "../scripts/install-local.mjs";
 
 const temporaryDirectories = [];
 
@@ -28,5 +32,21 @@ describe("activatePlugin", () => {
 
     const active = JSON.parse(await readFile(communityFile, "utf8"));
     expect(active).toEqual(["existing-plugin", PLUGIN_ID]);
+  });
+});
+
+describe("copyFileIfMissing", () => {
+  it("installs an initial configuration without overwriting user changes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mud-syntax-config-"));
+    temporaryDirectories.push(root);
+    const source = path.join(root, "default.json");
+    const target = path.join(root, "mud-highlight.json");
+    await writeFile(source, '{"version":1}', "utf8");
+
+    expect(await copyFileIfMissing(source, target)).toBe(true);
+    await writeFile(target, '{"custom":true}', "utf8");
+    expect(await copyFileIfMissing(source, target)).toBe(false);
+
+    expect(await readFile(target, "utf8")).toBe('{"custom":true}');
   });
 });
