@@ -60,7 +60,7 @@
     ],
     "builtin": [
       "Text",
-      "Character",
+      "Char",
       "Bool",
       "Natural",
       "Integer",

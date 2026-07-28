@@ -8,7 +8,7 @@ export type MudTokenKind =
   | "unit"
   | "function"
   | "string"
-  | "character"
+  | "char"
   | "number"
   | "operator"
   | "brace"
@@ -175,7 +175,7 @@ function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
 
     if (character === "'") {
       const end = scanQuoted(source, cursor, "'");
-      addRaw(tokens, source, cursor, end, "character");
+      addRaw(tokens, source, cursor, end, "char");
       cursor = end;
       continue;
     }

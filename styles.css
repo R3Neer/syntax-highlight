@@ -60,7 +60,7 @@
 }
 
 .mud-token-string,
-.mud-token-character {
+.mud-token-char {
   color: var(--mud-color-string);
 }
 

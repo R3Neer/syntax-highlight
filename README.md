@@ -99,7 +99,7 @@ No diagnostica:
 
 - Tipos incompatibles.
 - Nombres ambiguos.
-- Orden Unicode incorrecto en una colección `Character [* ordered]`.
+- Orden Unicode incorrecto en una colección `Char [* ordered]`.
 - Formas de unidad dependientes de Q-054.
 - Literales `POINT_LITERAL` dependientes de Q-055.
 

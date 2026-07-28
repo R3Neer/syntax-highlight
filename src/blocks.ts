@@ -40,10 +40,10 @@ export function findMudCodeBlocks(source: string): MudCodeBlock[] {
     if (opening === null) continue;
 
     const fence = opening[1] ?? "```";
-    const fenceCharacter = fence[0] ?? "`";
+    const fenceChar = fence[0] ?? "`";
     const minimum = fence.length;
     const closingPattern = new RegExp(
-      `^[\\t ]*${fenceCharacter === "`" ? "`" : "~"}{${minimum},}[\\t ]*$`,
+      `^[\\t ]*${fenceChar === "`" ? "`" : "~"}{${minimum},}[\\t ]*$`,
     );
     const bodyFrom = line.next;
     let bodyTo = source.length;

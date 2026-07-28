@@ -10,7 +10,7 @@ describe("tokenizeMud", () => {
   it("leaves fields plain and highlights their types", () => {
     expect(
       compact(
-        "ordered family Color { value: Character owner: PlayerName owner = owner }",
+        "ordered family Color { value: Char owner: PlayerName owner = owner }",
       ),
     ).toEqual([
       ["ordered", "keyword"],
@@ -18,7 +18,7 @@ describe("tokenizeMud", () => {
       ["Color", "declaration"],
       ["{", "brace"],
       [":", "punctuation"],
-      ["Character", "builtin"],
+      ["Char", "builtin"],
       [":", "punctuation"],
       ["PlayerName", "type"],
       ["=", "operator"],
@@ -176,7 +176,7 @@ describe("tokenizeMud", () => {
     ]);
   });
 
-  it("recognises ordinary and multiline text plus Character", () => {
+  it("recognises ordinary and multiline text plus Char", () => {
     const source = [
       'name = "Ada',
       "description = \"\"\"",
@@ -187,7 +187,7 @@ describe("tokenizeMud", () => {
     const tokens = compact(source);
     expect(tokens).toContainEqual(['"Ada', "string"]);
     expect(tokens.some(([text, kind]) => text.startsWith('"""') && kind === "string")).toBe(true);
-    expect(tokens).toContainEqual(["'ñ'", "character"]);
+    expect(tokens).toContainEqual(["'ñ'", "char"]);
   });
 
   it("recognises multiline comments as a single token", () => {
