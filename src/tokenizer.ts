@@ -231,6 +231,7 @@ function contextualKeyword(
 }
 
 function classifyWord(
+  source: string,
   tokens: RawToken[],
   index: number,
   config: PreparedHighlightConfig,
@@ -247,7 +248,8 @@ function classifyWord(
     return "declaration";
   }
   if (isInheritedThing(tokens, index)) return "declaration";
-  if (isTypeReference(tokens, index)) return "type";
+  if (isFamilyMember(source, tokens, index)) return "constant";
+  if (isTypeReference(tokens, index, config)) return "type";
   if (next?.text === "(") return "function";
   return undefined;
 }
@@ -270,10 +272,81 @@ function isInheritedThing(tokens: RawToken[], index: number): boolean {
   return false;
 }
 
-function isTypeReference(tokens: RawToken[], index: number): boolean {
+function isFamilyMember(
+  source: string,
+  tokens: RawToken[],
+  index: number,
+): boolean {
+  const token = tokens[index];
+  if (token === undefined) return false;
+  const previous = tokens[index - 1]?.text;
+  const next = tokens[index + 1]?.text;
+  const startsMember =
+    previous === "{" ||
+    previous === "," ||
+    onlyHorizontalSpace(source.slice(lineStart(source, token.from), token.from));
+  if (!startsMember || (next !== "," && next !== "{" && next !== "}")) {
+    return false;
+  }
+
+  let nestedBodies = 0;
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === "}") {
+      nestedBodies += 1;
+    } else if (text === "{") {
+      if (nestedBodies > 0) {
+        nestedBodies -= 1;
+      } else {
+        return tokens[cursor - 2]?.text === "family";
+      }
+    }
+  }
+  return false;
+}
+
+function isMagnitudeDimensionReference(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): boolean {
+  let assignment = -1;
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === ":=") {
+      assignment = cursor;
+      break;
+    }
+    if (
+      text === "{" ||
+      text === "}" ||
+      text === ";" ||
+      (text !== undefined && config.declarationHeads.has(text))
+    ) {
+      return false;
+    }
+  }
+  if (assignment < 0) return false;
+
+  for (let cursor = assignment - 1; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === "{" || text === "}" || text === ";") return false;
+    if (text !== undefined && config.declarationHeads.has(text)) {
+      return text === "magnitude";
+    }
+  }
+  return false;
+}
+
+function isTypeReference(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): boolean {
   const previous = tokens[index - 1]?.text;
   if (previous === ":" || previous === "to" || previous === "over") return true;
   if (previous === "->") return true;
+  if (isMagnitudeDimensionReference(tokens, index, config)) return true;
 
   if (previous !== ":=") return false;
   const declarationName = tokens[index - 2];
@@ -294,7 +367,9 @@ export function tokenizeMud(
 
   raw.forEach((token, index) => {
     const kind =
-      token.kind === "word" ? classifyWord(raw, index, prepared) : token.kind;
+      token.kind === "word"
+        ? classifyWord(source, raw, index, prepared)
+        : token.kind;
     if (kind !== undefined) result.push({ ...token, kind });
   });
 

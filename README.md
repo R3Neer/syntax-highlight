@@ -86,6 +86,10 @@ manualmente `MUD Syntax Highlight` en los ajustes comunitarios.
 
 El resaltado es léxico y contextual ligero; no reemplaza al futuro parser o LSP. Marca declaraciones, referencias de tipo reconocibles por su posición, palabras reservadas, algunos términos contextuales, literales, comentarios, números, operadores y puntuación.
 
+También reconoce los miembros nominales declarados dentro de una `family` y
+todas las referencias de magnitud que forman la expresión dimensional situada
+tras `:=`.
+
 No diagnostica:
 
 - Tipos incompatibles.

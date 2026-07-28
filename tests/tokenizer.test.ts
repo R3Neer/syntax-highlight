@@ -52,6 +52,62 @@ describe("tokenizeMud", () => {
     ]);
   });
 
+  it("highlights family members but not their data fields", () => {
+    const source = [
+      "family Terrain {",
+      "  movementCost: Natural = 1",
+      "  Plain,",
+      "  Forest {",
+      "    movementCost = 2",
+      "  },",
+      "  Water",
+      "}",
+    ].join("\n");
+    expect(compact(source)).toEqual([
+      ["family", "keyword"],
+      ["Terrain", "declaration"],
+      ["{", "brace"],
+      [":", "punctuation"],
+      ["Natural", "builtin"],
+      ["=", "operator"],
+      ["1", "number"],
+      ["Plain", "constant"],
+      [",", "punctuation"],
+      ["Forest", "constant"],
+      ["{", "brace"],
+      ["=", "operator"],
+      ["2", "number"],
+      ["}", "brace"],
+      [",", "punctuation"],
+      ["Water", "constant"],
+      ["}", "brace"],
+    ]);
+  });
+
+  it("highlights every magnitude in a derived dimension expression", () => {
+    const source = [
+      "magnitude Acceleration: Number :=",
+      "  Length / (Time * Time)",
+      "{}",
+    ].join("\n");
+    expect(compact(source)).toEqual([
+      ["magnitude", "keyword"],
+      ["Acceleration", "declaration"],
+      [":", "punctuation"],
+      ["Number", "builtin"],
+      [":=", "operator"],
+      ["Length", "type"],
+      ["/", "operator"],
+      ["(", "parenthesis"],
+      ["Time", "type"],
+      ["*", "operator"],
+      ["Time", "type"],
+      [")", "parenthesis"],
+      ["{", "brace"],
+      ["}", "brace"],
+    ]);
+  });
+
   it("distinguishes braces, parentheses and brackets", () => {
     expect(compact("rule R(A) { values[0] }")).toEqual([
       ["rule", "keyword"],
