@@ -10,6 +10,9 @@ export type MudTokenKind =
   | "character"
   | "number"
   | "operator"
+  | "brace"
+  | "parenthesis"
+  | "bracket"
   | "punctuation";
 
 export interface MudToken {
@@ -138,7 +141,10 @@ const OPERATOR_CHARACTERS = new Set([
   "|",
   "^",
 ]);
-const PUNCTUATION = new Set(["{", "}", "(", ")", "[", "]", ",", ".", ":", ";"]);
+const BRACES = new Set(["{", "}"]);
+const PARENTHESES = new Set(["(", ")"]);
+const BRACKETS = new Set(["[", "]"]);
+const PUNCTUATION = new Set([",", ".", ":", ";"]);
 
 function lineEnd(source: string, offset: number): number {
   const lf = source.indexOf("\n", offset);
@@ -300,6 +306,19 @@ function scanRaw(source: string): RawToken[] {
 
     if (OPERATOR_CHARACTERS.has(character)) {
       addRaw(tokens, source, cursor, cursor + 1, "operator");
+      cursor += 1;
+      continue;
+    }
+
+    const delimiterKind = BRACES.has(character)
+      ? "brace"
+      : PARENTHESES.has(character)
+        ? "parenthesis"
+        : BRACKETS.has(character)
+          ? "bracket"
+          : undefined;
+    if (delimiterKind !== undefined) {
+      addRaw(tokens, source, cursor, cursor + 1, delimiterKind);
       cursor += 1;
       continue;
     }

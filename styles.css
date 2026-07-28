@@ -1,52 +1,106 @@
+@font-face {
+  font-family: "MUD JetBrains Mono";
+  src: url("JetBrainsMono-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+:root {
+  --mud-code-font: "MUD JetBrains Mono", "JetBrains Mono", "Cascadia Code",
+    "Fira Code", var(--font-monospace);
+  --mud-darcula-text: #a9b7c6;
+  --mud-darcula-comment: #808080;
+  --mud-darcula-keyword: #cc7832;
+  --mud-darcula-builtin: #ffc66d;
+  --mud-darcula-constant: #9876aa;
+  --mud-darcula-declaration: #ffc66d;
+  --mud-darcula-property: #9876aa;
+  --mud-darcula-string: #6a8759;
+  --mud-darcula-number: #6897bb;
+  --mud-darcula-operator: #a9b7c6;
+  --mud-darcula-brace: #cc7832;
+  --mud-darcula-parenthesis: #ffc66d;
+  --mud-darcula-bracket: #9876aa;
+  --mud-darcula-punctuation: #a9b7c6;
+}
+
+/* La tipografía se aplica a todo el código de Obsidian, no solo a MUD. */
+.markdown-rendered code,
+.markdown-rendered pre,
+.markdown-source-view.mod-cm6 .cm-inline-code,
+.markdown-source-view.mod-cm6 .HyperMD-codeblock {
+  font-family: var(--mud-code-font);
+  font-variant-ligatures: contextual;
+}
+
 .mud-syntax-block {
   overflow-x: auto;
   tab-size: 4;
+  color: var(--mud-darcula-text);
+  font-family: var(--mud-code-font);
+  line-height: 1.4;
 }
 
 .mud-token-comment {
-  color: var(--text-faint);
+  color: var(--mud-darcula-comment);
   font-style: italic;
 }
 
 .mud-token-keyword {
-  color: var(--color-purple);
+  color: var(--mud-darcula-keyword);
   font-weight: 600;
 }
 
 .mud-token-builtin {
-  color: var(--color-cyan);
+  color: var(--mud-darcula-builtin);
 }
 
 .mud-token-constant {
-  color: var(--color-orange);
+  color: var(--mud-darcula-constant);
 }
 
 .mud-token-declaration {
-  color: var(--color-yellow);
+  color: var(--mud-darcula-declaration);
   font-weight: 600;
 }
 
 .mud-token-property {
-  color: var(--color-blue);
+  color: var(--mud-darcula-property);
 }
 
 .mud-token-function {
-  color: var(--color-yellow);
+  color: var(--mud-darcula-declaration);
 }
 
 .mud-token-string,
 .mud-token-character {
-  color: var(--color-green);
+  color: var(--mud-darcula-string);
 }
 
 .mud-token-number {
-  color: var(--color-orange);
+  color: var(--mud-darcula-number);
 }
 
 .mud-token-operator {
-  color: var(--color-pink);
+  color: var(--mud-darcula-operator);
+}
+
+.mud-token-brace {
+  color: var(--mud-darcula-brace);
+  font-weight: 600;
+}
+
+.mud-token-parenthesis {
+  color: var(--mud-darcula-parenthesis);
+  font-weight: 600;
+}
+
+.mud-token-bracket {
+  color: var(--mud-darcula-bracket);
+  font-weight: 600;
 }
 
 .mud-token-punctuation {
-  color: var(--text-muted);
+  color: var(--mud-darcula-punctuation);
 }

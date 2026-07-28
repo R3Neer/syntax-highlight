@@ -12,11 +12,25 @@ describe("tokenizeMud", () => {
       ["ordered", "keyword"],
       ["family", "keyword"],
       ["Color", "declaration"],
-      ["{", "punctuation"],
+      ["{", "brace"],
       ["value", "property"],
       [":", "punctuation"],
       ["Character", "builtin"],
-      ["}", "punctuation"],
+      ["}", "brace"],
+    ]);
+  });
+
+  it("distinguishes braces, parentheses and brackets", () => {
+    expect(compact("rule R(A) { values[0] }")).toEqual([
+      ["rule", "keyword"],
+      ["R", "declaration"],
+      ["(", "parenthesis"],
+      [")", "parenthesis"],
+      ["{", "brace"],
+      ["[", "bracket"],
+      ["0", "number"],
+      ["]", "bracket"],
+      ["}", "brace"],
     ]);
   });
 

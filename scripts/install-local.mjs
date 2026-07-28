@@ -31,6 +31,11 @@ export async function installLocal(pluginRoot) {
     copyFile(path.join(pluginRoot, "dist", "main.js"), path.join(target, "main.js")),
     copyFile(path.join(pluginRoot, "manifest.json"), path.join(target, "manifest.json")),
     copyFile(path.join(pluginRoot, "styles.css"), path.join(target, "styles.css")),
+    copyFile(
+      path.join(pluginRoot, "assets", "JetBrainsMono-Regular.woff2"),
+      path.join(target, "JetBrainsMono-Regular.woff2"),
+    ),
+    copyFile(path.join(pluginRoot, "assets", "OFL.txt"), path.join(target, "OFL.txt")),
   ]);
   const active = await activatePlugin(path.join(configDirectory, "community-plugins.json"));
   return { target, active };
