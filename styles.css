@@ -1,106 +1,86 @@
-@font-face {
-  font-family: "MUD JetBrains Mono";
-  src: url("JetBrainsMono-Regular.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-}
-
 :root {
-  --mud-code-font: "MUD JetBrains Mono", "JetBrains Mono", "Cascadia Code",
-    "Fira Code", var(--font-monospace);
-  --mud-darcula-text: #a9b7c6;
-  --mud-darcula-comment: #808080;
-  --mud-darcula-keyword: #cc7832;
-  --mud-darcula-builtin: #ffc66d;
-  --mud-darcula-constant: #9876aa;
-  --mud-darcula-declaration: #ffc66d;
-  --mud-darcula-property: #9876aa;
-  --mud-darcula-string: #6a8759;
-  --mud-darcula-number: #6897bb;
-  --mud-darcula-operator: #a9b7c6;
-  --mud-darcula-brace: #cc7832;
-  --mud-darcula-parenthesis: #ffc66d;
-  --mud-darcula-bracket: #9876aa;
-  --mud-darcula-punctuation: #a9b7c6;
-}
-
-/* La tipografía se aplica a todo el código de Obsidian, no solo a MUD. */
-.markdown-rendered code,
-.markdown-rendered pre,
-.markdown-source-view.mod-cm6 .cm-inline-code,
-.markdown-source-view.mod-cm6 .HyperMD-codeblock {
-  font-family: var(--mud-code-font);
-  font-variant-ligatures: contextual;
+  /* Paleta pastel viva inspirada en Catppuccin Mocha. */
+  --mud-color-text: #cdd6f4;
+  --mud-color-comment: #a6adc8;
+  --mud-color-keyword: #f5c2e7;
+  --mud-color-builtin: #89dceb;
+  --mud-color-constant: #fab387;
+  --mud-color-declaration: #f9e2af;
+  --mud-color-property: #89b4fa;
+  --mud-color-string: #a6e3a1;
+  --mud-color-number: #fab387;
+  --mud-color-operator: #f5e0dc;
+  --mud-color-brace: #f38ba8;
+  --mud-color-parenthesis: #f9e2af;
+  --mud-color-bracket: #89b4fa;
+  --mud-color-punctuation: #cba6f7;
 }
 
 .mud-syntax-block {
   overflow-x: auto;
   tab-size: 4;
-  color: var(--mud-darcula-text);
-  font-family: var(--mud-code-font);
-  line-height: 1.4;
+  color: var(--mud-color-text);
 }
 
 .mud-token-comment {
-  color: var(--mud-darcula-comment);
+  color: var(--mud-color-comment);
   font-style: italic;
 }
 
 .mud-token-keyword {
-  color: var(--mud-darcula-keyword);
+  color: var(--mud-color-keyword);
   font-weight: 600;
 }
 
 .mud-token-builtin {
-  color: var(--mud-darcula-builtin);
+  color: var(--mud-color-builtin);
 }
 
 .mud-token-constant {
-  color: var(--mud-darcula-constant);
+  color: var(--mud-color-constant);
 }
 
 .mud-token-declaration {
-  color: var(--mud-darcula-declaration);
+  color: var(--mud-color-declaration);
   font-weight: 600;
 }
 
 .mud-token-property {
-  color: var(--mud-darcula-property);
+  color: var(--mud-color-property);
 }
 
 .mud-token-function {
-  color: var(--mud-darcula-declaration);
+  color: var(--mud-color-declaration);
 }
 
 .mud-token-string,
 .mud-token-character {
-  color: var(--mud-darcula-string);
+  color: var(--mud-color-string);
 }
 
 .mud-token-number {
-  color: var(--mud-darcula-number);
+  color: var(--mud-color-number);
 }
 
 .mud-token-operator {
-  color: var(--mud-darcula-operator);
+  color: var(--mud-color-operator);
 }
 
 .mud-token-brace {
-  color: var(--mud-darcula-brace);
+  color: var(--mud-color-brace);
   font-weight: 600;
 }
 
 .mud-token-parenthesis {
-  color: var(--mud-darcula-parenthesis);
+  color: var(--mud-color-parenthesis);
   font-weight: 600;
 }
 
 .mud-token-bracket {
-  color: var(--mud-darcula-bracket);
+  color: var(--mud-color-bracket);
   font-weight: 600;
 }
 
 .mud-token-punctuation {
-  color: var(--mud-darcula-punctuation);
+  color: var(--mud-color-punctuation);
 }

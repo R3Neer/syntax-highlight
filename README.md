@@ -25,18 +25,14 @@ Ambas superficies comparten `src/tokenizer.ts`. El tokenizador sigue el léxico 
 
 ## Aspecto
 
-La paleta adapta el esquema oscuro Darcula clásico de JetBrains: palabras
-reservadas naranjas, cadenas verdes, números azules, declaraciones amarillas,
-constantes y propiedades violetas y comentarios grises. Los tres delimitadores
-estructurales reciben colores distintos.
+La paleta pastel viva está inspirada en Catppuccin Mocha: palabras reservadas
+rosas, cadenas verdes, números melocotón, declaraciones amarillas, tipos cian y
+propiedades azules. Llaves, paréntesis y corchetes reciben colores distintos.
 
-El plugin incluye JetBrains Mono y la aplica a todos los bloques y fragmentos de
-código de Obsidian. Las variables `--mud-*` de `styles.css` permiten retocar la
-paleta sin modificar TypeScript; después debe ejecutarse `npm run install-local`
-y recargarse Obsidian.
-
-JetBrains Mono se distribuye bajo SIL Open Font License 1.1. Su licencia se
-conserva en `assets/OFL.txt`.
+El plugin no impone ninguna tipografía: respeta la fuente de código configurada
+por Obsidian o por el tema activo. Las variables `--mud-color-*` de `styles.css`
+permiten retocar la paleta sin modificar TypeScript; después debe ejecutarse
+`npm run install-local` y recargarse Obsidian.
 
 ## Configuración léxica editable
 
@@ -79,12 +75,11 @@ npm run install-local
 .obsidian/plugins/mud-syntax-highlighter/
 ```
 
-Además copia la fuente incluida y añade el identificador a
-`.obsidian/community-plugins.json` sin retirar otros plugins. Para una primera
-instalación se recomienda cerrar Obsidian antes de ejecutar el comando: una
-instancia abierta puede volver a escribir su lista de plugins desde memoria. Si
-se instala con Obsidian abierto, debe activarse manualmente
-`MUD Syntax Highlight` en los ajustes comunitarios.
+Además añade el identificador a `.obsidian/community-plugins.json` sin retirar
+otros plugins. Para una primera instalación se recomienda cerrar Obsidian antes
+de ejecutar el comando: una instancia abierta puede volver a escribir su lista
+de plugins desde memoria. Si se instala con Obsidian abierto, debe activarse
+manualmente `MUD Syntax Highlight` en los ajustes comunitarios.
 
 ## Alcance
 
