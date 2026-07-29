@@ -11,6 +11,7 @@ import {
 
 import type SyntaxHighlightPlugin from "./main";
 import { LanguageRegistry } from "./languages";
+import { createJsonEditor } from "./json-editor";
 import {
   categoryText,
   descriptorName,
@@ -44,12 +45,15 @@ import {
 export class SyntaxSettingTab extends PluginSettingTab {
   private selectedThemeLanguage = "mud";
   private lastReport = "";
+  private jsonEditors: Array<{ destroy(): void }> = [];
   constructor(private readonly plugin: SyntaxHighlightPlugin) {
     super(plugin.app, plugin);
   }
 
   override display(): void {
     const { containerEl } = this;
+    for (const editor of this.jsonEditors) editor.destroy();
+    this.jsonEditors = [];
     containerEl.empty();
     containerEl.addClass("mud-syntax-settings");
     const tr = (en: string, es: string): string =>
@@ -352,13 +356,12 @@ export class SyntaxSettingTab extends PluginSettingTab {
       cls: "setting-item-description",
     });
     let draft = JSON.stringify(language.embeddedDescriptor, null, 2);
-    new Setting(details).addTextArea((text) => {
-      text.setValue(draft).onChange((value) => {
+    const editorHost = details.createDiv("syntax-descriptor-editor");
+    this.jsonEditors.push(
+      createJsonEditor(editorHost, draft, (value) => {
         draft = value;
-      });
-      text.inputEl.rows = 14;
-      text.inputEl.addClass("syntax-descriptor-editor");
-    });
+      }),
+    );
     new Setting(details).addButton((button) =>
       button.setButtonText("Aplicar descriptor").setCta().onClick(async () => {
         try {
