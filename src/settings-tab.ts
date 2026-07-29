@@ -59,6 +59,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
             name: "Nuevo lenguaje",
             enabled: false,
             fences: [id],
+            extensions: [id],
             engine: "grammar",
             lexicalGrammarPath: "",
             syntaxGrammarPath: "",
@@ -108,8 +109,17 @@ export class SyntaxSettingTab extends PluginSettingTab {
           await this.plugin.commitSettings(false);
         }),
       );
+    new Setting(card)
+      .setName("Extensiones de archivo")
+      .setDesc("Extensiones sin punto, separadas por comas. Las nuevas requieren recargar el plugin.")
+      .addText((text) =>
+        text.setValue(language.extensions.join(", ")).onChange(async (value) => {
+          language.extensions = fencesFrom(value);
+          await this.plugin.commitSettings(false);
+        }),
+      );
 
-    if (language.engine !== "ebnf") {
+    if (language.engine === "mud" || language.engine === "grammar") {
       this.renderGrammarFields(card, language);
     }
     this.renderTheme(card, language);
@@ -118,7 +128,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
     const actions = new Setting(card)
       .setName("Validación")
       .setDesc("Conserva la última configuración válida si una gramática falla.");
-    if (language.engine !== "ebnf") {
+    if (language.engine === "mud" || language.engine === "grammar") {
       actions.addButton((button) =>
         button.setButtonText("Validar y recargar").onClick(async () => {
           await this.plugin.reloadLanguage(language.id, true);

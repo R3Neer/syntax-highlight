@@ -7,6 +7,9 @@ const context = await esbuild.context({
   bundle: true,
   external: [
     "obsidian",
+    "@codemirror/commands",
+    "@codemirror/language",
+    "@codemirror/search",
     "@codemirror/state",
     "@codemirror/view"
   ],

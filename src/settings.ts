@@ -54,6 +54,20 @@ export const EBNF_TOKEN_KINDS: readonly SyntaxTokenKind[] = [
   "bracket",
 ];
 
+export const ASDL_TOKEN_KINDS: readonly SyntaxTokenKind[] = [
+  "comment",
+  "keyword",
+  "builtin",
+  "declaration",
+  "definition",
+  "reference",
+  "string",
+  "number",
+  "operator",
+  "bracket",
+  "punctuation",
+];
+
 export type ThemeColors = Record<SyntaxTokenKind, string>;
 
 export interface ThemePalette {
@@ -61,7 +75,7 @@ export interface ThemePalette {
   dark: ThemeColors;
 }
 
-export type LanguageEngine = "mud" | "ebnf" | "grammar";
+export type LanguageEngine = "mud" | "ebnf" | "asdl" | "grammar";
 
 export interface GrammarCategorySettings {
   keyword: string;
@@ -82,6 +96,7 @@ export interface LanguageProfileSettings {
   name: string;
   enabled: boolean;
   fences: string[];
+  extensions: string[];
   engine: LanguageEngine;
   lexicalGrammarPath: string;
   syntaxGrammarPath: string;
@@ -253,6 +268,7 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
       name: "MUD",
       enabled: true,
       fences: ["mud"],
+      extensions: ["mud"],
       engine: "mud",
       lexicalGrammarPath: "especificacion/gramatica/mud-lexico.ebnf",
       syntaxGrammarPath: "especificacion/gramatica/mud.ebnf",
@@ -273,6 +289,7 @@ thing Alexandria as City, Place {
       name: "EBNF",
       enabled: true,
       fences: ["ebnf"],
+      extensions: ["ebnf"],
       engine: "ebnf",
       lexicalGrammarPath: "",
       syntaxGrammarPath: "",
@@ -283,6 +300,27 @@ thing Alexandria as City, Place {
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
       previewSource: `expression ::= term , { ( "+" | "-" ) , term } ;
 term ::= NUMBER | "(" , expression , ")" ;`,
+    },
+    {
+      id: "asdl",
+      name: "ASDL",
+      enabled: true,
+      fences: ["asdl"],
+      extensions: ["asdl"],
+      engine: "asdl",
+      lexicalGrammarPath: "",
+      syntaxGrammarPath: "",
+      lexicalStart: "",
+      syntaxStart: "",
+      themePreset: "vscode",
+      palette: clonePalette(VSCODE),
+      categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
+      previewSource: `module Mud {
+    expr = Name(identifier id)
+         | Literal(constant value)
+         | Binary(expr left, operator op, expr right)
+         attributes (source_span span)
+}`,
     },
   ],
 };
@@ -344,6 +382,12 @@ function mergeLanguage(
             typeof entry === "string" && /^[A-Za-z0-9_-]+$/.test(entry),
         )
       : [...fallback.fences],
+    extensions: Array.isArray(object.extensions)
+      ? object.extensions.filter(
+          (entry): entry is string =>
+            typeof entry === "string" && /^[A-Za-z0-9_-]+$/.test(entry),
+        )
+      : [...fallback.extensions],
     themePreset: selectedPreset,
     palette: mergePalette(object.palette, presetPalette),
     categories: {
@@ -385,6 +429,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       name: id,
       engine: "grammar",
       fences: [id],
+      extensions: [id],
       themePreset: "catppuccin",
       palette: paletteFromPreset("catppuccin"),
       previewSource: `start ::= "sample" ;`,
@@ -406,6 +451,8 @@ export function tokenKindsFor(
 ): readonly SyntaxTokenKind[] {
   return language.engine === "ebnf"
     ? EBNF_TOKEN_KINDS
+    : language.engine === "asdl"
+      ? ASDL_TOKEN_KINDS
     : language.engine === "mud"
       ? MUD_TOKEN_KINDS
       : ALL_TOKEN_KINDS;

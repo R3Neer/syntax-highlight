@@ -1,7 +1,8 @@
 # Syntax Highlight
 
-Plugin local de Obsidian para resaltar bloques `mud`, `ebnf` y perfiles de
-lenguaje configurables tanto en lectura como en Source y Live Preview.
+Plugin local de Obsidian para resaltar bloques `mud`, `ebnf`, `asdl` y perfiles
+configurables tanto en lectura como en Source y Live Preview. También abre y
+edita directamente los archivos asociados a cada perfil.
 
 ## Gramáticas
 
@@ -16,10 +17,21 @@ a analizar automáticamente y conserva la última configuración válida si el
 archivo contiene un error. La pestaña de configuración permite cambiar rutas,
 validar manualmente y consultar el estado de cada perfil.
 
-El perfil EBNF usa el tokenizador integrado del visor EBNF. Los perfiles
+El perfil EBNF usa un tokenizador integrado de la metanotación. Los perfiles
 genéricos pueden mapear producciones EBNF a categorías visuales; constituyen una
 base configurable para lenguajes con convenciones léxicas compatibles, no un
 parser semántico ni un LSP universal.
+
+El perfil ASDL sigue la notación Zephyr empleada por CPython: `module`, tipos
+suma y producto, constructores, campos, `attributes`, opcionales `?` y
+secuencias `*`. La extensión canónica es `.asdl`.
+
+## Edición de archivos fuente
+
+Los perfiles declaran, además de los fences Markdown, las extensiones que abre
+el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y `.asdl`.
+La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste de línea,
+guardado automático y `Ctrl+S`.
 
 ## Temas
 

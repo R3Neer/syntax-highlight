@@ -13,12 +13,15 @@ describe("settings and themes", () => {
     const settings = loadSettings(undefined);
     const mud = settings.languages.find(({ id }) => id === "mud");
     const ebnf = settings.languages.find(({ id }) => id === "ebnf");
+    const asdl = settings.languages.find(({ id }) => id === "asdl");
 
     expect(mud?.palette.dark.keyword).toBe("#f5c2e7");
     expect(ebnf?.palette.dark.definition).toBe("#569cd6");
     expect(ebnf?.palette.light.definition).toBe("#0000ff");
     expect(mud?.previewSource).toContain("thing Alexandria");
     expect(ebnf?.previewSource).toContain("expression ::=");
+    expect(asdl?.previewSource).toContain("module Mud");
+    expect(asdl?.extensions).toEqual(["asdl"]);
   });
 
   it("copies presets and emits separate light and dark rules", () => {
@@ -57,5 +60,16 @@ describe("language registry", () => {
     const runtime = registry.byFence("GRAMMAR");
     expect(runtime?.settings.id).toBe("ebnf");
     expect(runtime?.tokenize("rule ::= 'x';")[0]?.kind).toBe("definition");
+  });
+
+  it("resolves source file extensions through the enabled profiles", () => {
+    const registry = new LanguageRegistry(
+      structuredClone(DEFAULT_SETTINGS),
+      () => Promise.resolve(""),
+    );
+
+    expect(registry.byExtension(".mud")?.settings.id).toBe("mud");
+    expect(registry.byExtension("EBNF")?.settings.id).toBe("ebnf");
+    expect(registry.byExtension("asdl")?.settings.id).toBe("asdl");
   });
 });

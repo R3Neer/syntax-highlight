@@ -4,6 +4,7 @@ import {
   DEFAULT_HIGHLIGHT_CONFIG,
   type MudHighlightConfig,
 } from "./config";
+import { tokenizeAsdl } from "./asdl-tokenizer";
 import { tokenizeEbnf } from "./ebnf-tokenizer";
 import type {
   LanguageProfileSettings,
@@ -57,8 +58,12 @@ export class LanguageRegistry {
         const runtime: InternalRuntime = {
           settings: profile,
           status:
-            profile.engine === "ebnf"
-              ? { state: "ready", message: "Tokenizador EBNF integrado", updatedAt: Date.now() }
+            profile.engine === "ebnf" || profile.engine === "asdl"
+              ? {
+                  state: "ready",
+                  message: `Tokenizador ${profile.name} integrado`,
+                  updatedAt: Date.now(),
+                }
               : { state: "loading", message: "Pendiente de cargar", updatedAt: null },
           revision: 0,
           highlightConfig:
@@ -81,7 +86,13 @@ export class LanguageRegistry {
 
   async reload(id: string): Promise<void> {
     const runtime = this.runtimes.get(id);
-    if (runtime === undefined || runtime.settings.engine === "ebnf") return;
+    if (
+      runtime === undefined ||
+      runtime.settings.engine === "ebnf" ||
+      runtime.settings.engine === "asdl"
+    ) {
+      return;
+    }
     runtime.status = {
       state: "loading",
       message: "Cargando gramáticas…",
@@ -146,6 +157,15 @@ export class LanguageRegistry {
     );
   }
 
+  byExtension(extension: string): LanguageRuntime | undefined {
+    const normalized = extension.toLocaleLowerCase().replace(/^\./, "");
+    return this.enabled().find(({ settings }) =>
+      settings.extensions.some(
+        (candidate) => candidate.toLocaleLowerCase() === normalized,
+      ),
+    );
+  }
+
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -155,6 +175,7 @@ export class LanguageRegistry {
     const runtime = this.runtimes.get(id);
     if (runtime === undefined) return [];
     if (runtime.settings.engine === "ebnf") return tokenizeEbnf(source);
+    if (runtime.settings.engine === "asdl") return tokenizeAsdl(source);
     const config = runtime.highlightConfig ?? DEFAULT_HIGHLIGHT_CONFIG;
     return runtime.settings.engine === "mud"
       ? tokenizeMud(source, config)

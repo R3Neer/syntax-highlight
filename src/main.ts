@@ -8,6 +8,7 @@ import {
   type SyntaxPluginSettings,
 } from "./settings";
 import { SyntaxSettingTab } from "./settings-tab";
+import { SOURCE_VIEW_TYPE, SyntaxSourceView } from "./source-view";
 import { ThemeManager } from "./themes";
 
 export default class MudSyntaxPlugin extends Plugin {
@@ -15,6 +16,7 @@ export default class MudSyntaxPlugin extends Plugin {
   registry!: LanguageRegistry;
   private themeManager?: ThemeManager;
   private readonly registeredFences = new Set<string>();
+  private readonly registeredExtensions = new Set<string>();
   private reloadTimer?: number;
 
   override async onload(): Promise<void> {
@@ -25,7 +27,12 @@ export default class MudSyntaxPlugin extends Plugin {
     });
     this.themeManager = new ThemeManager();
     this.themeManager.apply(this.pluginSettings);
+    this.registerView(
+      SOURCE_VIEW_TYPE,
+      (leaf) => new SyntaxSourceView(leaf, this.registry),
+    );
     this.registerConfiguredFences();
+    this.registerConfiguredExtensions();
     this.registerEditorExtension(createEditorHighlighter(this.registry));
     this.addSettingTab(new SyntaxSettingTab(this));
     this.registerGrammarWatchers();
@@ -42,6 +49,7 @@ export default class MudSyntaxPlugin extends Plugin {
     this.registry.replaceSettings(this.pluginSettings);
     this.themeManager?.apply(this.pluginSettings);
     this.registerConfiguredFences();
+    this.registerConfiguredExtensions();
     if (reload) await this.registry.reloadAll();
   }
 
@@ -74,6 +82,18 @@ export default class MudSyntaxPlugin extends Plugin {
           pre.append(code);
           element.replaceChildren(pre);
         });
+      }
+    }
+  }
+
+  private registerConfiguredExtensions(): void {
+    for (const profile of this.pluginSettings.languages) {
+      if (!profile.enabled) continue;
+      for (const rawExtension of profile.extensions) {
+        const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");
+        if (!extension || this.registeredExtensions.has(extension)) continue;
+        this.registerExtensions([extension], SOURCE_VIEW_TYPE);
+        this.registeredExtensions.add(extension);
       }
     }
   }

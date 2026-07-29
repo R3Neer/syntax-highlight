@@ -1,9 +1,9 @@
 {
   "id": "mud-syntax-highlighter",
   "name": "Syntax Highlight",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "minAppVersion": "1.7.2",
-  "description": "Grammar-driven syntax highlighting and configurable themes for MUD, EBNF and custom languages.",
+  "description": "Syntax highlighting, themes and direct source editing for MUD, EBNF, ASDL and custom languages.",
   "author": "Samuel",
   "isDesktopOnly": false
 }
