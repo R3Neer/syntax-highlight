@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "generic",
+  "name": "Lenguaje genérico",
+  "engine": "grammar",
+  "fences": ["generic"],
+  "extensions": ["generic"],
+  "groups": [
+    { "id": "words", "name": "Palabras y nombres" },
+    { "id": "literals", "name": "Literales" },
+    { "id": "symbols", "name": "Símbolos" }
+  ],
+  "categories": [
+    { "id": "comment", "name": "Comentario", "description": "Comentario reconocido por el escáner genérico.", "group": "words", "role": "comment" },
+    { "id": "keyword", "name": "Palabra reservada", "description": "Palabra obtenida de la producción configurada.", "group": "words", "role": "keyword" },
+    { "id": "operator-word", "name": "Operador verbal", "description": "Operador escrito como palabra.", "group": "words", "role": "operator" },
+    { "id": "builtin", "name": "Elemento incorporado", "description": "Nombre incorporado por el lenguaje.", "group": "words", "role": "type" },
+    { "id": "constant", "name": "Constante", "description": "Constante literal incorporada.", "group": "words", "role": "constant" },
+    { "id": "contextual", "name": "Palabra contextual", "description": "Palabra especial en un contexto gramatical.", "group": "words", "role": "keyword" },
+    { "id": "declaration", "name": "Nombre declarado", "description": "Nombre situado después de una cabecera de declaración.", "group": "words", "role": "declaration" },
+    { "id": "invocation", "name": "Invocación", "description": "Nombre seguido de paréntesis.", "group": "words", "role": "callable" },
+    { "id": "string", "name": "Texto", "description": "Literal entre comillas dobles.", "group": "literals", "role": "string" },
+    { "id": "character", "name": "Carácter", "description": "Literal entre comillas simples.", "group": "literals", "role": "string" },
+    { "id": "number", "name": "Número", "description": "Literal numérico.", "group": "literals", "role": "number" },
+    { "id": "operator", "name": "Operador simbólico", "description": "Operador obtenido de la gramática.", "group": "symbols", "role": "operator" },
+    { "id": "brace", "name": "Llaves", "description": "Llaves configuradas por la gramática.", "group": "symbols", "role": "delimiter" },
+    { "id": "parenthesis", "name": "Paréntesis", "description": "Paréntesis configurados por la gramática.", "group": "symbols", "role": "delimiter" },
+    { "id": "bracket", "name": "Corchetes", "description": "Corchetes configurados por la gramática.", "group": "symbols", "role": "delimiter" },
+    { "id": "punctuation", "name": "Puntuación", "description": "Separadores obtenidos de la gramática.", "group": "symbols", "role": "punctuation" }
+  ],
+  "grammarMappings": [
+    { "slot": "keyword", "grammar": "lexical", "production": "keyword-word", "category": "keyword" },
+    { "slot": "operator-word", "grammar": "lexical", "production": "operator-word", "category": "operator-word" },
+    { "slot": "builtin", "grammar": "lexical", "production": "builtin-word", "category": "builtin" },
+    { "slot": "constant", "grammar": "lexical", "production": "constant-word", "category": "constant" },
+    { "slot": "operator-symbol", "grammar": "lexical", "production": "operator-token", "category": "operator" },
+    { "slot": "brace", "grammar": "lexical", "production": "brace-token", "category": "brace" },
+    { "slot": "parenthesis", "grammar": "lexical", "production": "parenthesis-token", "category": "parenthesis" },
+    { "slot": "bracket", "grammar": "lexical", "production": "bracket-token", "category": "bracket" },
+    { "slot": "punctuation", "grammar": "lexical", "production": "punctuation-token", "category": "punctuation" },
+    { "slot": "contextual", "grammar": "lexical", "production": "contextual-word", "category": "contextual" },
+    { "slot": "declaration-name", "grammar": "syntax", "production": "nominal-name", "category": "declaration" }
+  ],
+  "previewSource": "start ::= \"sample\" ;"
+}

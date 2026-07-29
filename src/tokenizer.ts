@@ -1,31 +1,7 @@
-export type SyntaxTokenKind =
-  | "comment"
-  | "keyword"
-  | "builtin"
-  | "constant"
-  | "declaration"
-  | "type"
-  | "unit"
-  | "function"
-  | "string"
-  | "char"
-  | "number"
-  | "operator"
-  | "brace"
-  | "parenthesis"
-  | "bracket"
-  | "punctuation"
-  | "definition"
-  | "reference"
-  | "terminal"
-  | "meta";
-
-export type MudTokenKind = SyntaxTokenKind;
-
 export interface SyntaxToken {
   from: number;
   to: number;
-  kind: SyntaxTokenKind;
+  categoryId: string;
   text: string;
 }
 
@@ -41,7 +17,7 @@ import {
 interface RawToken {
   from: number;
   to: number;
-  kind: MudTokenKind | "word";
+  categoryId: string;
   text: string;
 }
 
@@ -129,9 +105,9 @@ function addRaw(
   source: string,
   from: number,
   to: number,
-  kind: RawToken["kind"],
+  categoryId: RawToken["categoryId"],
 ): void {
-  tokens.push({ from, to, kind, text: source.slice(from, to) });
+  tokens.push({ from, to, categoryId, text: source.slice(from, to) });
 }
 
 function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
@@ -150,7 +126,7 @@ function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
       isBlockOpener(source, cursor, '"""')
     ) {
       const end = findBlockClose(source, cursor, '"""');
-      addRaw(tokens, source, cursor, end, "string");
+      addRaw(tokens, source, cursor, end, "text");
       cursor = end;
       continue;
     }
@@ -177,14 +153,14 @@ function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
 
     if (character === '"') {
       const end = scanQuoted(source, cursor, '"');
-      addRaw(tokens, source, cursor, end, "string");
+      addRaw(tokens, source, cursor, end, "text");
       cursor = end;
       continue;
     }
 
     if (character === "'") {
       const end = scanQuoted(source, cursor, "'");
-      addRaw(tokens, source, cursor, end, "char");
+      addRaw(tokens, source, cursor, end, "character");
       cursor = end;
       continue;
     }
@@ -195,7 +171,12 @@ function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
       (character !== "r" || number.length > 1) &&
       !(cursor > 0 && /[A-Za-z0-9]/.test(source[cursor - 1] ?? ""))
     ) {
-      addRaw(tokens, source, cursor, cursor + number.length, "number");
+      const categoryId = number.startsWith("r")
+        ? "rumber"
+        : number.includes(":")
+          ? "point-literal"
+          : "exact-number";
+      addRaw(tokens, source, cursor, cursor + number.length, categoryId);
       cursor += number.length;
       continue;
     }
@@ -211,7 +192,13 @@ function scanRaw(source: string, config: PreparedHighlightConfig): RawToken[] {
       source.startsWith(text, cursor),
     );
     if (symbol !== undefined) {
-      addRaw(tokens, source, cursor, cursor + symbol.text.length, symbol.kind);
+      addRaw(
+        tokens,
+        source,
+        cursor,
+        cursor + symbol.text.length,
+        symbol.categoryId,
+      );
       cursor += symbol.text.length;
       continue;
     }
@@ -245,22 +232,24 @@ function classifyWord(
   tokens: RawToken[],
   index: number,
   config: PreparedHighlightConfig,
-): MudTokenKind | undefined {
+): string | undefined {
   const token = tokens[index];
-  if (token === undefined || token.kind !== "word") return undefined;
+  if (token === undefined || token.categoryId !== "word") return undefined;
   const configuredKind = config.words.get(token.text);
   if (configuredKind !== undefined) return configuredKind;
-  if (contextualKeyword(tokens, index, config)) return "keyword";
+  if (contextualKeyword(tokens, index, config)) {
+    return config.categories.contextual;
+  }
 
   const previous = tokens[index - 1];
   const next = tokens[index + 1];
   if (previous !== undefined && config.declarationHeads.has(previous.text)) {
-    return "declaration";
+    return config.categories["declaration-name"] ?? "declared-name";
   }
-  if (isInheritedThing(tokens, index)) return "declaration";
-  if (isFamilyMember(source, tokens, index)) return "constant";
-  if (isTypeReference(tokens, index, config)) return "type";
-  if (next?.text === "(") return "function";
+  if (isInheritedThing(tokens, index)) return "specialization-reference";
+  if (isFamilyMember(source, tokens, index)) return "family-member";
+  if (isTypeReference(tokens, index, config)) return "type-reference";
+  if (next?.text === "(") return "invocation-name";
   return undefined;
 }
 
@@ -273,7 +262,7 @@ function isInheritedThing(tokens: RawToken[], index: number): boolean {
   while (cursor >= 0) {
     const token = tokens[cursor];
     if (token?.text === "as") return true;
-    if (token?.kind === "word" || token?.text === ",") {
+    if (token?.categoryId === "word" || token?.text === ",") {
       cursor -= 1;
       continue;
     }
@@ -362,14 +351,14 @@ function isTypeReference(
   const declarationName = tokens[index - 2];
   const declarationHead = tokens[index - 3]?.text;
   return (
-    declarationName?.kind === "word" &&
+    declarationName?.categoryId === "word" &&
     (declarationHead === "alias" || declarationHead === "magnitude")
   );
 }
 
 function parseUnitFactor(tokens: RawToken[], start: number): number | undefined {
   const token = tokens[start];
-  if (token?.kind === "word") return start + 1;
+  if (token?.categoryId === "word") return start + 1;
   if (token?.text !== "(") return undefined;
   const end = parseUnitExpression(tokens, start + 1);
   if (end === undefined || tokens[end]?.text !== ")") return undefined;
@@ -399,7 +388,7 @@ function markUnitRange(
   for (let index = from; index < to; index += 1) {
     const token = tokens[index];
     if (
-      token?.kind === "word" ||
+      token?.categoryId === "word" ||
       token?.text === "*" ||
       token?.text === "/"
     ) {
@@ -425,7 +414,11 @@ function unitTokenIndices(
 ): ReadonlySet<number> {
   const result = new Set<number>();
   tokens.forEach((token, index) => {
-    if (token.kind === "number") {
+    if (
+      token.categoryId === "exact-number" ||
+      token.categoryId === "rumber" ||
+      token.categoryId === "point-literal"
+    ) {
       const start = index + 1;
       if (!beginsOnSameLine(source, token, tokens[start])) return;
       const end = parseUnitExpression(tokens, start);
@@ -457,13 +450,20 @@ export function tokenizeMud(
   const result: MudToken[] = [];
 
   raw.forEach((token, index) => {
-    const kind =
+    const categoryId =
       units.has(index)
         ? "unit"
-        : token.kind === "word"
+        : token.categoryId === "word"
         ? classifyWord(source, raw, index, prepared)
-        : token.kind;
-    if (kind !== undefined) result.push({ ...token, kind });
+        : token.categoryId;
+    if (categoryId !== undefined) {
+      result.push({
+        from: token.from,
+        to: token.to,
+        text: token.text,
+        categoryId,
+      });
+    }
   });
 
   return result;
@@ -477,31 +477,50 @@ export function tokenizeGrammar(
   const raw = scanRaw(source, prepared);
   const result: SyntaxToken[] = [];
   raw.forEach((token, index) => {
-    const kind =
-      token.kind === "word"
+    const categoryId =
+      token.categoryId === "word"
         ? prepared.words.get(token.text) ??
           (contextualKeyword(raw, index, prepared)
-            ? "keyword"
+            ? prepared.categories.contextual
             : prepared.declarationHeads.has(raw[index - 1]?.text ?? "")
-              ? "declaration"
+              ? prepared.categories["declaration-name"]
               : raw[index + 1]?.text === "("
-                ? "function"
+                ? "invocation"
                 : undefined)
-        : token.kind;
-    if (kind !== undefined) result.push({ ...token, kind });
+        : token.categoryId === "text"
+          ? "string"
+          : token.categoryId === "character"
+            ? "character"
+            : token.categoryId === "exact-number" ||
+                token.categoryId === "rumber" ||
+                token.categoryId === "point-literal"
+              ? "number"
+              : token.categoryId;
+    if (categoryId !== undefined) {
+      result.push({
+        from: token.from,
+        to: token.to,
+        text: token.text,
+        categoryId,
+      });
+    }
   });
   return result;
 }
 
-export function tokenClass(kind: MudTokenKind): string {
-  return `syntax-token-${kind}`;
+function safeId(value: string): string {
+  return value.replace(/[^a-z0-9-]/gi, "-");
+}
+
+export function tokenClass(categoryId: string): string {
+  return `syntax-token-${safeId(categoryId)}`;
 }
 
 export function tokenColorClass(
   languageId: string,
-  kind: SyntaxTokenKind,
+  categoryId: string,
 ): string {
-  return `syntax-color-${languageId}-${kind}`;
+  return `syntax-color-${safeId(languageId)}-${safeId(categoryId)}`;
 }
 
 export function sourceLineStart(source: string, offset: number): number {

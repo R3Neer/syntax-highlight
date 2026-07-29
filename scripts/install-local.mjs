@@ -1,5 +1,6 @@
 import {
   copyFile,
+  cp,
   mkdir,
   readFile,
   rename,
@@ -33,6 +34,9 @@ export async function installLocal(pluginRoot) {
   const configDirectory = path.join(repositoryRoot, ".obsidian");
   const target = path.join(configDirectory, "plugins", PLUGIN_ID);
   await mkdir(target, { recursive: true });
+  await cp(path.join(pluginRoot, "languages"), path.join(target, "languages"), {
+    recursive: true,
+  });
   await Promise.all([
     copyFile(path.join(pluginRoot, "dist", "main.js"), path.join(target, "main.js")),
     copyFile(path.join(pluginRoot, "manifest.json"), path.join(target, "manifest.json")),

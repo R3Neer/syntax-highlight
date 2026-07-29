@@ -35,7 +35,7 @@ function sourceDecorations(
   if (runtime === undefined) return Decoration.none;
   const ranges = runtime.tokenize(view.state.doc.toString()).map((token) =>
     Decoration.mark({
-      class: `${tokenClass(token.kind)} ${tokenColorClass(runtime.settings.id, token.kind)}`,
+      class: `${tokenClass(token.categoryId)} ${tokenColorClass(runtime.settings.id, token.categoryId)}`,
     }).range(token.from, token.to),
   );
   return Decoration.set(ranges, true);
@@ -202,7 +202,7 @@ export class SyntaxSourceView extends TextFileView {
 
   private languageName(): string {
     return (
-      this.registry.byExtension(this.file?.extension ?? "")?.settings.name ??
+      this.registry.byExtension(this.file?.extension ?? "")?.descriptor.name ??
       "Source"
     );
   }

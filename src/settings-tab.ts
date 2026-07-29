@@ -5,28 +5,22 @@ import {
   PluginSettingTab,
   Setting,
   type TextComponent,
+  normalizePath,
 } from "obsidian";
 
-import type MudSyntaxPlugin from "./main";
+import type SyntaxHighlightPlugin from "./main";
+import { validateLanguageDescriptor } from "./descriptor";
+import { renderSyntaxCode } from "./reading";
 import {
-  DEFAULT_GRAMMAR_CATEGORIES,
-  paletteFromPreset,
+  effectiveCategoryColor,
+  newGenericProfile,
   THEME_PRESETS,
   themeById,
-  tokenKindsFor,
   type LanguageProfileSettings,
 } from "./settings";
-import { renderSyntaxCode } from "./reading";
-
-function fencesFrom(value: string): string[] {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => /^[A-Za-z0-9_-]+$/.test(item));
-}
 
 export class SyntaxSettingTab extends PluginSettingTab {
-  constructor(private readonly plugin: MudSyntaxPlugin) {
+  constructor(private readonly plugin: SyntaxHighlightPlugin) {
     super(plugin.app, plugin);
   }
 
@@ -36,13 +30,13 @@ export class SyntaxSettingTab extends PluginSettingTab {
     containerEl.addClass("mud-syntax-settings");
     containerEl.createEl("h2", { text: "Syntax Highlight" });
     containerEl.createEl("p", {
-      text: "Perfiles de lenguaje derivados de gramáticas y temas editables para lectura y edición.",
+      text: "Lenguajes descritos mediante JSON, gramáticas recargables y temas semánticos con excepciones por categoría.",
       cls: "setting-item-description",
     });
 
     new Setting(containerEl)
-      .setName("Recargar gramáticas automáticamente")
-      .setDesc("Vuelve a validar el perfil al guardar uno de sus archivos EBNF.")
+      .setName("Recargar archivos de lenguaje automáticamente")
+      .setDesc("Vuelve a validar el descriptor JSON y las gramáticas cuando cambian.")
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.pluginSettings.autoReloadGrammar)
@@ -58,27 +52,11 @@ export class SyntaxSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Añadir lenguaje")
-      .setDesc("Crea un perfil genérico configurable mediante gramática léxica y sintáctica EBNF.")
+      .setDesc("Crea un perfil genérico con un descriptor JSON integrado y gramáticas EBNF.")
       .addButton((button) =>
         button.setButtonText("Nuevo perfil").setCta().onClick(async () => {
-          const id = this.uniqueId();
-          this.plugin.pluginSettings.languages.push({
-            id,
-            name: "Nuevo lenguaje",
-            enabled: false,
-            fences: [id],
-            extensions: [id],
-            engine: "grammar",
-            lexicalGrammarPath: "",
-            syntaxGrammarPath: "",
-            lexicalStart: "",
-            syntaxStart: "",
-            themePreset: "catppuccin",
-            customThemeName: "",
-            palette: paletteFromPreset("catppuccin"),
-            categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
-            previewSource: `start ::= "sample" ;`,
-          });
+          const profile = newGenericProfile(this.uniqueId());
+          this.plugin.pluginSettings.languages.push(profile);
           await this.plugin.commitSettings(false);
           this.display();
         }),
@@ -86,13 +64,15 @@ export class SyntaxSettingTab extends PluginSettingTab {
   }
 
   private renderLanguage(language: LanguageProfileSettings): void {
+    const runtime = this.plugin.registry.get(language.id);
+    const descriptor = runtime?.descriptor ?? language.embeddedDescriptor;
+    if (descriptor === undefined) return;
     const card = this.containerEl.createDiv("mud-syntax-language-card");
     const heading = card.createDiv("mud-syntax-language-heading");
-    heading.createEl("h3", { text: language.name });
-    const status = this.plugin.registry.get(language.id)?.status;
+    heading.createEl("h3", { text: descriptor.name });
     heading.createSpan({
-      text: status?.message ?? "Sin cargar",
-      cls: `mud-syntax-status is-${status?.state ?? "loading"}`,
+      text: runtime?.status.message ?? "Sin cargar",
+      cls: `mud-syntax-status is-${runtime?.status.state ?? "loading"}`,
     });
 
     new Setting(card)
@@ -103,32 +83,63 @@ export class SyntaxSettingTab extends PluginSettingTab {
           await this.plugin.commitSettings(false);
         }),
       );
-    new Setting(card).setName("Nombre").addText((text) =>
-      text.setValue(language.name).onChange(async (value) => {
-        language.name = value.trim() || language.id;
-        await this.plugin.commitSettings(false);
-      }),
-    );
+
     new Setting(card)
-      .setName("Bloques Markdown")
-      .setDesc("Alias separados por comas, sin incluir ```.")
+      .setName("Descriptor JSON")
+      .setDesc("Ruta dentro de la bóveda. Déjala vacía para usar el descriptor integrado del perfil.")
       .addText((text) =>
-        text.setValue(language.fences.join(", ")).onChange(async (value) => {
-          language.fences = fencesFrom(value);
-          await this.plugin.commitSettings(false);
+        text
+          .setPlaceholder("ruta/lenguaje.json")
+          .setValue(language.descriptorPath)
+          .onChange(async (value) => {
+            language.descriptorPath = value.trim();
+            await this.plugin.commitSettings(false);
+          }),
+      )
+      .addButton((button) =>
+        button.setButtonText("Cargar").onClick(async () => {
+          await this.plugin.reloadLanguage(language.id, true);
+          this.display();
         }),
-      );
-    new Setting(card)
-      .setName("Extensiones de archivo")
-      .setDesc("Extensiones sin punto, separadas por comas. Las nuevas requieren recargar el plugin.")
-      .addText((text) =>
-        text.setValue(language.extensions.join(", ")).onChange(async (value) => {
-          language.extensions = fencesFrom(value);
-          await this.plugin.commitSettings(false);
+      )
+      .addButton((button) =>
+        button.setButtonText("Importar").onClick(async () => {
+          if (!language.descriptorPath) {
+            new Notice("Escribe primero la ruta de un descriptor JSON.");
+            return;
+          }
+          try {
+            const source = await this.plugin.app.vault.adapter.read(
+              normalizePath(language.descriptorPath),
+            );
+            const imported = validateLanguageDescriptor(JSON.parse(source));
+            if (imported.id !== language.id) {
+              throw new Error(`El id debe ser ${language.id}.`);
+            }
+            language.embeddedDescriptor = imported;
+            language.descriptorPath = "";
+            await this.plugin.commitSettings(false);
+            await this.plugin.reloadLanguage(language.id, true);
+            this.display();
+          } catch (error) {
+            new Notice(
+              error instanceof Error ? error.message : "No se pudo importar el descriptor.",
+            );
+          }
         }),
       );
 
-    if (language.engine === "mud" || language.engine === "grammar") {
+    card.createEl("p", {
+      text: `Bloques: ${descriptor.fences.join(", ") || "ninguno"} · Extensiones: ${
+        descriptor.extensions.join(", ") || "ninguna"
+      }`,
+      cls: "setting-item-description",
+    });
+
+    if (language.embeddedDescriptor !== undefined) {
+      this.renderEmbeddedDescriptor(card, language);
+    }
+    if (descriptor.engine === "mud" || descriptor.engine === "grammar") {
       this.renderGrammarFields(card, language);
     }
     this.renderTheme(card, language);
@@ -136,16 +147,14 @@ export class SyntaxSettingTab extends PluginSettingTab {
 
     const actions = new Setting(card)
       .setName("Validación")
-      .setDesc("Conserva la última configuración válida si una gramática falla.");
-    if (language.engine === "mud" || language.engine === "grammar") {
-      actions.addButton((button) =>
+      .setDesc("Conserva el último descriptor y la última gramática válidos si la recarga falla.")
+      .addButton((button) =>
         button.setButtonText("Validar y recargar").onClick(async () => {
           await this.plugin.reloadLanguage(language.id, true);
           this.display();
         }),
       );
-    }
-    if (language.engine === "grammar") {
+    if (!["mud", "ebnf", "asdl"].includes(language.id)) {
       actions.addButton((button) =>
         button.setButtonText("Eliminar perfil").setWarning().onClick(async () => {
           this.plugin.pluginSettings.languages =
@@ -155,6 +164,44 @@ export class SyntaxSettingTab extends PluginSettingTab {
         }),
       );
     }
+  }
+
+  private renderEmbeddedDescriptor(
+    card: HTMLElement,
+    language: LanguageProfileSettings,
+  ): void {
+    const details = card.createEl("details", { cls: "mud-syntax-colors" });
+    details.createEl("summary", { text: "Descriptor integrado" });
+    details.createEl("p", {
+      text: "Se usa cuando no hay una ruta externa. Puedes editar nombres, categorías, aliases, mapeos y ejemplo sin recompilar.",
+      cls: "setting-item-description",
+    });
+    let draft = JSON.stringify(language.embeddedDescriptor, null, 2);
+    new Setting(details).addTextArea((text) => {
+      text.setValue(draft).onChange((value) => {
+        draft = value;
+      });
+      text.inputEl.rows = 14;
+      text.inputEl.addClass("syntax-descriptor-editor");
+    });
+    new Setting(details).addButton((button) =>
+      button.setButtonText("Aplicar descriptor").setCta().onClick(async () => {
+        try {
+          const descriptor = validateLanguageDescriptor(JSON.parse(draft));
+          if (descriptor.id !== language.id) {
+            throw new Error(`El id debe ser ${language.id}.`);
+          }
+          language.embeddedDescriptor = descriptor;
+          await this.plugin.commitSettings(false);
+          await this.plugin.reloadLanguage(language.id, true);
+          this.display();
+        } catch (error) {
+          new Notice(
+            error instanceof Error ? error.message : "Descriptor JSON inválido.",
+          );
+        }
+      }),
+    );
   }
 
   private renderGrammarFields(
@@ -179,7 +226,8 @@ export class SyntaxSettingTab extends PluginSettingTab {
           await this.plugin.commitSettings(false);
         }),
     );
-    if (language.engine === "grammar") {
+    const descriptor = this.plugin.registry.get(language.id)?.descriptor;
+    if (descriptor?.engine === "grammar") {
       new Setting(card)
         .setName("Símbolos iniciales")
         .setDesc("Producciones raíz léxica y sintáctica.")
@@ -195,21 +243,6 @@ export class SyntaxSettingTab extends PluginSettingTab {
             await this.plugin.commitSettings(false);
           }),
         );
-      const mapping = card.createEl("details", { cls: "mud-syntax-colors" });
-      mapping.createEl("summary", { text: "Mapeo de producciones" });
-      for (const key of Object.keys(
-        language.categories,
-      ) as (keyof typeof language.categories)[]) {
-        new Setting(mapping)
-          .setName(key)
-          .setDesc("Nombre de la producción EBNF que alimenta esta categoría.")
-          .addText((text) =>
-            text.setValue(language.categories[key]).onChange(async (value) => {
-              language.categories[key] = value.trim();
-              await this.plugin.commitSettings(false);
-            }),
-          );
-      }
     }
   }
 
@@ -217,6 +250,8 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    const descriptor = this.plugin.registry.get(language.id)?.descriptor;
+    if (descriptor === undefined) return;
     let dropdownControl: DropdownComponent | undefined;
     let nameControl: TextComponent | undefined;
     let saveButton: ButtonComponent | undefined;
@@ -232,9 +267,8 @@ export class SyntaxSettingTab extends PluginSettingTab {
         const selected = themeById(this.plugin.pluginSettings, value);
         if (selected !== undefined) {
           language.palette = structuredClone(selected.palette);
-          language.customThemeName = value.startsWith("custom-")
-            ? selected.name
-            : "";
+          language.categoryColors = structuredClone(selected.overrides);
+          language.customThemeName = value.startsWith("custom-") ? selected.name : "";
         }
         await this.plugin.commitSettings(false);
         this.display();
@@ -243,7 +277,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
 
     new Setting(card)
       .setName("Guardar tema personalizado")
-      .setDesc("Al modificar un color, la selección pasa a ser un tema personalizado sin guardar.")
+      .setDesc("Guarda la paleta común y sus excepciones por lenguaje y categoría.")
       .addText((text) => {
         nameControl = text;
         text
@@ -259,59 +293,73 @@ export class SyntaxSettingTab extends PluginSettingTab {
           .setButtonText("Guardar tema")
           .setDisabled(language.themePreset !== "custom")
           .onClick(async () => {
-          const name = language.customThemeName.trim();
-          if (!name) {
-            new Notice("Escribe un nombre para guardar el tema.");
-            return;
-          }
-          const existing = this.plugin.pluginSettings.customThemes.find(
-            (theme) => theme.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
-          );
-          if (existing === undefined) {
-            const id = this.uniqueThemeId(name);
-            this.plugin.pluginSettings.customThemes.push({
-              id,
-              name,
-              palette: structuredClone(language.palette),
-            });
-            language.themePreset = id;
-          } else {
-            existing.name = name;
-            existing.palette = structuredClone(language.palette);
-            language.themePreset = existing.id;
-          }
-          await this.plugin.commitSettings(false);
-          this.display();
+            const name = language.customThemeName.trim();
+            if (!name) {
+              new Notice("Escribe un nombre para guardar el tema.");
+              return;
+            }
+            const existing = this.plugin.pluginSettings.customThemes.find(
+              (theme) => theme.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+            );
+            if (existing === undefined) {
+              const id = this.uniqueThemeId(name);
+              this.plugin.pluginSettings.customThemes.push({
+                id,
+                name,
+                palette: structuredClone(language.palette),
+                overrides: structuredClone(language.categoryColors),
+              });
+              language.themePreset = id;
+            } else {
+              existing.name = name;
+              existing.palette = structuredClone(language.palette);
+              existing.overrides = structuredClone(language.categoryColors);
+              language.themePreset = existing.id;
+            }
+            await this.plugin.commitSettings(false);
+            this.display();
           });
       });
 
     const colors = card.createEl("details", { cls: "mud-syntax-colors" });
-    colors.createEl("summary", { text: "Personalizar colores" });
-    const grid = colors.createDiv("mud-syntax-color-grid");
-    for (const kind of tokenKindsFor(language)) {
-      const row = grid.createDiv("mud-syntax-color-row");
-      row.createSpan({ text: kind });
-      for (const mode of ["light", "dark"] as const) {
-        new Setting(row).setName(mode === "light" ? "Claro" : "Oscuro")
-          .addColorPicker((picker) =>
-            picker.setValue(language.palette[mode][kind]).onChange(async (value) => {
-              const selected = themeById(
-                this.plugin.pluginSettings,
-                language.themePreset,
-              );
-              if (language.themePreset !== "custom") {
-                language.customThemeName = selected === undefined
-                  ? ""
-                  : `${selected.name} personalizado`;
-                nameControl?.setValue(language.customThemeName);
-              }
-              language.palette[mode][kind] = value;
-              language.themePreset = "custom";
-              dropdownControl?.setValue("custom");
-              saveButton?.setDisabled(false);
-              await this.plugin.commitSettings(false);
-            }),
-          );
+    colors.createEl("summary", { text: "Personalizar categorías de este lenguaje" });
+    for (const group of descriptor.groups) {
+      const categories = descriptor.categories.filter(
+        (category) => category.group === group.id,
+      );
+      if (categories.length === 0) continue;
+      colors.createEl("h4", { text: group.name, cls: "syntax-category-group" });
+      const grid = colors.createDiv("mud-syntax-color-grid");
+      for (const category of categories) {
+        const row = grid.createDiv("mud-syntax-color-row");
+        row.createSpan({ text: category.name });
+        row.createEl("small", { text: category.description });
+        for (const mode of ["light", "dark"] as const) {
+          new Setting(row)
+            .setName(mode === "light" ? "Claro" : "Oscuro")
+            .addColorPicker((picker) =>
+              picker
+                .setValue(effectiveCategoryColor(language, descriptor, category.id, mode))
+                .onChange(async (value) => {
+                  const selected = themeById(
+                    this.plugin.pluginSettings,
+                    language.themePreset,
+                  );
+                  if (language.themePreset !== "custom") {
+                    language.customThemeName =
+                      selected === undefined ? "" : `${selected.name} personalizado`;
+                    nameControl?.setValue(language.customThemeName);
+                  }
+                  const languageOverrides =
+                    (language.categoryColors[language.id] ??= {});
+                  (languageOverrides[category.id] ??= {})[mode] = value;
+                  language.themePreset = "custom";
+                  dropdownControl?.setValue("custom");
+                  saveButton?.setDisabled(false);
+                  await this.plugin.commitSettings(false);
+                }),
+            );
+        }
       }
     }
   }
@@ -320,29 +368,38 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    const runtime = this.plugin.registry.get(language.id);
+    if (runtime === undefined) return;
     const section = card.createDiv("syntax-preview");
     section.createEl("h4", { text: "Vista previa" });
     section.createEl("p", {
-      text: "Edita el ejemplo para comprobar inmediatamente la paleta y el tokenizador.",
+      text: "Edita el ejemplo para comprobar inmediatamente las categorías y el tema.",
       cls: "setting-item-description",
     });
     const output = section.createDiv("syntax-preview-output");
-    const updateOutput = (): void => {
-      const runtime = this.plugin.registry.get(language.id);
-      if (runtime !== undefined) renderSyntaxCode(language.previewSource, output, runtime);
-    };
-    new Setting(section).addTextArea((text) => {
-      text
-        .setValue(language.previewSource)
-        .setPlaceholder("Escribe un fragmento de código…")
-        .onChange(async (value) => {
-          language.previewSource = value;
+    const source = (): string =>
+      language.previewSource ?? runtime.descriptor.previewSource;
+    const updateOutput = (): void => renderSyntaxCode(source(), output, runtime);
+    new Setting(section)
+      .addTextArea((text) => {
+        text
+          .setValue(source())
+          .setPlaceholder("Escribe un fragmento de código…")
+          .onChange(async (value) => {
+            language.previewSource = value;
+            await this.plugin.commitSettings(false);
+            updateOutput();
+          });
+        text.inputEl.rows = 7;
+        text.inputEl.addClass("syntax-preview-editor");
+      })
+      .addButton((button) =>
+        button.setButtonText("Restaurar ejemplo").onClick(async () => {
+          language.previewSource = null;
           await this.plugin.commitSettings(false);
-          updateOutput();
-        });
-      text.inputEl.rows = 7;
-      text.inputEl.addClass("syntax-preview-editor");
-    });
+          this.display();
+        }),
+      );
     updateOutput();
   }
 

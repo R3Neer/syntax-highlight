@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "asdl",
+  "name": "ASDL",
+  "engine": "asdl",
+  "fences": ["asdl"],
+  "extensions": ["asdl"],
+  "groups": [
+    { "id": "structure", "name": "Estructura ASDL" },
+    { "id": "types", "name": "Tipos, constructores y campos" },
+    { "id": "notation", "name": "Notación" }
+  ],
+  "categories": [
+    { "id": "comment", "name": "Comentario", "description": "Comentario de línea introducido por --.", "group": "structure", "role": "comment" },
+    { "id": "asdl-keyword", "name": "Palabra ASDL", "description": "Palabra estructural propia de ASDL.", "group": "structure", "role": "keyword" },
+    { "id": "module-name", "name": "Nombre de módulo", "description": "Nombre declarado después de module.", "group": "structure", "role": "declaration" },
+    { "id": "defined-type", "name": "Tipo definido", "description": "Tipo declarado a la izquierda de una asignación.", "group": "types", "role": "declaration" },
+    { "id": "constructor", "name": "Constructor", "description": "Constructor de un tipo suma.", "group": "types", "role": "callable" },
+    { "id": "builtin-type", "name": "Tipo incorporado", "description": "Tipo básico reconocido por ASDL.", "group": "types", "role": "type" },
+    { "id": "type-reference", "name": "Referencia de tipo", "description": "Referencia a un tipo definido.", "group": "types", "role": "type" },
+    { "id": "field-name", "name": "Nombre de campo", "description": "Nombre local de un campo de constructor o atributo.", "group": "types", "role": "text" },
+    { "id": "cardinality", "name": "Cardinalidad", "description": "Modificador opcional o repetible.", "group": "notation", "role": "operator" },
+    { "id": "assignment", "name": "Asignación", "description": "Símbolo que introduce la definición de un tipo.", "group": "notation", "role": "operator" },
+    { "id": "alternative", "name": "Alternativa", "description": "Separador entre constructores alternativos.", "group": "notation", "role": "operator" },
+    { "id": "delimiter", "name": "Delimitador", "description": "Llave, paréntesis o corchete estructural.", "group": "notation", "role": "delimiter" },
+    { "id": "separator", "name": "Separador", "description": "Coma o punto y coma.", "group": "notation", "role": "punctuation" },
+    { "id": "string", "name": "Cadena", "description": "Cadena literal.", "group": "notation", "role": "string" },
+    { "id": "number", "name": "Número", "description": "Literal numérico.", "group": "notation", "role": "number" }
+  ],
+  "grammarMappings": [],
+  "previewSource": "module Mud {\n    expr = Name(identifier id)\n         | Literal(constant value)\n         | Binary(expr left, operator op, expr right)\n         attributes (source_span span)\n}"
+}

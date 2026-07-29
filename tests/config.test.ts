@@ -9,12 +9,12 @@ import { tokenizeMud } from "../src/tokenizer";
 
 describe("compilación EBNF del resaltado MUD", () => {
   it("deriva palabras, símbolos y contextuales de las gramáticas normativas", () => {
-    expect(DEFAULT_HIGHLIGHT_CONFIG.schemaVersion).toBe(2);
-    expect(DEFAULT_HIGHLIGHT_CONFIG.words.keyword).toContain("thing");
-    expect(DEFAULT_HIGHLIGHT_CONFIG.words.operator).toContain("xor");
-    expect(DEFAULT_HIGHLIGHT_CONFIG.words.operator).not.toContain("implies");
-    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols.operator).toContain("!=");
-    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols.operator).not.toContain("!");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.schemaVersion).toBe(3);
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words["reserved-word"]).toContain("thing");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words["word-operator"]).toContain("xor");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words["word-operator"]).not.toContain("implies");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols["symbolic-operator"]).toContain("!=");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols["symbolic-operator"]).not.toContain("!");
     expect(DEFAULT_HIGHLIGHT_CONFIG.contextualKeywords).toContainEqual({
       word: "format",
       next: "=",
@@ -28,21 +28,21 @@ describe("compilación EBNF del resaltado MUD", () => {
   it("aplica las categorías derivadas al tokenizador", () => {
     expect(
       tokenizeMud("format = value\nname = \"Ada\"\nimplies !").map(
-        ({ text, kind }) => [text, kind],
+        ({ text, categoryId }) => [text, categoryId],
       ),
     ).toEqual([
-      ["format", "keyword"],
-      ["=", "operator"],
-      ["name", "keyword"],
-      ["=", "operator"],
-      ['"Ada"', "string"],
+      ["format", "contextual-word"],
+      ["=", "symbolic-operator"],
+      ["name", "contextual-word"],
+      ["=", "symbolic-operator"],
+      ['"Ada"', "text"],
     ]);
   });
 
   it("mantiene un literal de punto numérico como una sola unidad visual", () => {
     expect(tokenizeMud("at 26:00:00")[0]).toMatchObject({
       text: "26:00:00",
-      kind: "number",
+      categoryId: "point-literal",
     });
   });
 

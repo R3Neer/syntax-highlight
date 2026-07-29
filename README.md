@@ -4,7 +4,24 @@ Plugin local de Obsidian para resaltar bloques `mud`, `ebnf`, `asdl` y perfiles
 configurables tanto en lectura como en Source y Live Preview. También abre y
 edita directamente los archivos asociados a cada perfil.
 
-## Gramáticas
+## Descriptores y gramáticas
+
+Cada lenguaje se presenta mediante un descriptor JSON independiente. El
+descriptor declara su nombre, motor, aliases de bloque, extensiones, grupos y
+categorías, roles visuales, mapeos de producciones y ejemplo inicial. Los
+descriptores integrados se encuentran en `languages/` y se instalan junto al
+plugin.
+
+La ruta del descriptor se puede cambiar desde los ajustes por otra ruta de la
+bóveda. Los perfiles genéricos también pueden guardar el JSON dentro de sus
+propios ajustes. El plugin valida identificadores, duplicados, grupos, roles,
+categorías y referencias de los mapeos antes de aceptar una recarga. Si el JSON
+o una gramática falla, conserva la última versión válida.
+
+Cambiar datos del descriptor o de las gramáticas instaladas no requiere
+recompilar: el plugin vigila esos archivos y los recarga al guardarlos. Añadir
+una distinción que necesite un algoritmo léxico o contextual nuevo sí requiere
+ampliar el tokenizador TypeScript.
 
 El perfil MUD obtiene palabras, operadores, signos, declaraciones y términos
 contextuales directamente de:
@@ -13,14 +30,13 @@ contextuales directamente de:
 - `especificacion/gramatica/mud.ebnf`
 
 Ya no existe `mud-highlight.json`. Al guardar una gramática, el plugin la vuelve
-a analizar automáticamente y conserva la última configuración válida si el
-archivo contiene un error. La pestaña de configuración permite cambiar rutas,
+a analizar automáticamente. La pestaña de configuración permite cambiar rutas,
 validar manualmente y consultar el estado de cada perfil.
 
 El perfil EBNF usa un tokenizador integrado de la metanotación. Los perfiles
-genéricos pueden mapear producciones EBNF a categorías visuales; constituyen una
-base configurable para lenguajes con convenciones léxicas compatibles, no un
-parser semántico ni un LSP universal.
+genéricos mapean producciones EBNF a categorías declaradas por su descriptor;
+constituyen una base configurable para lenguajes con convenciones léxicas
+compatibles, no un parser semántico ni un LSP universal.
 
 El perfil ASDL sigue la notación Zephyr empleada por CPython: `module`, tipos
 suma y producto, constructores, campos, `attributes`, opcionales `?` y
@@ -28,22 +44,25 @@ secuencias `*`. La extensión canónica es `.asdl`.
 
 ## Edición de archivos fuente
 
-Los perfiles declaran, además de los fences Markdown, las extensiones que abre
-el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y `.asdl`.
-La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste de línea,
-guardado automático y `Ctrl+S`.
+Los descriptores declaran, además de los fences Markdown, las extensiones que
+abre el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y
+`.asdl`. La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste
+de línea, guardado automático y `Ctrl+S`.
 
 ## Temas
 
-Los colores se administran desde los ajustes del plugin, por lenguaje y por modo
-claro u oscuro. Se incluyen cinco familias reales: Catppuccin,
-Visual Studio Code Dark+/Light+, Solarized, GitHub Default y Gruvbox.
-Elegir una plantilla copia su paleta. Al cambiar cualquier color, el perfil pasa
-a `Personalizado sin guardar`; puede asignársele un nombre y guardarse como una
-plantilla reutilizable en cualquier lenguaje.
+Los colores se administran desde los ajustes mediante las categorías auténticas
+de cada lenguaje, agrupadas y descritas por su JSON. Se incluyen cinco familias:
+Catppuccin, Visual Studio Code Dark+/Light+, Solarized, GitHub Default y
+Gruvbox.
 
-Cada perfil contiene además un fragmento editable y una vista previa coloreada
-que se actualiza al escribir. MUD y EBNF incluyen ejemplos iniciales propios.
+Cada plantilla aporta una paleta común de roles visuales y puede contener
+excepciones por lenguaje y categoría. Al cambiar un color solo se crea una
+excepción para esa categoría; el perfil pasa a `Personalizado sin guardar` y
+puede guardarse como una plantilla global reutilizable.
+
+Cada descriptor aporta un fragmento inicial y cada perfil permite editarlo en
+una vista previa coloreada que se actualiza al escribir.
 
 `styles.css` solo conserva estructura, tipografía semántica y diseño de la
 interfaz; las reglas de color se generan desde la configuración.
@@ -56,7 +75,7 @@ npm run check
 npm run install-local
 ```
 
-`install-local` copia `main.js`, `manifest.json` y `styles.css` a
+`install-local` copia `main.js`, `manifest.json`, `styles.css` y `languages/` a
 `.obsidian/plugins/mud-syntax-highlighter/`, y activa el identificador sin
 retirar otros plugins.
 
@@ -67,7 +86,7 @@ ni crear una segunda instalación, pero el nombre visible es `Syntax Highlight`.
 
 El resaltado de MUD sigue siendo léxico y contextual ligero. Reconoce el
 catálogo normativo vigente, declaraciones, referencias de tipo habituales,
-familias, unidades, literales numéricos y formas de punto numéricas. No valida
+familias, unidades, literales numéricos, Rumber y formas de punto. No valida
 dominios, tipos ni formatos declarados: esos diagnósticos corresponden al futuro
 parser o LSP.
 

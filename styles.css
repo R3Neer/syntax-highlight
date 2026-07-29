@@ -8,10 +8,13 @@
   font-style: italic;
 }
 
-.syntax-token-keyword,
-.syntax-token-declaration,
+.syntax-token-reserved-word,
+.syntax-token-contextual-word,
+.syntax-token-declared-name,
 .syntax-token-unit,
-.syntax-token-definition {
+.syntax-token-production-definition,
+.syntax-token-defined-type,
+.syntax-token-module-name {
   font-weight: 600;
 }
 
@@ -90,6 +93,21 @@
   font-weight: 600;
 }
 
+.mud-syntax-color-row > small {
+  display: block;
+  min-height: 2.5em;
+  margin-bottom: 0.35rem;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.25;
+}
+
+.syntax-category-group {
+  margin: 1rem 0 0.35rem;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
 .mud-syntax-color-row .setting-item {
   padding: 0.2rem 0;
   border: 0;
@@ -123,6 +141,14 @@
   min-height: 8rem;
   resize: vertical;
   font-family: var(--font-monospace);
+}
+
+.syntax-descriptor-editor {
+  width: 100%;
+  min-height: 18rem;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
 }
 
 .syntax-preview-output {

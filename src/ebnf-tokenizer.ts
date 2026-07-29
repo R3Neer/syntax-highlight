@@ -1,29 +1,16 @@
-import type { SyntaxToken, SyntaxTokenKind } from "./tokenizer";
+import type { SyntaxToken } from "./tokenizer";
 
 const IDENTIFIER_START = /[A-Za-z]/;
 const IDENTIFIER_PART = /[A-Za-z0-9-]/;
 const DIGIT = /[0-9]/;
 const UPPER_TERMINAL = /^[A-Z][A-Z0-9_]*$/;
-const OPERATORS = [
-  "<=>",
-  "::=",
-  ":=",
-  "->",
-  "..",
-  "=>",
-  "==",
-  "!=",
-  "<=",
-  ">=",
-  "+=",
-  "-=",
-  "*=",
-  "/=",
-  "|",
-  ",",
-  ";",
-  "=",
-];
+const SYMBOL_CATEGORIES: Readonly<Record<string, string>> = {
+  "::=": "definition-symbol",
+  "=": "definition-symbol",
+  "|": "alternative",
+  ",": "sequence-separator",
+  ";": "terminator",
+};
 
 function isDefinition(text: string, start: number, end: number): boolean {
   let after = end;
@@ -38,11 +25,11 @@ function isDefinition(text: string, start: number, end: number): boolean {
 
 function token(
   source: string,
-  kind: SyntaxTokenKind,
+  categoryId: string,
   from: number,
   to: number,
 ): SyntaxToken {
-  return { kind, from, to, text: source.slice(from, to) };
+  return { categoryId, from, to, text: source.slice(from, to) };
 }
 
 export function tokenizeEbnf(source: string): SyntaxToken[] {
@@ -66,13 +53,13 @@ export function tokenizeEbnf(source: string): SyntaxToken[] {
         escaped = character === "\\" && !escaped;
         if (character !== "\\") escaped = false;
       }
-      tokens.push(token(source, "string", start, position));
+      tokens.push(token(source, "terminal-literal", start, position));
       continue;
     }
     if (source[position] === "?") {
       const closing = source.indexOf("?", position + 1);
       position = closing < 0 ? source.length : closing + 1;
-      tokens.push(token(source, "meta", start, position));
+      tokens.push(token(source, "special-sequence", start, position));
       continue;
     }
     if (IDENTIFIER_START.test(source[position] ?? "")) {
@@ -84,16 +71,16 @@ export function tokenizeEbnf(source: string): SyntaxToken[] {
         position += 1;
       }
       const value = source.slice(start, position);
-      const kind: SyntaxTokenKind = isDefinition(
+      const categoryId = isDefinition(
         source,
         start,
         position,
       )
-        ? "definition"
+        ? "production-definition"
         : UPPER_TERMINAL.test(value)
-          ? "terminal"
-          : "reference";
-      tokens.push(token(source, kind, start, position));
+          ? "external-terminal"
+          : "production-reference";
+      tokens.push(token(source, categoryId, start, position));
       continue;
     }
     if (DIGIT.test(source[position] ?? "")) {
@@ -104,17 +91,29 @@ export function tokenizeEbnf(source: string): SyntaxToken[] {
       tokens.push(token(source, "number", start, position));
       continue;
     }
-    const operator = OPERATORS.find((candidate) =>
+    const operator = Object.keys(SYMBOL_CATEGORIES).find((candidate) =>
       source.startsWith(candidate, position),
     );
     if (operator !== undefined) {
       position += operator.length;
-      tokens.push(token(source, "operator", start, position));
+      tokens.push(
+        token(source, SYMBOL_CATEGORIES[operator] ?? "definition-symbol", start, position),
+      );
       continue;
     }
-    if ("()[]{}".includes(source[position] ?? "")) {
+    if ("()".includes(source[position] ?? "")) {
       position += 1;
-      tokens.push(token(source, "bracket", start, position));
+      tokens.push(token(source, "group", start, position));
+      continue;
+    }
+    if ("[]".includes(source[position] ?? "")) {
+      position += 1;
+      tokens.push(token(source, "optional", start, position));
+      continue;
+    }
+    if ("{}".includes(source[position] ?? "")) {
+      position += 1;
+      tokens.push(token(source, "repetition", start, position));
       continue;
     }
     position += 1;

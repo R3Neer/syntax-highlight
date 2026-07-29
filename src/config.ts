@@ -8,8 +8,12 @@ import {
   parseEbnf,
   validateEbnf,
 } from "./grammar/ebnf";
-import type { GrammarCategorySettings } from "./settings";
-import type { SyntaxTokenKind } from "./tokenizer";
+import {
+  BUILTIN_DESCRIPTORS,
+  type GrammarCategoryMapping,
+  type GrammarMappingSlot,
+  type LanguageDescriptor,
+} from "./descriptor";
 
 export interface ContextualKeyword {
   word: string;
@@ -18,41 +22,44 @@ export interface ContextualKeyword {
 }
 
 export interface MudHighlightConfig {
-  schemaVersion: 2;
-  words: Readonly<Record<"keyword" | "operator" | "builtin" | "constant", readonly string[]>>;
-  symbols: Readonly<
-    Record<
-      "operator" | "brace" | "parenthesis" | "bracket" | "punctuation",
-      readonly string[]
-    >
-  >;
+  schemaVersion: 3;
+  words: Readonly<Record<string, readonly string[]>>;
+  symbols: Readonly<Record<string, readonly string[]>>;
   declarationHeads: readonly string[];
   contextualKeywords: readonly ContextualKeyword[];
+  categories: Readonly<Partial<Record<GrammarMappingSlot, string>>>;
 }
 
 export interface PreparedHighlightConfig {
-  words: ReadonlyMap<string, SyntaxTokenKind>;
-  symbols: readonly { text: string; kind: SyntaxTokenKind }[];
+  words: ReadonlyMap<string, string>;
+  symbols: readonly { text: string; categoryId: string }[];
   declarationHeads: ReadonlySet<string>;
   contextualKeywords: readonly ContextualKeyword[];
+  categories: Readonly<Partial<Record<GrammarMappingSlot, string>>>;
 }
 
-const CATEGORY_KEYS: readonly (keyof GrammarCategorySettings)[] = [
+const REQUIRED_SLOTS: readonly GrammarMappingSlot[] = [
   "keyword",
-  "operatorWord",
+  "operator-word",
   "builtin",
   "constant",
-  "operatorSymbol",
+  "operator-symbol",
   "brace",
   "parenthesis",
   "bracket",
   "punctuation",
   "contextual",
-  "declarationName",
+  "declaration-name",
 ];
 
 function sorted(values: ReadonlySet<string>): string[] {
   return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+function mappingBySlot(
+  descriptor: LanguageDescriptor,
+): Map<GrammarMappingSlot, GrammarCategoryMapping> {
+  return new Map(descriptor.grammarMappings.map((mapping) => [mapping.slot, mapping]));
 }
 
 function contextualRules(
@@ -65,19 +72,15 @@ function contextualRules(
   const words = collectLiterals(lexical, contextualProduction);
   const result: ContextualKeyword[] = [];
   const keys = new Set<string>();
-
   const add = (entry: ContextualKeyword): void => {
     const key = `${entry.word}\0${entry.previous ?? ""}\0${entry.next ?? ""}`;
     if (keys.has(key)) return;
     keys.add(key);
     result.push(entry);
   };
-
   for (const context of findLiteralContexts(syntax, words)) {
     for (const next of context.next) add({ word: context.value, next });
-    for (const previous of context.previous) {
-      add({ word: context.value, previous });
-    }
+    for (const previous of context.previous) add({ word: context.value, previous });
   }
   if (words.has("anchor")) add({ word: "anchor", next: "{" });
   return result.sort((left, right) =>
@@ -90,23 +93,12 @@ function contextualRules(
 export function compileMudHighlightConfig(
   lexicalGrammarSource: string,
   syntaxGrammarSource: string,
+  descriptor: LanguageDescriptor = BUILTIN_DESCRIPTORS.mud,
 ): MudHighlightConfig {
   return compileGrammarHighlightConfig(
     lexicalGrammarSource,
     syntaxGrammarSource,
-    {
-      keyword: "keyword-word",
-      operatorWord: "operator-word",
-      builtin: "builtin-word",
-      constant: "constant-word",
-      operatorSymbol: "operator-token",
-      brace: "brace-token",
-      parenthesis: "parenthesis-token",
-      bracket: "bracket-token",
-      punctuation: "punctuation-token",
-      contextual: "contextual-word",
-      declarationName: "nominal-name",
-    },
+    descriptor,
     "mud-source",
     "mud-file",
   );
@@ -115,27 +107,31 @@ export function compileMudHighlightConfig(
 export function compileGrammarHighlightConfig(
   lexicalGrammarSource: string,
   syntaxGrammarSource: string,
-  categories: GrammarCategorySettings,
+  descriptor: LanguageDescriptor,
   lexicalStart?: string,
   syntaxStart?: string,
 ): MudHighlightConfig {
   const lexical = parseEbnf(lexicalGrammarSource);
   const syntax = parseEbnf(syntaxGrammarSource);
+  const mappings = mappingBySlot(descriptor);
   const diagnostics = [
     ...validateEbnf(lexical, lexicalStart || undefined),
     ...validateEbnf(syntax, syntaxStart || undefined),
   ];
-  for (const category of CATEGORY_KEYS) {
-    const production = categories[category];
-    const grammar = category === "declarationName" ? syntax : lexical;
-    if (!production) {
+
+  for (const slot of REQUIRED_SLOTS) {
+    const mapping = mappings.get(slot);
+    if (mapping === undefined) {
       diagnostics.push({
-        message: `Falta la producción configurada para ${category}`,
+        message: `Falta el mapeo de gramática ${slot}`,
         position: { offset: 0, line: 1, column: 1 },
       });
-    } else if (!grammar.productions.has(production)) {
+      continue;
+    }
+    const grammar = mapping.grammar === "syntax" ? syntax : lexical;
+    if (!grammar.productions.has(mapping.production)) {
       diagnostics.push({
-        message: `La producción configurada para ${category} no existe: ${production}`,
+        message: `La producción configurada para ${slot} no existe: ${mapping.production}`,
         position: { offset: 0, line: 1, column: 1 },
       });
     }
@@ -143,36 +139,51 @@ export function compileGrammarHighlightConfig(
   if (diagnostics.length > 0) {
     throw new Error(
       diagnostics
-        .map(
-          ({ message, position }) =>
-            `${position.line}:${position.column}: ${message}`,
-        )
+        .map(({ message, position }) => `${position.line}:${position.column}: ${message}`)
         .join("\n"),
     );
   }
 
+  const words: Record<string, string[]> = {};
+  const symbols: Record<string, string[]> = {};
+  for (const slot of ["keyword", "operator-word", "builtin", "constant"] as const) {
+    const mapping = mappings.get(slot);
+    if (mapping !== undefined) {
+      words[mapping.category] = sorted(collectLiterals(lexical, mapping.production));
+    }
+  }
+  for (const slot of [
+    "operator-symbol",
+    "brace",
+    "parenthesis",
+    "bracket",
+    "punctuation",
+  ] as const) {
+    const mapping = mappings.get(slot);
+    if (mapping !== undefined) {
+      symbols[mapping.category] = sorted(collectLiterals(lexical, mapping.production));
+    }
+  }
+  const declaration = mappings.get("declaration-name");
+  const contextual = mappings.get("contextual");
   return {
-    schemaVersion: 2,
-    words: {
-      keyword: sorted(collectLiterals(lexical, categories.keyword)),
-      operator: sorted(collectLiterals(lexical, categories.operatorWord)),
-      builtin: sorted(collectLiterals(lexical, categories.builtin)),
-      constant: sorted(collectLiterals(lexical, categories.constant)),
-    },
-    symbols: {
-      operator: sorted(collectLiterals(lexical, categories.operatorSymbol)),
-      brace: sorted(collectLiterals(lexical, categories.brace)),
-      parenthesis: sorted(collectLiterals(lexical, categories.parenthesis)),
-      bracket: sorted(collectLiterals(lexical, categories.bracket)),
-      punctuation: sorted(collectLiterals(lexical, categories.punctuation)),
-    },
-    declarationHeads: sorted(
-      literalsBeforeReference(syntax, categories.declarationName),
-    ),
-    contextualKeywords: contextualRules(
-      lexicalGrammarSource,
-      syntaxGrammarSource,
-      categories.contextual,
+    schemaVersion: 3,
+    words,
+    symbols,
+    declarationHeads:
+      declaration === undefined
+        ? []
+        : sorted(literalsBeforeReference(syntax, declaration.production)),
+    contextualKeywords:
+      contextual === undefined
+        ? []
+        : contextualRules(
+            lexicalGrammarSource,
+            syntaxGrammarSource,
+            contextual.production,
+          ),
+    categories: Object.fromEntries(
+      [...mappings].map(([slot, mapping]) => [slot, mapping.category]),
     ),
   };
 }
@@ -180,13 +191,13 @@ export function compileGrammarHighlightConfig(
 export function prepareHighlightConfig(
   config: MudHighlightConfig,
 ): PreparedHighlightConfig {
-  const words = new Map<string, SyntaxTokenKind>();
-  for (const [kind, values] of Object.entries(config.words)) {
-    for (const value of values) words.set(value, kind as SyntaxTokenKind);
+  const words = new Map<string, string>();
+  for (const [categoryId, values] of Object.entries(config.words)) {
+    for (const value of values) words.set(value, categoryId);
   }
   const symbols = Object.entries(config.symbols)
-    .flatMap(([kind, values]) =>
-      values.map((text) => ({ text, kind: kind as SyntaxTokenKind })),
+    .flatMap(([categoryId, values]) =>
+      values.map((text) => ({ text, categoryId })),
     )
     .sort((left, right) => right.text.length - left.text.length);
   return {
@@ -194,6 +205,7 @@ export function prepareHighlightConfig(
     symbols,
     declarationHeads: new Set(config.declarationHeads),
     contextualKeywords: config.contextualKeywords,
+    categories: config.categories,
   };
 }
 

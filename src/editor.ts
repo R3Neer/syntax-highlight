@@ -32,7 +32,7 @@ function addTokenRanges(
         base + segmentStart,
         base + index,
         Decoration.mark({
-          class: `${tokenClass(token.kind)} ${tokenColorClass(languageId, token.kind)}`,
+          class: `${tokenClass(token.categoryId)} ${tokenColorClass(languageId, token.categoryId)}`,
         }),
       );
     }
@@ -52,8 +52,8 @@ export function buildSyntaxDecorations(
   const fences = new Set(
     registry
       .enabled()
-      .flatMap(({ settings }) =>
-        settings.fences.map((fence) => fence.toLocaleLowerCase()),
+      .flatMap(({ descriptor }) =>
+        descriptor.fences.map((fence) => fence.toLocaleLowerCase()),
       ),
   );
   for (const block of findCodeBlocks(source, fences)) {

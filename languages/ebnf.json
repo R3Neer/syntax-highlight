@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "ebnf",
+  "name": "EBNF",
+  "engine": "ebnf",
+  "fences": ["ebnf"],
+  "extensions": ["ebnf"],
+  "groups": [
+    { "id": "productions", "name": "Producciones y terminales" },
+    { "id": "notation", "name": "Notación EBNF" },
+    { "id": "other", "name": "Literales y comentarios" }
+  ],
+  "categories": [
+    { "id": "comment", "name": "Comentario", "description": "Comentario delimitado por (* y *).", "group": "other", "role": "comment" },
+    { "id": "production-definition", "name": "Producción definida", "description": "Nombre situado a la izquierda de una definición.", "group": "productions", "role": "declaration" },
+    { "id": "production-reference", "name": "Referencia a producción", "description": "Referencia a otra producción de la gramática.", "group": "productions", "role": "text" },
+    { "id": "external-terminal", "name": "Terminal externo", "description": "Nombre convencional de un terminal externo.", "group": "productions", "role": "type" },
+    { "id": "terminal-literal", "name": "Literal terminal", "description": "Texto terminal escrito entre comillas.", "group": "other", "role": "string" },
+    { "id": "special-sequence", "name": "Secuencia especial", "description": "Contenido dependiente de la implementación delimitado por interrogaciones.", "group": "other", "role": "meta" },
+    { "id": "definition-symbol", "name": "Símbolo de definición", "description": "Operador que introduce el cuerpo de una producción.", "group": "notation", "role": "operator" },
+    { "id": "alternative", "name": "Alternativa", "description": "Separador entre alternativas.", "group": "notation", "role": "operator" },
+    { "id": "sequence-separator", "name": "Separador de secuencia", "description": "Coma que separa elementos consecutivos.", "group": "notation", "role": "punctuation" },
+    { "id": "terminator", "name": "Terminador", "description": "Punto y coma que termina una producción.", "group": "notation", "role": "punctuation" },
+    { "id": "group", "name": "Grupo", "description": "Paréntesis de agrupación.", "group": "notation", "role": "delimiter" },
+    { "id": "optional", "name": "Opcional", "description": "Corchetes que delimitan una parte opcional.", "group": "notation", "role": "delimiter" },
+    { "id": "repetition", "name": "Repetición", "description": "Llaves que delimitan una repetición.", "group": "notation", "role": "delimiter" },
+    { "id": "number", "name": "Número", "description": "Número empleado por la notación.", "group": "other", "role": "number" }
+  ],
+  "grammarMappings": [],
+  "previewSource": "expression ::= term , { ( \"+\" | \"-\" ) , term } ;\nterm ::= NUMBER | \"(\" , expression , \")\" ;"
+}

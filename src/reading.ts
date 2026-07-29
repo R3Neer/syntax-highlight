@@ -27,8 +27,8 @@ function renderTokens(
     }
     const span = document.createElement("span");
     span.classList.add(
-      tokenClass(token.kind),
-      tokenColorClass(languageId, token.kind),
+      tokenClass(token.categoryId),
+      tokenColorClass(languageId, token.categoryId),
     );
     span.textContent = token.text;
     code.append(span);
@@ -51,7 +51,7 @@ export function renderSyntaxCode(
     source,
     container,
     runtime.settings.id,
-    `language-${runtime.settings.fences[0] ?? runtime.settings.id}`,
+    `language-${runtime.descriptor.fences[0] ?? runtime.settings.id}`,
     runtime.tokenize(source),
   );
 }
