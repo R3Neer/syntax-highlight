@@ -22,6 +22,34 @@
   margin-bottom: 1.5rem;
 }
 
+.syntax-settings-section {
+  margin: 0.8rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.syntax-settings-section > summary {
+  cursor: pointer;
+  font-size: var(--font-ui-large);
+  font-weight: 700;
+}
+
+.syntax-validation-error,
+.syntax-contrast-warning {
+  color: var(--text-error);
+}
+
+.syntax-diagnostic-output {
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.syntax-inline-button {
+  margin-top: 0.4rem;
+}
+
 .mud-syntax-language-card {
   margin: 1.25rem 0;
   padding: 1rem 1.1rem;

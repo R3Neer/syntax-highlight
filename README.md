@@ -67,6 +67,28 @@ una vista previa coloreada que se actualiza al escribir.
 `styles.css` solo conserva estructura, tipografía semántica y diseño de la
 interfaz; las reglas de color se generan desde la configuración.
 
+## Configuración portable
+
+Los ajustes se organizan en General, Lenguajes, Temas, Diagnóstico y Avanzado.
+La interfaz sigue el idioma de Obsidian y permite forzar inglés o español.
+Lectura Markdown, editor Markdown y editor directo de fuentes se activan por
+separado.
+
+Se pueden exportar configuraciones ligeras, paquetes de lenguaje autocontenidos
+y temas como documentos JSON versionados. Las importaciones se validan antes de
+aplicarse, permiten fusionar o reemplazar y conservan una copia recuperable de
+la configuración anterior. Un paquete puede mantener sus gramáticas integradas
+o materializarlas bajo `syntax-highlight/languages/` para editarlas.
+
+Los descriptores incluidos se empaquetan dentro de `main.js`; la carpeta
+`languages/` es material de desarrollo y no es necesaria para una instalación
+desde la comunidad de Obsidian. Al personalizar un descriptor integrado se
+crea una copia personal y siempre se puede volver al original.
+
+El diagnóstico valida perfiles, gramáticas y colisiones de fences o
+extensiones. La copia diagnóstica nunca incluye snippets ni contenido de las
+gramáticas.
+
 ## Desarrollo e instalación local
 
 ```powershell
