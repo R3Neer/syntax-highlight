@@ -101,7 +101,7 @@ No diagnostica:
 - Nombres ambiguos.
 - Orden Unicode incorrecto en una colección `Char [* ordered]`.
 - Formas de unidad dependientes de Q-054.
-- Literales `POINT_LITERAL` dependientes de Q-055.
+- Literales contextuales `POINT_LITERAL` definidos por D-062, todavía no implementados por el resaltador.
 
 ## Arquitectura
 
