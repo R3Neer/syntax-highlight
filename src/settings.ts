@@ -90,6 +90,7 @@ export interface LanguageProfileSettings {
   themePreset: string;
   palette: ThemePalette;
   categories: GrammarCategorySettings;
+  previewSource: string;
 }
 
 export interface SyntaxPluginSettings {
@@ -260,6 +261,12 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
       themePreset: "mud-current",
       palette: clonePalette(MUD_CURRENT),
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
+      previewSource: `abstract thing Place {
+}
+
+thing Alexandria as City, Place {
+    name: Text = "Alexandria"
+}`,
     },
     {
       id: "ebnf",
@@ -274,6 +281,8 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
       themePreset: "ebnf-current",
       palette: clonePalette(EBNF_CURRENT),
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
+      previewSource: `expression ::= term , { ( "+" | "-" ) , term } ;
+term ::= NUMBER | "(" , expression , ")" ;`,
     },
   ],
 };
@@ -378,6 +387,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       fences: [id],
       themePreset: "catppuccin",
       palette: paletteFromPreset("catppuccin"),
+      previewSource: `start ::= "sample" ;`,
     };
     languages.push(mergeLanguage(entry, fallback));
   }

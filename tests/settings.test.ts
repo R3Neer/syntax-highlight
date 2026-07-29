@@ -17,6 +17,8 @@ describe("settings and themes", () => {
     expect(mud?.palette.dark.keyword).toBe("#f5c2e7");
     expect(ebnf?.palette.dark.definition).toBe("#569cd6");
     expect(ebnf?.palette.light.definition).toBe("#0000ff");
+    expect(mud?.previewSource).toContain("thing Alexandria");
+    expect(ebnf?.previewSource).toContain("expression ::=");
   });
 
   it("copies presets and emits separate light and dark rules", () => {

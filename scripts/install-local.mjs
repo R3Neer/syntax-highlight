@@ -48,7 +48,7 @@ if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === currentFi
   const result = await installLocal(pluginRoot);
   console.log(`Plugin instalado en ${result.target}`);
   console.log(
-    "Si Obsidian estaba abierto, activa MUD Syntax Highlight en los ajustes comunitarios; " +
+    "Si Obsidian estaba abierto, activa Syntax Highlight en los ajustes comunitarios; " +
       "la aplicación puede restaurar desde memoria su lista anterior de plugins.",
   );
 }

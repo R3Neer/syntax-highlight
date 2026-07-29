@@ -8,6 +8,7 @@ import {
   tokenKindsFor,
   type LanguageProfileSettings,
 } from "./settings";
+import { renderSyntaxCode } from "./reading";
 
 function fencesFrom(value: string): string[] {
   return value
@@ -25,7 +26,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.addClass("mud-syntax-settings");
-    containerEl.createEl("h2", { text: "MUD Syntax Highlight" });
+    containerEl.createEl("h2", { text: "Syntax Highlight" });
     containerEl.createEl("p", {
       text: "Perfiles de lenguaje derivados de gramáticas y temas editables para lectura y edición.",
       cls: "setting-item-description",
@@ -66,6 +67,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
             themePreset: "catppuccin",
             palette: paletteFromPreset("catppuccin"),
             categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
+            previewSource: `start ::= "sample" ;`,
           });
           await this.plugin.commitSettings(false);
           this.display();
@@ -111,6 +113,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
       this.renderGrammarFields(card, language);
     }
     this.renderTheme(card, language);
+    this.renderPreview(card, language);
 
     const actions = new Setting(card)
       .setName("Validación")
@@ -223,6 +226,36 @@ export class SyntaxSettingTab extends PluginSettingTab {
           );
       }
     }
+  }
+
+  private renderPreview(
+    card: HTMLElement,
+    language: LanguageProfileSettings,
+  ): void {
+    const section = card.createDiv("syntax-preview");
+    section.createEl("h4", { text: "Vista previa" });
+    section.createEl("p", {
+      text: "Edita el ejemplo para comprobar inmediatamente la paleta y el tokenizador.",
+      cls: "setting-item-description",
+    });
+    const output = section.createDiv("syntax-preview-output");
+    const updateOutput = (): void => {
+      const runtime = this.plugin.registry.get(language.id);
+      if (runtime !== undefined) renderSyntaxCode(language.previewSource, output, runtime);
+    };
+    new Setting(section).addTextArea((text) => {
+      text
+        .setValue(language.previewSource)
+        .setPlaceholder("Escribe un fragmento de código…")
+        .onChange(async (value) => {
+          language.previewSource = value;
+          await this.plugin.commitSettings(false);
+          updateOutput();
+        });
+      text.inputEl.rows = 7;
+      text.inputEl.addClass("syntax-preview-editor");
+    });
+    updateOutput();
   }
 
   private uniqueId(): string {

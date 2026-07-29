@@ -98,3 +98,41 @@
 .mud-syntax-color-row .setting-item-name {
   font-size: var(--font-ui-smaller);
 }
+
+.syntax-preview {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.syntax-preview h4 {
+  margin: 0 0 0.25rem;
+}
+
+.syntax-preview > .setting-item {
+  padding-bottom: 0.5rem;
+  border: 0;
+}
+
+.syntax-preview > .setting-item .setting-item-control {
+  width: 100%;
+}
+
+.syntax-preview-editor {
+  width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+  font-family: var(--font-monospace);
+}
+
+.syntax-preview-output {
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--code-background);
+}
+
+.syntax-preview-output .syntax-highlight-block {
+  margin: 0;
+  padding: 0.8rem;
+}

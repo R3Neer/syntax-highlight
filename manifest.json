@@ -1,7 +1,7 @@
 {
   "id": "mud-syntax-highlighter",
-  "name": "MUD Syntax Highlight",
-  "version": "0.2.0",
+  "name": "Syntax Highlight",
+  "version": "0.3.0",
   "minAppVersion": "1.7.2",
   "description": "Grammar-driven syntax highlighting and configurable themes for MUD, EBNF and custom languages.",
   "author": "Samuel",

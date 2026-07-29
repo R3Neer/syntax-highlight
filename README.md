@@ -1,4 +1,4 @@
-# MUD Syntax Highlight
+# Syntax Highlight
 
 Plugin local de Obsidian para resaltar bloques `mud`, `ebnf` y perfiles de
 lenguaje configurables tanto en lectura como en Source y Live Preview.
@@ -28,6 +28,9 @@ claro u oscuro. Se incluyen plantillas MUD actual, EBNF actual, Catppuccin y
 Visual Studio Code. MUD y EBNF parten de sus colores anteriores. Elegir una
 plantilla copia su paleta y cada color puede personalizarse después.
 
+Cada perfil contiene además un fragmento editable y una vista previa coloreada
+que se actualiza al escribir. MUD y EBNF incluyen ejemplos iniciales propios.
+
 `styles.css` solo conserva estructura, tipografía semántica y diseño de la
 interfaz; las reglas de color se generan desde la configuración.
 
@@ -42,6 +45,9 @@ npm run install-local
 `install-local` copia `main.js`, `manifest.json` y `styles.css` a
 `.obsidian/plugins/mud-syntax-highlighter/`, y activa el identificador sin
 retirar otros plugins.
+
+El identificador interno conserva el prefijo histórico para no perder ajustes
+ni crear una segunda instalación, pero el nombre visible es `Syntax Highlight`.
 
 ## Alcance
 
