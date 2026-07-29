@@ -328,8 +328,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
         (category) => category.group === group.id,
       );
       if (categories.length === 0) continue;
-      colors.createEl("h4", { text: group.name, cls: "syntax-category-group" });
-      const grid = colors.createDiv("mud-syntax-color-grid");
+      const section = colors.createDiv("syntax-category-section");
+      section.createEl("h4", { text: group.name, cls: "syntax-category-group" });
+      const grid = section.createDiv("mud-syntax-color-grid");
       for (const category of categories) {
         const row = grid.createDiv("mud-syntax-color-row");
         row.createSpan({ text: category.name });
