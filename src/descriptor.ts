@@ -65,6 +65,14 @@ export interface LanguageDescriptor {
   categories: CategoryDefinition[];
   grammarMappings: GrammarCategoryMapping[];
   previewSource: string;
+  translations?: Record<
+    string,
+    {
+      name?: string;
+      groups?: Record<string, string>;
+      categories?: Record<string, { name?: string; description?: string }>;
+    }
+  >;
 }
 
 const IDENTIFIER = /^[a-z][a-z0-9-]*$/;
@@ -288,6 +296,12 @@ export function validateLanguageDescriptor(value: unknown): LanguageDescriptor {
     grammarMappings,
     previewSource:
       typeof source.previewSource === "string" ? source.previewSource : "",
+    translations:
+      typeof source.translations === "object" &&
+      source.translations !== null &&
+      !Array.isArray(source.translations)
+        ? (source.translations as LanguageDescriptor["translations"])
+        : undefined,
   };
 }
 

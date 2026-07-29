@@ -34,7 +34,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
     );
     this.registerConfiguredFences();
     this.registerConfiguredExtensions();
-    this.registerEditorExtension(createEditorHighlighter(this.registry));
+    this.registerEditorExtension(
+      createEditorHighlighter(this.registry, () => this.pluginSettings.markdownEditor),
+    );
     this.addSettingTab(new SyntaxSettingTab(this));
     this.registerSourceWatchers();
     this.registerDescriptorPolling();
@@ -62,6 +64,23 @@ export default class SyntaxHighlightPlugin extends Plugin {
     if (reload) await this.registry.reloadAll();
   }
 
+  async replaceSettings(settings: SyntaxPluginSettings, backup = true): Promise<void> {
+    if (backup) {
+      const previous = structuredClone(this.pluginSettings);
+      previous.lastBackup = null;
+      settings.lastBackup = JSON.stringify(previous);
+    }
+    this.pluginSettings = settings;
+    await this.commitSettings(true);
+  }
+
+  async restoreBackup(): Promise<boolean> {
+    if (this.pluginSettings.lastBackup === null) return false;
+    const restored = loadSettings(JSON.parse(this.pluginSettings.lastBackup));
+    await this.replaceSettings(restored, false);
+    return true;
+  }
+
   async reloadLanguage(id: string, notify: boolean): Promise<void> {
     await this.registry.reload(id);
     const status = this.registry.get(id)?.status;
@@ -80,6 +99,14 @@ export default class SyntaxHighlightPlugin extends Plugin {
         if (this.registeredFences.has(fence)) continue;
         this.registeredFences.add(fence);
         this.registerMarkdownCodeBlockProcessor(fence, (source, element) => {
+          if (!this.pluginSettings.markdownReading) {
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = source;
+            pre.append(code);
+            element.replaceChildren(pre);
+            return;
+          }
           const runtime = this.registry.byFence(fence);
           if (runtime !== undefined) {
             renderSyntaxCode(source, element, runtime);
@@ -96,6 +123,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
   }
 
   private registerConfiguredExtensions(): void {
+    if (!this.pluginSettings.sourceEditor) return;
     for (const runtime of this.registry.enabled()) {
       for (const rawExtension of runtime.descriptor.extensions) {
         const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");

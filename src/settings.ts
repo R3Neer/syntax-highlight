@@ -37,11 +37,23 @@ export interface LanguageProfileSettings {
   palette: ThemePalette;
   categoryColors: ThemeOverrides;
   previewSource: string | null;
+  descriptorOrigin: "builtin" | "external" | "imported" | "personal";
+  embeddedLexicalGrammar?: string;
+  embeddedSyntaxGrammar?: string;
+  baseline?: unknown;
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 3;
+  schemaVersion: 4;
+  locale: "auto" | "en" | "es";
   autoReloadGrammar: boolean;
+  markdownReading: boolean;
+  markdownEditor: boolean;
+  sourceEditor: boolean;
+  previewMode: "auto" | "light" | "dark";
+  contrastWarnings: boolean;
+  showTechnicalIds: boolean;
+  lastBackup: string | null;
   customThemes: ThemePreset[];
   languages: LanguageProfileSettings[];
 }
@@ -316,8 +328,6 @@ export function themeFromPreset(id: string): Pick<ThemePreset, "palette" | "over
   return cloneTheme(theme);
 }
 
-const DESCRIPTOR_DIRECTORY = ".obsidian/plugins/mud-syntax-highlighter/languages";
-
 function defaultProfile(
   id: "mud" | "ebnf" | "asdl",
   themePreset: string,
@@ -326,7 +336,7 @@ function defaultProfile(
   return {
     id,
     enabled: true,
-    descriptorPath: `${DESCRIPTOR_DIRECTORY}/${id}.json`,
+    descriptorPath: "",
     lexicalGrammarPath:
       id === "mud" ? "especificacion/gramatica/mud-lexico.ebnf" : "",
     syntaxGrammarPath: id === "mud" ? "especificacion/gramatica/mud.ebnf" : "",
@@ -337,12 +347,21 @@ function defaultProfile(
     palette: theme.palette,
     categoryColors: theme.overrides,
     previewSource: null,
+    descriptorOrigin: "builtin",
   };
 }
 
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 3,
+  schemaVersion: 4,
+  locale: "auto",
   autoReloadGrammar: true,
+  markdownReading: true,
+  markdownEditor: true,
+  sourceEditor: true,
+  previewMode: "auto",
+  contrastWarnings: true,
+  showTechnicalIds: false,
+  lastBackup: null,
   customThemes: [],
   languages: [
     defaultProfile("mud", "catppuccin"),
@@ -556,6 +575,24 @@ function mergeLanguage(
       object.previewSource === null || typeof object.previewSource === "string"
         ? object.previewSource
         : fallback.previewSource,
+    descriptorOrigin:
+      object.descriptorOrigin === "external" ||
+      object.descriptorOrigin === "imported" ||
+      object.descriptorOrigin === "personal" ||
+      object.descriptorOrigin === "builtin"
+        ? object.descriptorOrigin
+        : typeof object.descriptorPath === "string" && object.descriptorPath.trim()
+          ? "external"
+          : fallback.descriptorOrigin,
+    embeddedLexicalGrammar:
+      typeof object.embeddedLexicalGrammar === "string"
+        ? object.embeddedLexicalGrammar
+        : undefined,
+    embeddedSyntaxGrammar:
+      typeof object.embeddedSyntaxGrammar === "string"
+        ? object.embeddedSyntaxGrammar
+        : undefined,
+    baseline: object.baseline,
   };
 }
 
@@ -580,6 +617,7 @@ function genericFallback(id: string): LanguageProfileSettings {
     palette: theme.palette,
     categoryColors: theme.overrides,
     previewSource: null,
+    descriptorOrigin: "personal",
   };
 }
 
@@ -614,11 +652,36 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     languages.push(mergeLanguage(entry, genericFallback(id), customThemes));
   }
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
+    locale:
+      object.locale === "en" || object.locale === "es" || object.locale === "auto"
+        ? object.locale
+        : "auto",
     autoReloadGrammar:
       typeof object.autoReloadGrammar === "boolean"
         ? object.autoReloadGrammar
         : true,
+    markdownReading:
+      typeof object.markdownReading === "boolean" ? object.markdownReading : true,
+    markdownEditor:
+      typeof object.markdownEditor === "boolean" ? object.markdownEditor : true,
+    sourceEditor:
+      typeof object.sourceEditor === "boolean" ? object.sourceEditor : true,
+    previewMode:
+      object.previewMode === "light" ||
+      object.previewMode === "dark" ||
+      object.previewMode === "auto"
+        ? object.previewMode
+        : "auto",
+    contrastWarnings:
+      typeof object.contrastWarnings === "boolean"
+        ? object.contrastWarnings
+        : true,
+    showTechnicalIds:
+      typeof object.showTechnicalIds === "boolean"
+        ? object.showTechnicalIds
+        : false,
+    lastBackup: typeof object.lastBackup === "string" ? object.lastBackup : null,
     customThemes,
     languages,
   };

@@ -37,6 +37,16 @@ export interface LanguageRuntime {
 
 export type SourceLoader = (path: string) => Promise<string>;
 type Listener = () => void;
+export interface ValidationIssue {
+  severity: "error" | "warning" | "info";
+  profileId?: string;
+  message: string;
+}
+export interface ValidationReport {
+  valid: boolean;
+  checkedAt: number;
+  issues: ValidationIssue[];
+}
 
 interface InternalRuntime extends LanguageRuntime {
   highlightConfig?: MudHighlightConfig;
@@ -131,8 +141,8 @@ export class LanguageRegistry {
       let highlightConfig = runtime.highlightConfig;
       if (descriptor.engine === "mud" || descriptor.engine === "grammar") {
         const [lexical, syntax] = await Promise.all([
-          this.loadRequired(runtime.settings.lexicalGrammarPath, "gramática léxica"),
-          this.loadRequired(runtime.settings.syntaxGrammarPath, "gramática sintáctica"),
+          this.loadGrammar(runtime.settings, "lexical"),
+          this.loadGrammar(runtime.settings, "syntax"),
         ]);
         highlightConfig =
           descriptor.engine === "mud"
@@ -206,6 +216,72 @@ export class LanguageRegistry {
     return () => this.listeners.delete(listener);
   }
 
+  async validateAll(): Promise<ValidationReport> {
+    const issues: ValidationIssue[] = [];
+    for (const runtime of this.runtimes.values()) {
+      try {
+        const descriptor = await this.loadDescriptor(runtime.settings);
+        if (descriptor.id !== runtime.settings.id) {
+          throw new Error(`Descriptor id ${descriptor.id} does not match the profile.`);
+        }
+        if (descriptor.engine === "mud" || descriptor.engine === "grammar") {
+          const [lexical, syntax] = await Promise.all([
+            this.loadGrammar(runtime.settings, "lexical"),
+            this.loadGrammar(runtime.settings, "syntax"),
+          ]);
+          if (descriptor.engine === "mud") {
+            compileMudHighlightConfig(lexical, syntax, descriptor);
+          } else {
+            compileGrammarHighlightConfig(
+              lexical,
+              syntax,
+              descriptor,
+              runtime.settings.lexicalStart,
+              runtime.settings.syntaxStart,
+            );
+          }
+        }
+        issues.push({
+          severity: "info",
+          profileId: runtime.settings.id,
+          message: `${descriptor.categories.length} categories validated.`,
+        });
+      } catch (error) {
+        issues.push({
+          severity: runtime.settings.enabled ? "error" : "warning",
+          profileId: runtime.settings.id,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    for (const field of ["fences", "extensions"] as const) {
+      const owners = new Map<string, LanguageRuntime[]>();
+      for (const runtime of this.runtimes.values()) {
+        for (const value of runtime.descriptor[field]) {
+          const key = value.toLocaleLowerCase();
+          const entries = owners.get(key) ?? [];
+          entries.push(runtime);
+          owners.set(key, entries);
+        }
+      }
+      for (const [value, entries] of owners) {
+        if (entries.length < 2) continue;
+        const active = entries.filter(({ settings }) => settings.enabled);
+        issues.push({
+          severity: active.length > 1 ? "error" : "warning",
+          message: `${field} "${value}" is shared by ${entries
+            .map(({ settings }) => settings.id)
+            .join(", ")}.`,
+        });
+      }
+    }
+    return {
+      valid: !issues.some(({ severity }) => severity === "error"),
+      checkedAt: Date.now(),
+      issues,
+    };
+  }
+
   private async loadDescriptor(
     profile: LanguageProfileSettings,
   ): Promise<LanguageDescriptor> {
@@ -233,6 +309,23 @@ export class LanguageRegistry {
   private async loadRequired(path: string, label: string): Promise<string> {
     if (!path) throw new Error(`Falta la ruta de la ${label}.`);
     return this.loadSource(path);
+  }
+
+  private loadGrammar(
+    profile: LanguageProfileSettings,
+    kind: "lexical" | "syntax",
+  ): Promise<string> {
+    const embedded =
+      kind === "lexical"
+        ? profile.embeddedLexicalGrammar
+        : profile.embeddedSyntaxGrammar;
+    if (embedded !== undefined) return Promise.resolve(embedded);
+    return this.loadRequired(
+      kind === "lexical"
+        ? profile.lexicalGrammarPath
+        : profile.syntaxGrammarPath,
+      kind === "lexical" ? "gramática léxica" : "gramática sintáctica",
+    );
   }
 
   private tokenize(id: string, source: string): SyntaxToken[] {

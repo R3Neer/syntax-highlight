@@ -105,7 +105,10 @@ export function createMudEditorHighlighter(config: MudHighlightConfig) {
   );
 }
 
-export function createEditorHighlighter(registry: LanguageRegistry) {
+export function createEditorHighlighter(
+  registry: LanguageRegistry,
+  enabled: () => boolean = () => true,
+) {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
@@ -114,7 +117,9 @@ export function createEditorHighlighter(registry: LanguageRegistry) {
 
       constructor(private readonly view: EditorView) {
         this.revision = this.currentRevision();
-        this.decorations = buildSyntaxDecorations(view, registry);
+        this.decorations = enabled()
+          ? buildSyntaxDecorations(view, registry)
+          : Decoration.none;
         this.unsubscribe = registry.subscribe(() => {
           this.view.dispatch({});
         });
@@ -122,7 +127,9 @@ export function createEditorHighlighter(registry: LanguageRegistry) {
 
       update(update: ViewUpdate): void {
         const revision = this.currentRevision();
-        if (update.docChanged || revision !== this.revision) {
+        if (!enabled()) {
+          this.decorations = Decoration.none;
+        } else if (update.docChanged || revision !== this.revision) {
           this.revision = revision;
           this.decorations = buildSyntaxDecorations(update.view, registry);
         }
@@ -133,7 +140,7 @@ export function createEditorHighlighter(registry: LanguageRegistry) {
       }
 
       private currentRevision(): string {
-        return registry
+        return `${enabled()}:` + registry
           .enabled()
           .map(({ settings, revision }) => `${settings.id}:${revision}`)
           .join("|");

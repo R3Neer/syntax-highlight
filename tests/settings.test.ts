@@ -172,6 +172,8 @@ describe("language registry", () => {
   it("loads an external descriptor and applies its aliases without recompiling", async () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
     const profile = settings.languages[1];
+    profile.descriptorPath = "languages/ebnf.json";
+    profile.descriptorOrigin = "external";
     const descriptor = structuredClone(BUILTIN_DESCRIPTORS.ebnf);
     descriptor.fences.push("grammar");
     const registry = new LanguageRegistry(settings, (path) => {
@@ -212,5 +214,23 @@ describe("language registry", () => {
     expect(registry.byExtension(".mud")?.settings.id).toBe("mud");
     expect(registry.byExtension("EBNF")?.settings.id).toBe("ebnf");
     expect(registry.byExtension("asdl")?.settings.id).toBe("asdl");
+  });
+
+  it("reports active collisions as configuration errors", async () => {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    settings.languages[1].embeddedDescriptor = structuredClone(
+      BUILTIN_DESCRIPTORS.ebnf,
+    );
+    settings.languages[1].embeddedDescriptor.fences = ["mud"];
+    settings.languages[1].descriptorOrigin = "personal";
+    const registry = new LanguageRegistry(settings, () => Promise.resolve(""));
+    const report = await registry.validateAll();
+    expect(report.valid).toBe(false);
+    expect(
+      report.issues.some(
+        ({ severity, message }) =>
+          severity === "error" && message.includes('fences "mud"'),
+      ),
+    ).toBe(true);
   });
 });
