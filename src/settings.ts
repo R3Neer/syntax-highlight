@@ -103,14 +103,16 @@ export interface LanguageProfileSettings {
   lexicalStart: string;
   syntaxStart: string;
   themePreset: string;
+  customThemeName: string;
   palette: ThemePalette;
   categories: GrammarCategorySettings;
   previewSource: string;
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 1;
+  schemaVersion: 2;
   autoReloadGrammar: boolean;
+  customThemes: ThemePreset[];
   languages: LanguageProfileSettings[];
 }
 
@@ -133,6 +135,54 @@ function palette(
   dark: Partial<ThemeColors> = light,
 ): ThemePalette {
   return { light: fillColors(light), dark: fillColors(dark) };
+}
+
+interface SemanticColors {
+  text: string;
+  comment: string;
+  keyword: string;
+  type: string;
+  constant: string;
+  declaration: string;
+  function: string;
+  string: string;
+  number: string;
+  operator: string;
+  delimiter: string;
+  punctuation: string;
+  meta: string;
+}
+
+function semanticColors(values: SemanticColors): ThemeColors {
+  return fillColors({
+    comment: values.comment,
+    keyword: values.keyword,
+    builtin: values.type,
+    constant: values.constant,
+    declaration: values.declaration,
+    type: values.type,
+    unit: values.type,
+    function: values.function,
+    string: values.string,
+    char: values.string,
+    number: values.number,
+    operator: values.operator,
+    brace: values.delimiter,
+    parenthesis: values.delimiter,
+    bracket: values.delimiter,
+    punctuation: values.punctuation,
+    definition: values.declaration,
+    reference: values.text,
+    terminal: values.type,
+    meta: values.meta,
+  });
+}
+
+function semanticPalette(
+  light: SemanticColors,
+  dark: SemanticColors,
+): ThemePalette {
+  return { light: semanticColors(light), dark: semanticColors(dark) };
 }
 
 const MUD_CURRENT = palette({
@@ -179,6 +229,7 @@ const EBNF_CURRENT = palette(
   },
 );
 
+// Catppuccin Latte/Mocha: https://github.com/catppuccin/catppuccin
 const CATPPUCCIN = palette(
   {
     comment: "#7c7f93",
@@ -205,6 +256,7 @@ const CATPPUCCIN = palette(
   MUD_CURRENT.dark,
 );
 
+// VS Code Light+/Dark+: extensions/theme-defaults in microsoft/vscode.
 const VSCODE = palette(
   EBNF_CURRENT.light,
   {
@@ -223,11 +275,118 @@ const VSCODE = palette(
   },
 );
 
+// Solarized: https://github.com/altercation/solarized
+const SOLARIZED = semanticPalette(
+  {
+    text: "#657b83",
+    comment: "#93a1a1",
+    keyword: "#859900",
+    type: "#b58900",
+    constant: "#2aa198",
+    declaration: "#268bd2",
+    function: "#268bd2",
+    string: "#2aa198",
+    number: "#d33682",
+    operator: "#859900",
+    delimiter: "#657b83",
+    punctuation: "#657b83",
+    meta: "#cb4b16",
+  },
+  {
+    text: "#839496",
+    comment: "#586e75",
+    keyword: "#859900",
+    type: "#b58900",
+    constant: "#2aa198",
+    declaration: "#268bd2",
+    function: "#268bd2",
+    string: "#2aa198",
+    number: "#d33682",
+    operator: "#859900",
+    delimiter: "#839496",
+    punctuation: "#839496",
+    meta: "#cb4b16",
+  },
+);
+
+// GitHub Default: https://github.com/primer/github-vscode-theme
+const GITHUB = semanticPalette(
+  {
+    text: "#24292f",
+    comment: "#6e7781",
+    keyword: "#cf222e",
+    type: "#8250df",
+    constant: "#0550ae",
+    declaration: "#953800",
+    function: "#8250df",
+    string: "#0a3069",
+    number: "#0550ae",
+    operator: "#cf222e",
+    delimiter: "#24292f",
+    punctuation: "#57606a",
+    meta: "#953800",
+  },
+  {
+    text: "#c9d1d9",
+    comment: "#8b949e",
+    keyword: "#ff7b72",
+    type: "#ffa657",
+    constant: "#79c0ff",
+    declaration: "#d2a8ff",
+    function: "#d2a8ff",
+    string: "#a5d6ff",
+    number: "#79c0ff",
+    operator: "#ff7b72",
+    delimiter: "#c9d1d9",
+    punctuation: "#8b949e",
+    meta: "#ffa657",
+  },
+);
+
+// Gruvbox: https://github.com/morhetz/gruvbox
+const GRUVBOX = semanticPalette(
+  {
+    text: "#3c3836",
+    comment: "#928374",
+    keyword: "#9d0006",
+    type: "#076678",
+    constant: "#8f3f71",
+    declaration: "#b57614",
+    function: "#79740e",
+    string: "#79740e",
+    number: "#8f3f71",
+    operator: "#9d0006",
+    delimiter: "#665c54",
+    punctuation: "#7c6f64",
+    meta: "#af3a03",
+  },
+  {
+    text: "#ebdbb2",
+    comment: "#928374",
+    keyword: "#fb4934",
+    type: "#8ec07c",
+    constant: "#d3869b",
+    declaration: "#fabd2f",
+    function: "#b8bb26",
+    string: "#b8bb26",
+    number: "#d3869b",
+    operator: "#fe8019",
+    delimiter: "#83a598",
+    punctuation: "#a89984",
+    meta: "#fabd2f",
+  },
+);
+
 export const THEME_PRESETS: readonly ThemePreset[] = [
-  { id: "mud-current", name: "MUD actual · Catppuccin", palette: MUD_CURRENT },
-  { id: "ebnf-current", name: "EBNF actual · VS Code", palette: EBNF_CURRENT },
-  { id: "catppuccin", name: "Catppuccin adaptable", palette: CATPPUCCIN },
-  { id: "vscode", name: "Visual Studio Code", palette: VSCODE },
+  { id: "catppuccin", name: "Catppuccin", palette: CATPPUCCIN },
+  {
+    id: "vscode-classic",
+    name: "Visual Studio Code Dark+/Light+",
+    palette: VSCODE,
+  },
+  { id: "solarized", name: "Solarized", palette: SOLARIZED },
+  { id: "github-default", name: "GitHub Default", palette: GITHUB },
+  { id: "gruvbox", name: "Gruvbox", palette: GRUVBOX },
 ];
 
 export const DEFAULT_GRAMMAR_CATEGORIES: GrammarCategorySettings = {
@@ -252,16 +411,35 @@ function clonePalette(value: ThemePalette): ThemePalette {
 }
 
 function preset(id: string): ThemePreset {
-  return THEME_PRESETS.find((entry) => entry.id === id) ?? THEME_PRESETS[0];
+  const migrated =
+    id === "mud-current"
+      ? "catppuccin"
+      : id === "ebnf-current" || id === "vscode"
+        ? "vscode-classic"
+        : id;
+  return (
+    THEME_PRESETS.find((entry) => entry.id === migrated) ?? THEME_PRESETS[0]
+  );
 }
 
 export function paletteFromPreset(id: string): ThemePalette {
   return clonePalette(preset(id).palette);
 }
 
+export function themeById(
+  settings: SyntaxPluginSettings,
+  id: string,
+): ThemePreset | undefined {
+  return (
+    THEME_PRESETS.find((entry) => entry.id === id) ??
+    settings.customThemes.find((entry) => entry.id === id)
+  );
+}
+
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   autoReloadGrammar: true,
+  customThemes: [],
   languages: [
     {
       id: "mud",
@@ -274,8 +452,9 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
       syntaxGrammarPath: "especificacion/gramatica/mud.ebnf",
       lexicalStart: "mud-source",
       syntaxStart: "mud-file",
-      themePreset: "mud-current",
-      palette: clonePalette(MUD_CURRENT),
+      themePreset: "catppuccin",
+      customThemeName: "",
+      palette: clonePalette(CATPPUCCIN),
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
       previewSource: `abstract thing Place {
 }
@@ -295,8 +474,9 @@ thing Alexandria as City, Place {
       syntaxGrammarPath: "",
       lexicalStart: "",
       syntaxStart: "",
-      themePreset: "ebnf-current",
-      palette: clonePalette(EBNF_CURRENT),
+      themePreset: "vscode-classic",
+      customThemeName: "",
+      palette: clonePalette(VSCODE),
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
       previewSource: `expression ::= term , { ( "+" | "-" ) , term } ;
 term ::= NUMBER | "(" , expression , ")" ;`,
@@ -312,7 +492,8 @@ term ::= NUMBER | "(" , expression , ")" ;`,
       syntaxGrammarPath: "",
       lexicalStart: "",
       syntaxStart: "",
-      themePreset: "vscode",
+      themePreset: "vscode-classic",
+      customThemeName: "",
       palette: clonePalette(VSCODE),
       categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
       previewSource: `module Mud {
@@ -355,16 +536,26 @@ function mergePalette(
 function mergeLanguage(
   value: unknown,
   fallback: LanguageProfileSettings,
+  customThemes: readonly ThemePreset[],
 ): LanguageProfileSettings {
   const object =
     typeof value === "object" && value !== null
       ? (value as Partial<LanguageProfileSettings>)
       : {};
-  const selectedPreset =
+  const rawPreset =
     typeof object.themePreset === "string"
       ? object.themePreset
       : fallback.themePreset;
-  const presetPalette = paletteFromPreset(selectedPreset);
+  const selectedPreset =
+    rawPreset === "mud-current"
+      ? "catppuccin"
+      : rawPreset === "ebnf-current" || rawPreset === "vscode"
+        ? "vscode-classic"
+        : rawPreset;
+  const selectedTheme =
+    THEME_PRESETS.find(({ id }) => id === selectedPreset) ??
+    customThemes.find(({ id }) => id === selectedPreset);
+  const presetPalette = selectedTheme?.palette ?? fallback.palette;
   return {
     ...fallback,
     ...object,
@@ -389,6 +580,10 @@ function mergeLanguage(
         )
       : [...fallback.extensions],
     themePreset: selectedPreset,
+    customThemeName:
+      typeof object.customThemeName === "string"
+        ? object.customThemeName
+        : fallback.customThemeName,
     palette: mergePalette(object.palette, presetPalette),
     categories: {
       ...fallback.categories,
@@ -399,11 +594,35 @@ function mergeLanguage(
   };
 }
 
+function loadCustomThemes(value: unknown): ThemePreset[] {
+  if (!Array.isArray(value)) return [];
+  const result: ThemePreset[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const candidate = entry as Partial<ThemePreset>;
+    if (
+      typeof candidate.id !== "string" ||
+      !/^custom-[a-z0-9-]+$/.test(candidate.id) ||
+      typeof candidate.name !== "string" ||
+      !candidate.name.trim()
+    ) {
+      continue;
+    }
+    result.push({
+      id: candidate.id,
+      name: candidate.name.trim(),
+      palette: mergePalette(candidate.palette, CATPPUCCIN),
+    });
+  }
+  return result;
+}
+
 export function loadSettings(value: unknown): SyntaxPluginSettings {
   if (typeof value !== "object" || value === null) {
     return structuredClone(DEFAULT_SETTINGS);
   }
   const object = value as Partial<SyntaxPluginSettings>;
+  const customThemes = loadCustomThemes(object.customThemes);
   const stored = Array.isArray(object.languages) ? object.languages : [];
   const languages = DEFAULT_SETTINGS.languages.map((fallback) => {
     const match = stored.find(
@@ -412,7 +631,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
         entry !== null &&
         (entry as Partial<LanguageProfileSettings>).id === fallback.id,
     );
-    return mergeLanguage(match, fallback);
+    return mergeLanguage(match, fallback, customThemes);
   });
   for (const entry of stored) {
     if (typeof entry !== "object" || entry === null) continue;
@@ -431,17 +650,19 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       fences: [id],
       extensions: [id],
       themePreset: "catppuccin",
+      customThemeName: "",
       palette: paletteFromPreset("catppuccin"),
       previewSource: `start ::= "sample" ;`,
     };
-    languages.push(mergeLanguage(entry, fallback));
+    languages.push(mergeLanguage(entry, fallback, customThemes));
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     autoReloadGrammar:
       typeof object.autoReloadGrammar === "boolean"
         ? object.autoReloadGrammar
         : true,
+    customThemes,
     languages,
   };
 }

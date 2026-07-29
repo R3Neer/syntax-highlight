@@ -36,9 +36,11 @@ guardado automático y `Ctrl+S`.
 ## Temas
 
 Los colores se administran desde los ajustes del plugin, por lenguaje y por modo
-claro u oscuro. Se incluyen plantillas MUD actual, EBNF actual, Catppuccin y
-Visual Studio Code. MUD y EBNF parten de sus colores anteriores. Elegir una
-plantilla copia su paleta y cada color puede personalizarse después.
+claro u oscuro. Se incluyen cinco familias reales: Catppuccin,
+Visual Studio Code Dark+/Light+, Solarized, GitHub Default y Gruvbox.
+Elegir una plantilla copia su paleta. Al cambiar cualquier color, el perfil pasa
+a `Personalizado sin guardar`; puede asignársele un nombre y guardarse como una
+plantilla reutilizable en cualquier lenguaje.
 
 Cada perfil contiene además un fragmento editable y una vista previa coloreada
 que se actualiza al escribir. MUD y EBNF incluyen ejemplos iniciales propios.

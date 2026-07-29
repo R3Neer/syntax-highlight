@@ -1,10 +1,18 @@
-import { PluginSettingTab, Setting } from "obsidian";
+import {
+  type ButtonComponent,
+  type DropdownComponent,
+  Notice,
+  PluginSettingTab,
+  Setting,
+  type TextComponent,
+} from "obsidian";
 
 import type MudSyntaxPlugin from "./main";
 import {
   DEFAULT_GRAMMAR_CATEGORIES,
   paletteFromPreset,
   THEME_PRESETS,
+  themeById,
   tokenKindsFor,
   type LanguageProfileSettings,
 } from "./settings";
@@ -66,6 +74,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
             lexicalStart: "",
             syntaxStart: "",
             themePreset: "catppuccin",
+            customThemeName: "",
             palette: paletteFromPreset("catppuccin"),
             categories: { ...DEFAULT_GRAMMAR_CATEGORIES },
             previewSource: `start ::= "sample" ;`,
@@ -208,16 +217,73 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    let dropdownControl: DropdownComponent | undefined;
+    let nameControl: TextComponent | undefined;
+    let saveButton: ButtonComponent | undefined;
     new Setting(card).setName("Plantilla de tema").addDropdown((dropdown) => {
+      dropdownControl = dropdown;
       for (const theme of THEME_PRESETS) dropdown.addOption(theme.id, theme.name);
-      dropdown.addOption("custom", "Personalizado");
+      for (const theme of this.plugin.pluginSettings.customThemes) {
+        dropdown.addOption(theme.id, `${theme.name} · guardado`);
+      }
+      dropdown.addOption("custom", "Personalizado sin guardar");
       dropdown.setValue(language.themePreset).onChange(async (value) => {
         language.themePreset = value;
-        if (value !== "custom") language.palette = paletteFromPreset(value);
+        const selected = themeById(this.plugin.pluginSettings, value);
+        if (selected !== undefined) {
+          language.palette = structuredClone(selected.palette);
+          language.customThemeName = value.startsWith("custom-")
+            ? selected.name
+            : "";
+        }
         await this.plugin.commitSettings(false);
         this.display();
       });
     });
+
+    new Setting(card)
+      .setName("Guardar tema personalizado")
+      .setDesc("Al modificar un color, la selección pasa a ser un tema personalizado sin guardar.")
+      .addText((text) => {
+        nameControl = text;
+        text
+          .setPlaceholder("Nombre del tema")
+          .setValue(language.customThemeName)
+          .onChange((value) => {
+            language.customThemeName = value;
+          });
+      })
+      .addButton((button) => {
+        saveButton = button;
+        button
+          .setButtonText("Guardar tema")
+          .setDisabled(language.themePreset !== "custom")
+          .onClick(async () => {
+          const name = language.customThemeName.trim();
+          if (!name) {
+            new Notice("Escribe un nombre para guardar el tema.");
+            return;
+          }
+          const existing = this.plugin.pluginSettings.customThemes.find(
+            (theme) => theme.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+          );
+          if (existing === undefined) {
+            const id = this.uniqueThemeId(name);
+            this.plugin.pluginSettings.customThemes.push({
+              id,
+              name,
+              palette: structuredClone(language.palette),
+            });
+            language.themePreset = id;
+          } else {
+            existing.name = name;
+            existing.palette = structuredClone(language.palette);
+            language.themePreset = existing.id;
+          }
+          await this.plugin.commitSettings(false);
+          this.display();
+          });
+      });
 
     const colors = card.createEl("details", { cls: "mud-syntax-colors" });
     colors.createEl("summary", { text: "Personalizar colores" });
@@ -229,8 +295,20 @@ export class SyntaxSettingTab extends PluginSettingTab {
         new Setting(row).setName(mode === "light" ? "Claro" : "Oscuro")
           .addColorPicker((picker) =>
             picker.setValue(language.palette[mode][kind]).onChange(async (value) => {
+              const selected = themeById(
+                this.plugin.pluginSettings,
+                language.themePreset,
+              );
+              if (language.themePreset !== "custom") {
+                language.customThemeName = selected === undefined
+                  ? ""
+                  : `${selected.name} personalizado`;
+                nameControl?.setValue(language.customThemeName);
+              }
               language.palette[mode][kind] = value;
               language.themePreset = "custom";
+              dropdownControl?.setValue("custom");
+              saveButton?.setDisabled(false);
               await this.plugin.commitSettings(false);
             }),
           );
@@ -276,5 +354,24 @@ export class SyntaxSettingTab extends PluginSettingTab {
       index += 1;
     }
     return `language-${index}`;
+  }
+
+  private uniqueThemeId(name: string): string {
+    const stem =
+      name
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "theme";
+    let id = `custom-${stem}`;
+    let suffix = 2;
+    while (
+      this.plugin.pluginSettings.customThemes.some((theme) => theme.id === id)
+    ) {
+      id = `custom-${stem}-${suffix}`;
+      suffix += 1;
+    }
+    return id;
   }
 }

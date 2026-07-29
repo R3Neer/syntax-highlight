@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { LanguageRegistry } from "../src/languages";
 import {
   DEFAULT_SETTINGS,
+  THEME_PRESETS,
   loadSettings,
   paletteFromPreset,
+  themeById,
 } from "../src/settings";
 import { buildThemeCss } from "../src/themes";
 
@@ -26,7 +28,7 @@ describe("settings and themes", () => {
 
   it("copies presets and emits separate light and dark rules", () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
-    settings.languages[0].palette = paletteFromPreset("vscode");
+    settings.languages[0].palette = paletteFromPreset("vscode-classic");
     const css = buildThemeCss(settings);
 
     expect(css).toContain(
@@ -35,6 +37,43 @@ describe("settings and themes", () => {
     expect(css).toContain(
       ".theme-dark .syntax-color-ebnf-definition{color:#569cd6!important}",
     );
+  });
+
+  it("offers only distinct named theme families", () => {
+    expect(THEME_PRESETS.map(({ name }) => name)).toEqual([
+      "Catppuccin",
+      "Visual Studio Code Dark+/Light+",
+      "Solarized",
+      "GitHub Default",
+      "Gruvbox",
+    ]);
+    expect(new Set(THEME_PRESETS.map(({ id }) => id)).size).toBe(5);
+  });
+
+  it("migrates former duplicate presets without losing stored colors", () => {
+    const stored = structuredClone(DEFAULT_SETTINGS);
+    stored.languages[0].themePreset = "mud-current";
+    stored.languages[0].palette.dark.keyword = "#123456";
+    const loaded = loadSettings(stored);
+
+    expect(loaded.languages[0].themePreset).toBe("catppuccin");
+    expect(loaded.languages[0].palette.dark.keyword).toBe("#123456");
+  });
+
+  it("loads and resolves named custom themes", () => {
+    const stored = structuredClone(DEFAULT_SETTINGS);
+    const custom = {
+      id: "custom-samuel",
+      name: "Samuel",
+      palette: paletteFromPreset("solarized"),
+    };
+    stored.customThemes.push(custom);
+    stored.languages[1].themePreset = custom.id;
+    stored.languages[1].palette = structuredClone(custom.palette);
+    const loaded = loadSettings(stored);
+
+    expect(themeById(loaded, custom.id)?.name).toBe("Samuel");
+    expect(loaded.languages[1].themePreset).toBe("custom-samuel");
   });
 });
 
