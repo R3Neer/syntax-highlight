@@ -1,24 +1,35 @@
 import type { MudHighlightConfig } from "./config";
-import { tokenClass, tokenizeMud } from "./tokenizer";
+import type { LanguageRuntime } from "./languages";
+import {
+  tokenClass,
+  tokenColorClass,
+  tokenizeMud,
+  type SyntaxToken,
+} from "./tokenizer";
 
-export function renderMudCode(
+function renderTokens(
   source: string,
   container: HTMLElement,
-  config?: MudHighlightConfig,
+  languageId: string,
+  languageClass: string,
+  tokens: readonly SyntaxToken[],
 ): void {
   container.replaceChildren();
   const pre = document.createElement("pre");
   const code = document.createElement("code");
-  pre.className = "mud-syntax-block";
-  code.className = "language-mud";
+  pre.className = "syntax-highlight-block";
+  code.className = languageClass;
 
   let cursor = 0;
-  for (const token of tokenizeMud(source, config)) {
+  for (const token of tokens) {
     if (token.from > cursor) {
       code.append(document.createTextNode(source.slice(cursor, token.from)));
     }
     const span = document.createElement("span");
-    span.className = tokenClass(token.kind);
+    span.classList.add(
+      tokenClass(token.kind),
+      tokenColorClass(languageId, token.kind),
+    );
     span.textContent = token.text;
     code.append(span);
     cursor = token.to;
@@ -29,4 +40,32 @@ export function renderMudCode(
 
   pre.append(code);
   container.append(pre);
+}
+
+export function renderSyntaxCode(
+  source: string,
+  container: HTMLElement,
+  runtime: LanguageRuntime,
+): void {
+  renderTokens(
+    source,
+    container,
+    runtime.settings.id,
+    `language-${runtime.settings.fences[0] ?? runtime.settings.id}`,
+    runtime.tokenize(source),
+  );
+}
+
+export function renderMudCode(
+  source: string,
+  container: HTMLElement,
+  config?: MudHighlightConfig,
+): void {
+  renderTokens(
+    source,
+    container,
+    "mud",
+    "language-mud",
+    tokenizeMud(source, config),
+  );
 }

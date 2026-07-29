@@ -17,6 +17,9 @@ const context = await esbuild.context({
   sourcemap: production ? false : "inline",
   treeShaking: true,
   minify: production,
+  loader: {
+    ".ebnf": "text"
+  },
   outfile: "dist/main.js"
 });
 

@@ -1,92 +1,100 @@
-:root {
-  /* Paleta pastel viva inspirada en Catppuccin Mocha. */
-  --mud-color-text: #cdd6f4;
-  --mud-color-comment: #a6adc8;
-  --mud-color-keyword: #f5c2e7;
-  --mud-color-builtin: #89dceb;
-  --mud-color-constant: #fab387;
-  --mud-color-declaration: #f9e2af;
-  --mud-color-type: #89dceb;
-  --mud-color-unit: #94e2d5;
-  --mud-color-string: #a6e3a1;
-  --mud-color-number: #fab387;
-  --mud-color-operator: #f5e0dc;
-  --mud-color-brace: #f38ba8;
-  --mud-color-parenthesis: #f9e2af;
-  --mud-color-bracket: #89b4fa;
-  --mud-color-punctuation: #cba6f7;
-}
-
+.syntax-highlight-block,
 .mud-syntax-block {
   overflow-x: auto;
   tab-size: 4;
-  color: var(--mud-color-text);
 }
 
-.mud-token-comment {
-  color: var(--mud-color-comment);
+.syntax-token-comment {
   font-style: italic;
 }
 
-.mud-token-keyword {
-  color: var(--mud-color-keyword);
+.syntax-token-keyword,
+.syntax-token-declaration,
+.syntax-token-unit,
+.syntax-token-definition {
   font-weight: 600;
 }
 
-.mud-token-builtin {
-  color: var(--mud-color-builtin);
+.mud-syntax-settings > .setting-item-description {
+  margin-bottom: 1.5rem;
 }
 
-.mud-token-constant {
-  color: var(--mud-color-constant);
+.mud-syntax-language-card {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
 }
 
-.mud-token-declaration {
-  color: var(--mud-color-declaration);
+.mud-syntax-language-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mud-syntax-language-heading h3 {
+  margin: 0;
+}
+
+.mud-syntax-status {
+  max-width: 55%;
+  padding: 0.2rem 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mud-syntax-status.is-ready {
+  color: var(--text-success);
+}
+
+.mud-syntax-status.is-error {
+  color: var(--text-error);
+}
+
+.mud-syntax-colors {
+  margin-top: 0.75rem;
+}
+
+.mud-syntax-colors summary {
+  padding: 0.5rem 0;
+  cursor: pointer;
+  color: var(--text-muted);
   font-weight: 600;
 }
 
-.mud-token-type {
-  color: var(--mud-color-type);
+.mud-syntax-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.5rem;
+  padding-top: 0.5rem;
 }
 
-.mud-token-unit {
-  color: var(--mud-color-unit);
+.mud-syntax-color-row {
+  padding: 0.5rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.mud-syntax-color-row > span {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-monospace);
   font-weight: 600;
 }
 
-.mud-token-function {
-  color: var(--mud-color-declaration);
+.mud-syntax-color-row .setting-item {
+  padding: 0.2rem 0;
+  border: 0;
 }
 
-.mud-token-string,
-.mud-token-char {
-  color: var(--mud-color-string);
-}
-
-.mud-token-number {
-  color: var(--mud-color-number);
-}
-
-.mud-token-operator {
-  color: var(--mud-color-operator);
-}
-
-.mud-token-brace {
-  color: var(--mud-color-brace);
-  font-weight: 600;
-}
-
-.mud-token-parenthesis {
-  color: var(--mud-color-parenthesis);
-  font-weight: 600;
-}
-
-.mud-token-bracket {
-  color: var(--mud-color-bracket);
-  font-weight: 600;
-}
-
-.mud-token-punctuation {
-  color: var(--mud-color-punctuation);
+.mud-syntax-color-row .setting-item-name {
+  font-size: var(--font-ui-smaller);
 }

@@ -1,4 +1,4 @@
-export type MudTokenKind =
+export type SyntaxTokenKind =
   | "comment"
   | "keyword"
   | "builtin"
@@ -14,14 +14,22 @@ export type MudTokenKind =
   | "brace"
   | "parenthesis"
   | "bracket"
-  | "punctuation";
+  | "punctuation"
+  | "definition"
+  | "reference"
+  | "terminal"
+  | "meta";
 
-export interface MudToken {
+export type MudTokenKind = SyntaxTokenKind;
+
+export interface SyntaxToken {
   from: number;
   to: number;
-  kind: MudTokenKind;
+  kind: SyntaxTokenKind;
   text: string;
 }
+
+export type MudToken = SyntaxToken;
 
 import {
   DEFAULT_HIGHLIGHT_CONFIG,
@@ -105,9 +113,10 @@ function scanQuoted(source: string, offset: number, quote: string): number {
 
 function numericMatch(source: string, offset: number): string | undefined {
   const value = source.slice(offset);
-  const match = /^(?:r)?(?:\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?|\.\d(?:[\d_]*\d)?)(?:[eE][+-]?\d(?:[\d_]*\d)?)?/.exec(
-    value,
-  );
+  const match =
+    /^(?:\d(?:[\d_]*\d)?(?::\d(?:[\d_]*\d)?)+|(?:r)?(?:\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?|\.\d(?:[\d_]*\d)?)(?:[eE][+-]?\d(?:[\d_]*\d)?)?)/.exec(
+      value,
+    );
   return match?.[0];
 }
 
@@ -460,8 +469,39 @@ export function tokenizeMud(
   return result;
 }
 
+export function tokenizeGrammar(
+  source: string,
+  config: MudHighlightConfig,
+): SyntaxToken[] {
+  const prepared = preparedConfig(config);
+  const raw = scanRaw(source, prepared);
+  const result: SyntaxToken[] = [];
+  raw.forEach((token, index) => {
+    const kind =
+      token.kind === "word"
+        ? prepared.words.get(token.text) ??
+          (contextualKeyword(raw, index, prepared)
+            ? "keyword"
+            : prepared.declarationHeads.has(raw[index - 1]?.text ?? "")
+              ? "declaration"
+              : raw[index + 1]?.text === "("
+                ? "function"
+                : undefined)
+        : token.kind;
+    if (kind !== undefined) result.push({ ...token, kind });
+  });
+  return result;
+}
+
 export function tokenClass(kind: MudTokenKind): string {
-  return `mud-token-${kind}`;
+  return `syntax-token-${kind}`;
+}
+
+export function tokenColorClass(
+  languageId: string,
+  kind: SyntaxTokenKind,
+): string {
+  return `syntax-color-${languageId}-${kind}`;
 }
 
 export function sourceLineStart(source: string, offset: number): number {

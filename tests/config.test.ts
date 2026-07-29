@@ -1,35 +1,74 @@
 import { describe, expect, it } from "vitest";
 
-import defaultConfigData from "../mud-highlight.json";
-import { parseHighlightConfig } from "../src/config";
+import {
+  DEFAULT_HIGHLIGHT_CONFIG,
+  compileMudHighlightConfig,
+} from "../src/config";
+import { parseEbnf, validateEbnf } from "../src/grammar/ebnf";
 import { tokenizeMud } from "../src/tokenizer";
 
-describe("mud-highlight.json", () => {
-  it("is a valid configuration", () => {
-    expect(parseHighlightConfig(defaultConfigData).schemaVersion).toBe(1);
+describe("compilación EBNF del resaltado MUD", () => {
+  it("deriva palabras, símbolos y contextuales de las gramáticas normativas", () => {
+    expect(DEFAULT_HIGHLIGHT_CONFIG.schemaVersion).toBe(2);
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words.keyword).toContain("thing");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words.operator).toContain("xor");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.words.operator).not.toContain("implies");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols.operator).toContain("!=");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.symbols.operator).not.toContain("!");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.contextualKeywords).toContainEqual({
+      word: "format",
+      next: "=",
+    });
+    expect(DEFAULT_HIGHLIGHT_CONFIG.contextualKeywords).toContainEqual({
+      word: "name",
+      next: "=",
+    });
   });
 
-  it("allows words and symbols to move between categories", () => {
-    const modified = structuredClone(defaultConfigData);
-    modified.words.keyword.push("custom");
-    modified.symbols.brace = ["@", "}"];
-    const config = parseHighlightConfig(modified);
-
-    expect(tokenizeMud("custom @", config).map(({ text, kind }) => [text, kind])).toEqual([
-      ["custom", "keyword"],
-      ["@", "brace"],
+  it("aplica las categorías derivadas al tokenizador", () => {
+    expect(
+      tokenizeMud("format = value\nname = \"Ada\"\nimplies !").map(
+        ({ text, kind }) => [text, kind],
+      ),
+    ).toEqual([
+      ["format", "keyword"],
+      ["=", "operator"],
+      ["name", "keyword"],
+      ["=", "operator"],
+      ['"Ada"', "string"],
     ]);
   });
 
-  it("rejects ambiguous assignments", () => {
-    const modified = structuredClone(defaultConfigData);
-    modified.words.constant.push("thing");
-    expect(() => parseHighlightConfig(modified)).toThrow(/aparece en words/);
+  it("mantiene un literal de punto numérico como una sola unidad visual", () => {
+    expect(tokenizeMud("at 26:00:00")[0]).toMatchObject({
+      text: "26:00:00",
+      kind: "number",
+    });
   });
 
-  it("rejects symbols that the lexical scanner reserves for other tokens", () => {
-    const modified = structuredClone(defaultConfigData);
-    modified.symbols.operator.push("#");
-    expect(() => parseHighlightConfig(modified)).toThrow(/comillas ni #/);
+  it("rechaza gramáticas estructuralmente inválidas", () => {
+    expect(() =>
+      compileMudHighlightConfig(
+        'mud-source ::= missing ;',
+        'mud-file ::= "thing" ;',
+      ),
+    ).toThrow(/Producción indefinida: missing/);
+  });
+});
+
+describe("parser EBNF", () => {
+  it("analiza grupos, opcionales, repeticiones y secuencias especiales", () => {
+    const grammar = parseEbnf(
+      'start ::= "a" , [ item ] , { ( "b" | ? especial ? ) } ;\n' +
+        'item ::= "x" ;',
+    );
+    expect(grammar.order).toEqual(["start", "item"]);
+    expect(validateEbnf(grammar, "start")).toEqual([]);
+  });
+
+  it("informa línea y columna en errores sintácticos", () => {
+    expect(() => parseEbnf('start ::= "a"\nother ::= "b" ;')).toThrow(
+      /Falta una coma.*2:1/,
+    );
   });
 });

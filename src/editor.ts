@@ -7,14 +7,21 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 
-import { findMudCodeBlocks } from "./blocks";
+import { findCodeBlocks, findMudCodeBlocks } from "./blocks";
 import type { MudHighlightConfig } from "./config";
-import { tokenClass, tokenizeMud, type MudToken } from "./tokenizer";
+import type { LanguageRegistry } from "./languages";
+import {
+  tokenClass,
+  tokenColorClass,
+  tokenizeMud,
+  type MudToken,
+} from "./tokenizer";
 
 function addTokenRanges(
   builder: RangeSetBuilder<Decoration>,
   token: MudToken,
   base: number,
+  languageId = "mud",
 ): void {
   let segmentStart = token.from;
   for (let index = token.from; index <= token.to; index += 1) {
@@ -24,7 +31,9 @@ function addTokenRanges(
       builder.add(
         base + segmentStart,
         base + index,
-        Decoration.mark({ class: tokenClass(token.kind) }),
+        Decoration.mark({
+          class: `${tokenClass(token.kind)} ${tokenColorClass(languageId, token.kind)}`,
+        }),
       );
     }
     if (character === "\r" && token.text[index - token.from + 1] === "\n") {
@@ -32,6 +41,30 @@ function addTokenRanges(
     }
     segmentStart = index + 1;
   }
+}
+
+export function buildSyntaxDecorations(
+  view: EditorView,
+  registry: LanguageRegistry,
+): DecorationSet {
+  const source = view.state.doc.toString();
+  const builder = new RangeSetBuilder<Decoration>();
+  const fences = new Set(
+    registry
+      .enabled()
+      .flatMap(({ settings }) =>
+        settings.fences.map((fence) => fence.toLocaleLowerCase()),
+      ),
+  );
+  for (const block of findCodeBlocks(source, fences)) {
+    const runtime = registry.byFence(block.language);
+    if (runtime === undefined) continue;
+    const body = source.slice(block.from, block.to);
+    for (const token of runtime.tokenize(body)) {
+      addTokenRanges(builder, token, block.from, runtime.settings.id);
+    }
+  }
+  return builder.finish();
 }
 
 export function buildMudDecorations(
@@ -64,6 +97,46 @@ export function createMudEditorHighlighter(config: MudHighlightConfig) {
         if (update.docChanged) {
           this.decorations = buildMudDecorations(update.view, config);
         }
+      }
+    },
+    {
+      decorations: (plugin) => plugin.decorations,
+    },
+  );
+}
+
+export function createEditorHighlighter(registry: LanguageRegistry) {
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
+      private readonly unsubscribe: () => void;
+      private revision = "";
+
+      constructor(private readonly view: EditorView) {
+        this.revision = this.currentRevision();
+        this.decorations = buildSyntaxDecorations(view, registry);
+        this.unsubscribe = registry.subscribe(() => {
+          this.view.dispatch({});
+        });
+      }
+
+      update(update: ViewUpdate): void {
+        const revision = this.currentRevision();
+        if (update.docChanged || revision !== this.revision) {
+          this.revision = revision;
+          this.decorations = buildSyntaxDecorations(update.view, registry);
+        }
+      }
+
+      destroy(): void {
+        this.unsubscribe();
+      }
+
+      private currentRevision(): string {
+        return registry
+          .enabled()
+          .map(({ settings, revision }) => `${settings.id}:${revision}`)
+          .join("|");
       }
     },
     {
