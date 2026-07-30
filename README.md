@@ -1,8 +1,30 @@
 # Syntax Highlight
 
-Plugin local de Obsidian para resaltar bloques `mud`, `ebnf`, `asdl` y perfiles
-configurables tanto en lectura como en Source y Live Preview. También abre y
-edita directamente los archivos asociados a cada perfil.
+Plugin local de Obsidian para resaltar y editar bloques `mud`, `ebnf`, `asdl`,
+lenguajes habituales y perfiles configurables tanto en lectura como en Source
+y Live Preview. También abre y edita directamente los archivos asociados.
+
+## Edición inteligente
+
+El editor integrado y los bloques de código Markdown comparten cierres
+automáticos, envoltura de selecciones, borrado de parejas, sangría inteligente,
+continuaciones y comentado mediante `Ctrl+/`. Los ajustes permiten elegir
+espacios o tabulaciones, tamaño de sangría, números de línea, ajuste de línea,
+cierres automáticos y continuación de comentarios.
+
+MUD añade reglas propias:
+
+- `#` inicia un comentario abierto y Enter continúa con `# `.
+- `###` y `"""` crean bloques multilínea cerrados y alineados.
+- Las parejas vacías crean una línea interior indentada.
+- Una colección todavía sin corchetes puede cerrarse desde cualquiera de sus
+  extremos: `1, 2, 3]` se convierte en `[1, 2, 3]`.
+- Un intervalo reconoce el extremo escrito e infiere el otro como cerrado:
+  `1..4)` se convierte en `[1..4)`.
+
+La envoltura retrospectiva solo actúa cuando la estructura MUD es inequívoca;
+en comentarios, cadenas o construcciones ambiguas conserva la escritura
+ordinaria.
 
 ## Descriptores y gramáticas
 
@@ -48,6 +70,16 @@ Los descriptores declaran, además de los fences Markdown, las extensiones que
 abre el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y
 `.asdl`. La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste
 de línea, guardado automático y `Ctrl+S`.
+
+Además de los perfiles configurables, el editor incluye JavaScript, TypeScript,
+JSON, HTML, CSS, Python, Java, C, C++, C#, SQL y YAML. Markdown se reconoce
+dentro de fences, pero los archivos `.md` continúan usando la vista nativa de
+Obsidian.
+
+Los bloques soportados muestran números reiniciados en `1` tanto en lectura
+como en edición. Los números son decorativos y no se copian con el código. Los
+bloques MUD muestran el distintivo monocromo `Mud` en lugar del símbolo
+genérico.
 
 ## Temas
 
