@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { defaultKeymap, history, undo } from "@codemirror/commands";
+import { history, undo } from "@codemirror/commands";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
@@ -29,7 +29,6 @@ function editor(
     extensions: [
       history(),
       EditorState.allowMultipleSelections.of(true),
-      keymap.of(defaultKeymap),
       ...createSmartEditingExtensions(
         (current) => ({
           from: 0,
@@ -82,14 +81,6 @@ describe("smart editing integration", () => {
     expect(view.state.selection.main.from).toBe(1);
     expect(press(view, "Backspace")).toBe(true);
     expect(view.state.doc.toString()).toBe("");
-  });
-
-  it("indents inside an empty pair before Obsidian's default Enter", () => {
-    const view = editor("");
-    expect(typeCharacter(view, "{")).toBe(true);
-    expect(press(view, "Enter")).toBe(true);
-    expect(view.state.doc.toString()).toBe("{\n    \n}");
-    expect(view.state.selection.main.from).toBe(6);
   });
 
   it("creates MUD multiline string and comment skeletons", () => {

@@ -6,7 +6,6 @@ import { indentUnit } from "@codemirror/language";
 import {
   EditorSelection,
   EditorState,
-  Prec,
   type Extension,
   type SelectionRange,
 } from "@codemirror/state";
@@ -964,12 +963,10 @@ export function createSmartEditingExtensions(
       }
       return dispatchProposals(view, proposals);
     }),
-    Prec.highest(
-      keymap.of([
-        { key: "Enter", run: smartEnter(resolver, getSettings) },
-        { key: "Backspace", run: deletePair(resolver) },
-        { key: "Mod-/", run: toggleComment },
-      ]),
-    ),
+    keymap.of([
+      { key: "Enter", run: smartEnter(resolver, getSettings) },
+      { key: "Backspace", run: deletePair(resolver) },
+      { key: "Mod-/", run: toggleComment },
+    ]),
   ];
 }
