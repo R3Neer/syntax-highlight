@@ -58,6 +58,14 @@ function typeCharacter(view: EditorView, character: string): boolean {
     );
 }
 
+function typeText(view: EditorView, text: string): void {
+  for (const character of text) {
+    if (!typeCharacter(view, character)) {
+      view.dispatch(view.state.replaceSelection(character));
+    }
+  }
+}
+
 function press(view: EditorView, key: string): boolean {
   for (const bindings of view.state.facet(keymap)) {
     const binding = bindings.find((candidate) => candidate.key === key);
@@ -127,5 +135,76 @@ describe("smart editing integration", () => {
     expect(view.state.doc.toString()).toBe("[1..4)");
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe("1..4");
+  });
+
+  it("adds the mandatory space before a MUD block brace", () => {
+    const view = editor("expression");
+    expect(typeCharacter(view, "{")).toBe(true);
+    expect(view.state.doc.toString()).toBe("expression {}");
+    expect(view.state.selection.main.from).toBe("expression {".length);
+  });
+
+  it("spaces commas and declaration colons", () => {
+    const argumentsView = editor(
+      "call(a)",
+      EditorSelection.create([EditorSelection.cursor("call(a".length)]),
+    );
+    typeText(argumentsView, ",b");
+    expect(argumentsView.state.doc.toString()).toBe("call(a, b)");
+
+    const declaration = editor("value");
+    typeText(declaration, ":Text");
+    expect(declaration.state.doc.toString()).toBe("value: Text");
+  });
+
+  it("composes and spaces multi-character operators", () => {
+    const assignment = editor("value");
+    typeText(assignment, ":=other");
+    expect(assignment.state.doc.toString()).toBe("value := other");
+
+    const comparison = editor("left");
+    typeText(comparison, "==right");
+    expect(comparison.state.doc.toString()).toBe("left == right");
+
+    const mapping = editor("Key");
+    typeText(mapping, "->Value");
+    expect(mapping.state.doc.toString()).toBe("Key -> Value");
+  });
+
+  it("distinguishes binary signs from prefix signs", () => {
+    const binary = editor("left");
+    typeText(binary, "-right");
+    expect(binary.state.doc.toString()).toBe("left - right");
+
+    const prefix = editor("then ");
+    typeText(prefix, "-value");
+    expect(prefix.state.doc.toString()).toBe("then -value");
+  });
+
+  it("keeps intervals, point forms and unit divisions compact", () => {
+    const interval = editor("1");
+    typeText(interval, "..4");
+    expect(interval.state.doc.toString()).toBe("1..4");
+
+    const point = editor("12");
+    typeText(point, ":30");
+    expect(point.state.doc.toString()).toBe("12:30");
+
+    const quantity = editor("10 m");
+    typeText(quantity, "/s");
+    expect(quantity.state.doc.toString()).toBe("10 m/s");
+  });
+
+  it("does not insert smart spaces in text or comments", () => {
+    const text = editor(
+      '"ab"',
+      EditorSelection.create([EditorSelection.cursor(2)]),
+    );
+    typeText(text, ",");
+    expect(text.state.doc.toString()).toBe('"a,b"');
+
+    const comment = editor("# expression");
+    typeText(comment, "{");
+    expect(comment.state.doc.toString()).toBe("# expression{}");
   });
 });

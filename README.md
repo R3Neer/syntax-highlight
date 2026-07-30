@@ -21,10 +21,18 @@ MUD añade reglas propias:
   extremos: `1, 2, 3]` se convierte en `[1, 2, 3]`.
 - Un intervalo reconoce el extremo escrito e infiere el otro como cerrado:
   `1..4)` se convierte en `[1..4)`.
+- La escritura normaliza el espaciado inequívoco de MUD: `expression{}` pasa a
+  `expression {}`, las comas y los dos puntos de declaración dejan un espacio
+  a la derecha, y asignaciones, comparaciones y operadores lógicos dejan uno a
+  cada lado.
+- Los operadores compuestos pueden escribirse carácter a carácter (`:=`, `->`,
+  `==`, `<=>`, etc.). Los signos `+` y `-` solo se espacian cuando son binarios;
+  los intervalos, las formas de punto y las expresiones de unidad conservan
+  formas compactas como `1..4`, `12:30` y `m/s`.
 
 La envoltura retrospectiva solo actúa cuando la estructura MUD es inequívoca;
 en comentarios, cadenas o construcciones ambiguas conserva la escritura
-ordinaria.
+ordinaria. El espaciado inteligente aplica la misma restricción léxica.
 
 ## Descriptores y gramáticas
 

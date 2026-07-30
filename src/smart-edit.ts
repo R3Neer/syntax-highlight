@@ -44,6 +44,71 @@ const PAIRS: Readonly<Record<string, string>> = {
 
 const CLOSERS = new Set(Object.values(PAIRS));
 
+const MUD_OPERATOR_CHARACTERS = new Set(":=<>!+-*/%&|^.");
+
+const MUD_OPERATORS = new Set([
+  "<=>",
+  ":=",
+  "->",
+  "..",
+  "==",
+  "!=",
+  "<=",
+  ">=",
+  "=>",
+  "+=",
+  "-=",
+  "*=",
+  "/=",
+  "=",
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "<",
+  ">",
+  "&",
+  "|",
+  "^",
+]);
+
+const PREFIX_EXPRESSION_WORDS = new Set([
+  "add",
+  "after",
+  "allowed",
+  "and",
+  "by",
+  "destroy",
+  "eventually",
+  "for",
+  "from",
+  "given",
+  "if",
+  "in",
+  "is",
+  "not",
+  "old",
+  "on",
+  "or",
+  "otherwise",
+  "remove",
+  "then",
+  "through",
+  "to",
+  "when",
+  "with",
+  "xor",
+]);
+
+type MudLexicalMode =
+  | "code"
+  | "line-comment"
+  | "text"
+  | "character"
+  | "multiline-text"
+  | "multiline-comment";
+
 function unit(settings: SyntaxPluginSettings): string {
   return settings.indentStyle === "tabs"
     ? "\t"
@@ -78,6 +143,200 @@ function nextLine(source: string, to: number): { from: number; to: number } | un
   let end = start;
   while (end < source.length && source[end] !== "\n" && source[end] !== "\r") end += 1;
   return { from: start, to: end };
+}
+
+function delimiterOpensMultiline(
+  source: string,
+  position: number,
+  delimiter: string,
+  contextTo: number,
+): boolean {
+  if (!source.startsWith(delimiter, position)) return false;
+  const bounds = lineBounds(source, position);
+  return /^[\t ]*$/.test(
+    source.slice(position + delimiter.length, Math.min(bounds.to, contextTo)),
+  );
+}
+
+function delimiterClosesMultiline(
+  source: string,
+  position: number,
+  delimiter: string,
+  contextFrom: number,
+  contextTo: number,
+): boolean {
+  if (!source.startsWith(delimiter, position)) return false;
+  const bounds = lineBounds(source, position);
+  return (
+    source
+      .slice(Math.max(bounds.from, contextFrom), Math.min(bounds.to, contextTo))
+      .trim() === delimiter
+  );
+}
+
+function isMudCodePosition(
+  source: string,
+  position: number,
+  context: EditingContext,
+): boolean {
+  let mode: MudLexicalMode = "code";
+  let cursor = context.from;
+
+  while (cursor < position && cursor < context.to) {
+    const character = source[cursor] ?? "";
+
+    if (mode === "code") {
+      if (delimiterOpensMultiline(source, cursor, '"""', context.to)) {
+        mode = "multiline-text";
+        cursor += 3;
+        continue;
+      }
+      if (delimiterOpensMultiline(source, cursor, "###", context.to)) {
+        mode = "multiline-comment";
+        cursor += 3;
+        continue;
+      }
+      if (character === "#") {
+        mode = "line-comment";
+        cursor += 1;
+        continue;
+      }
+      if (character === '"') {
+        mode = "text";
+        cursor += 1;
+        continue;
+      }
+      if (character === "'") {
+        mode = "character";
+        cursor += 1;
+        continue;
+      }
+      cursor += 1;
+      continue;
+    }
+
+    if (mode === "line-comment") {
+      if (character === "\n" || character === "\r") {
+        mode = "code";
+      } else if (character === "#") {
+        mode = "code";
+      }
+      cursor += 1;
+      continue;
+    }
+
+    if (mode === "text" || mode === "character") {
+      const delimiter = mode === "text" ? '"' : "'";
+      if (character === "\\") {
+        cursor += 2;
+      } else {
+        if (character === delimiter || character === "\n" || character === "\r") {
+          mode = "code";
+        }
+        cursor += 1;
+      }
+      continue;
+    }
+
+    const delimiter = mode === "multiline-text" ? '"""' : "###";
+    if (
+      delimiterClosesMultiline(
+        source,
+        cursor,
+        delimiter,
+        context.from,
+        context.to,
+      )
+    ) {
+      mode = "code";
+      cursor += delimiter.length;
+    } else {
+      cursor += 1;
+    }
+  }
+
+  return mode === "code";
+}
+
+function previousNonHorizontalSpace(
+  source: string,
+  position: number,
+  lineFrom: number,
+): number {
+  let cursor = position;
+  while (cursor > lineFrom && /[\t ]/.test(source[cursor - 1] ?? "")) cursor -= 1;
+  return cursor - 1;
+}
+
+function nextNonHorizontalSpace(
+  source: string,
+  position: number,
+  lineTo: number,
+): number {
+  let cursor = position;
+  while (cursor < lineTo && /[\t ]/.test(source[cursor] ?? "")) cursor += 1;
+  return cursor;
+}
+
+function horizontalSpaceStart(
+  source: string,
+  position: number,
+  lineFrom: number,
+): number {
+  const previous = previousNonHorizontalSpace(source, position, lineFrom);
+  return previous >= lineFrom ? previous + 1 : position;
+}
+
+function previousWord(source: string, position: number, lineFrom: number): string {
+  let cursor = position;
+  while (cursor > lineFrom && /[A-Za-z0-9]/.test(source[cursor - 1] ?? "")) {
+    cursor -= 1;
+  }
+  return source.slice(cursor, position);
+}
+
+function expectsPrefixExpression(
+  source: string,
+  position: number,
+  lineFrom: number,
+): boolean {
+  const previous = previousNonHorizontalSpace(source, position, lineFrom);
+  if (previous < lineFrom) return true;
+  const character = source[previous] ?? "";
+  if ("([{,:;".includes(character) || MUD_OPERATOR_CHARACTERS.has(character)) {
+    return true;
+  }
+  if (!/[A-Za-z0-9]/.test(character)) return false;
+  return PREFIX_EXPRESSION_WORDS.has(previousWord(source, previous + 1, lineFrom));
+}
+
+function numericTokenBefore(
+  source: string,
+  position: number,
+  lineFrom: number,
+): boolean {
+  let cursor = position;
+  while (cursor > lineFrom && /[A-Za-z0-9_.]/.test(source[cursor - 1] ?? "")) {
+    cursor -= 1;
+  }
+  return /^(?:r)?\d(?:[\d_]*\d)?$/.test(source.slice(cursor, position));
+}
+
+function operatorPrefix(
+  source: string,
+  position: number,
+  lineFrom: number,
+): { from: number; text: string } {
+  const end = previousNonHorizontalSpace(source, position, lineFrom) + 1;
+  let from = end;
+  while (
+    from > lineFrom &&
+    end - from < 3 &&
+    MUD_OPERATOR_CHARACTERS.has(source[from - 1] ?? "")
+  ) {
+    from -= 1;
+  }
+  return { from, text: source.slice(from, end) };
 }
 
 function logicalBounds(
@@ -269,6 +528,143 @@ function blockDelimiterProposal(
   };
 }
 
+function braceSpacingProposal(
+  state: EditorState,
+  range: SelectionRange,
+  context: EditingContext,
+  autoClose: boolean,
+): EditProposal | undefined {
+  const source = state.doc.toString();
+  if (!isMudCodePosition(source, range.from, context)) return undefined;
+  const line = state.doc.lineAt(range.from);
+  const previous = source[range.from - 1] ?? "";
+  if (
+    range.from === line.from ||
+    /\s/.test(previous) ||
+    "([{.".includes(previous)
+  ) {
+    return undefined;
+  }
+  const insert = autoClose ? " {}" : " {";
+  return {
+    from: range.from,
+    to: range.to,
+    insert,
+    selectionFrom: 2,
+    selectionTo: 2,
+  };
+}
+
+function punctuationSpacingProposal(
+  state: EditorState,
+  range: SelectionRange,
+  typed: string,
+  context: EditingContext,
+): EditProposal | undefined {
+  if (typed !== "," && typed !== ":") return undefined;
+  const source = state.doc.toString();
+  if (!isMudCodePosition(source, range.from, context)) return undefined;
+  const line = state.doc.lineAt(range.from);
+  if (
+    typed === ":" &&
+    numericTokenBefore(source, range.from, line.from)
+  ) {
+    return undefined;
+  }
+  const from = horizontalSpaceStart(source, range.from, line.from);
+  let to = nextNonHorizontalSpace(source, range.from, line.to);
+  let insert = `${typed} `;
+  if (typed === ":" && source[to] === "=") {
+    to += 1;
+    to = nextNonHorizontalSpace(source, to, line.to);
+    insert = ":= ";
+  }
+  return {
+    from,
+    to,
+    insert,
+    selectionFrom: insert.length,
+    selectionTo: insert.length,
+  };
+}
+
+function operatorSpacingProposal(
+  state: EditorState,
+  range: SelectionRange,
+  typed: string,
+  context: EditingContext,
+): EditProposal | undefined {
+  if (!MUD_OPERATOR_CHARACTERS.has(typed) || typed === ":") return undefined;
+  const source = state.doc.toString();
+  if (!isMudCodePosition(source, range.from, context)) return undefined;
+  const line = state.doc.lineAt(range.from);
+  const prefix = operatorPrefix(source, range.from, line.from);
+  const compound = `${prefix.text}${typed}`;
+  const combines = prefix.text.length > 0 && MUD_OPERATORS.has(compound);
+  const operator = combines
+    ? compound
+    : MUD_OPERATORS.has(typed)
+      ? typed
+      : undefined;
+  if (operator === undefined) return undefined;
+  if ((operator === "*" || operator === "/") && !combines) return undefined;
+
+  const operatorFrom = combines ? prefix.from : range.from;
+  if (
+    (operator === "+" || operator === "-") &&
+    !combines &&
+    expectsPrefixExpression(source, operatorFrom, line.from)
+  ) {
+    return undefined;
+  }
+
+  const from = horizontalSpaceStart(source, operatorFrom, line.from);
+  const to = nextNonHorizontalSpace(source, range.from, line.to);
+  if (operator === "..") {
+    return {
+      from,
+      to,
+      insert: operator,
+      selectionFrom: operator.length,
+      selectionTo: operator.length,
+    };
+  }
+
+  const previous = previousNonHorizontalSpace(source, operatorFrom, line.from);
+  const previousCharacter = previous >= line.from ? source[previous] ?? "" : "";
+  const leadingSpace =
+    previous >= line.from &&
+    !"([{,:;".includes(previousCharacter) &&
+    !MUD_OPERATOR_CHARACTERS.has(previousCharacter)
+      ? " "
+      : "";
+  const insert = `${leadingSpace}${operator} `;
+  return {
+    from,
+    to,
+    insert,
+    selectionFrom: insert.length,
+    selectionTo: insert.length,
+  };
+}
+
+function smartSpacingProposal(
+  state: EditorState,
+  range: SelectionRange,
+  typed: string,
+  context: EditingContext,
+  autoClose: boolean,
+): EditProposal | undefined {
+  if (context.languageId !== "mud" || !range.empty) return undefined;
+  if (typed === "{") {
+    return braceSpacingProposal(state, range, context, autoClose);
+  }
+  return (
+    punctuationSpacingProposal(state, range, typed, context) ??
+    operatorSpacingProposal(state, range, typed, context)
+  );
+}
+
 function typedProposal(
   state: EditorState,
   range: SelectionRange,
@@ -277,6 +673,7 @@ function typedProposal(
   settings: SyntaxPluginSettings,
 ): EditProposal | undefined {
   if (!range.empty) {
+    if (!settings.autoClose) return undefined;
     const close = PAIRS[typed];
     if (close === undefined) return undefined;
     const selected = state.sliceDoc(range.from, range.to);
@@ -289,24 +686,32 @@ function typedProposal(
     };
   }
 
-  const block = blockDelimiterProposal(
-    state,
-    range.from,
-    typed,
-    context,
-    settings,
-  );
-  if (block !== undefined) return block;
+  if (settings.autoClose) {
+    const block = blockDelimiterProposal(
+      state,
+      range.from,
+      typed,
+      context,
+      settings,
+    );
+    if (block !== undefined) return block;
+  }
 
-  const retrospective = retroactiveWrap(
-    state.doc.toString(),
-    range.from,
-    typed,
-    context,
-  );
-  if (retrospective !== undefined) return retrospective;
+  if (settings.autoClose) {
+    const retrospective = retroactiveWrap(
+      state.doc.toString(),
+      range.from,
+      typed,
+      context,
+    );
+    if (retrospective !== undefined) return retrospective;
+  }
 
-  if (CLOSERS.has(typed) && state.sliceDoc(range.from, range.from + 1) === typed) {
+  if (
+    settings.autoClose &&
+    CLOSERS.has(typed) &&
+    state.sliceDoc(range.from, range.from + 1) === typed
+  ) {
     return {
       from: range.from,
       to: range.from,
@@ -318,7 +723,11 @@ function typedProposal(
 
   const line = state.doc.lineAt(range.from);
   const prefix = state.sliceDoc(line.from, range.from);
-  if (["}", "]", ")"].includes(typed) && /^[\t ]*$/.test(prefix)) {
+  if (
+    settings.autoClose &&
+    ["}", "]", ")"].includes(typed) &&
+    /^[\t ]*$/.test(prefix)
+  ) {
     const indentation = lineIndent(state, range.from);
     const reduced = indentation.endsWith(unit(settings))
       ? indentation.slice(0, -unit(settings).length)
@@ -331,6 +740,16 @@ function typedProposal(
       selectionTo: reduced.length + 1,
     };
   }
+
+  const spacing = smartSpacingProposal(
+    state,
+    range,
+    typed,
+    context,
+    settings.autoClose,
+  );
+  if (spacing !== undefined) return spacing;
+  if (!settings.autoClose) return undefined;
 
   const close = PAIRS[typed];
   if (close === undefined || (typed === "#" && context.languageId === "mud")) {
@@ -528,7 +947,7 @@ export function createSmartEditingExtensions(
         : [];
     }),
     EditorView.inputHandler.of((view, _from, _to, text) => {
-      if (!getSettings().autoClose || text.length !== 1) return false;
+      if (text.length !== 1) return false;
       const proposals: EditProposal[] = [];
       for (const range of view.state.selection.ranges) {
         const context = resolver(view.state, range.from);
