@@ -18,6 +18,29 @@ import { tokenizeEbnf } from "../src/ebnf-tokenizer";
 import { tokenizeMud } from "../src/tokenizer";
 
 describe("settings, descriptors and themes", () => {
+  it("loads and validates smart editor preferences", () => {
+    const loaded = loadSettings({
+      ...structuredClone(DEFAULT_SETTINGS),
+      indentStyle: "tabs",
+      indentSize: 2,
+      lineNumbers: false,
+      lineWrapping: false,
+      autoClose: false,
+      continueLineComments: false,
+    });
+    expect(loaded).toMatchObject({
+      schemaVersion: 5,
+      indentStyle: "tabs",
+      indentSize: 2,
+      lineNumbers: false,
+      lineWrapping: false,
+      autoClose: false,
+      continueLineComments: false,
+    });
+
+    expect(loadSettings({ indentSize: 20 }).indentSize).toBe(4);
+  });
+
   it("preserves the current palettes and examples as language defaults", () => {
     const settings = loadSettings(undefined);
     const mud = settings.languages.find(({ id }) => id === "mud");
@@ -46,6 +69,7 @@ describe("settings, descriptors and themes", () => {
     expect(css).toContain(
       ".theme-dark .syntax-color-ebnf-production-definition{color:#569cd6!important}",
     );
+    expect(css).toContain("--syntax-common-keyword:#f5c2e7");
     expect(css).not.toContain("syntax-color-mud-function");
   });
 

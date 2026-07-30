@@ -44,12 +44,18 @@ export interface LanguageProfileSettings {
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 4;
+  schemaVersion: 5;
   locale: "auto" | "en" | "es";
   autoReloadGrammar: boolean;
   markdownReading: boolean;
   markdownEditor: boolean;
   sourceEditor: boolean;
+  indentStyle: "spaces" | "tabs";
+  indentSize: number;
+  lineNumbers: boolean;
+  lineWrapping: boolean;
+  autoClose: boolean;
+  continueLineComments: boolean;
   previewMode: "auto" | "light" | "dark";
   contrastWarnings: boolean;
   showTechnicalIds: boolean;
@@ -352,12 +358,18 @@ function defaultProfile(
 }
 
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   locale: "auto",
   autoReloadGrammar: true,
   markdownReading: true,
   markdownEditor: true,
   sourceEditor: true,
+  indentStyle: "spaces",
+  indentSize: 4,
+  lineNumbers: true,
+  lineWrapping: true,
+  autoClose: true,
+  continueLineComments: true,
   previewMode: "auto",
   contrastWarnings: true,
   showTechnicalIds: false,
@@ -652,7 +664,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     languages.push(mergeLanguage(entry, genericFallback(id), customThemes));
   }
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     locale:
       object.locale === "en" || object.locale === "es" || object.locale === "auto"
         ? object.locale
@@ -667,6 +679,24 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       typeof object.markdownEditor === "boolean" ? object.markdownEditor : true,
     sourceEditor:
       typeof object.sourceEditor === "boolean" ? object.sourceEditor : true,
+    indentStyle: object.indentStyle === "tabs" ? "tabs" : "spaces",
+    indentSize:
+      typeof object.indentSize === "number" &&
+      Number.isInteger(object.indentSize) &&
+      object.indentSize >= 1 &&
+      object.indentSize <= 8
+        ? object.indentSize
+        : 4,
+    lineNumbers:
+      typeof object.lineNumbers === "boolean" ? object.lineNumbers : true,
+    lineWrapping:
+      typeof object.lineWrapping === "boolean" ? object.lineWrapping : true,
+    autoClose:
+      typeof object.autoClose === "boolean" ? object.autoClose : true,
+    continueLineComments:
+      typeof object.continueLineComments === "boolean"
+        ? object.continueLineComments
+        : true,
     previewMode:
       object.previewMode === "light" ||
       object.previewMode === "dark" ||

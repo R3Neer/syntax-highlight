@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findMudCodeBlocks } from "../src/blocks";
+import { findCodeBlocks, findMudCodeBlocks } from "../src/blocks";
 
 describe("findMudCodeBlocks", () => {
   it("finds backtick and tilde MUD fences but ignores other languages", () => {
@@ -27,5 +27,14 @@ describe("findMudCodeBlocks", () => {
     const [block] = findMudCodeBlocks(source);
     expect(block).toBeDefined();
     expect(source.slice(block?.from, block?.to)).toBe("thing World {}");
+  });
+});
+
+describe("findCodeBlocks", () => {
+  it("resolves common language aliases without including fence lines", () => {
+    const source = "```csharp\nvar value = 1;\n```\n";
+    const [block] = findCodeBlocks(source, new Set(["cs", "csharp"]));
+    expect(block?.language).toBe("csharp");
+    expect(source.slice(block?.from, block?.to)).toBe("var value = 1;\n");
   });
 });

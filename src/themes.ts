@@ -14,6 +14,29 @@ export function buildThemeCss(
   descriptors: ReadonlyMap<string, LanguageDescriptor> = new Map(),
 ): string {
   const rules: string[] = [];
+  const commonPalette =
+    settings.languages.find(({ id }) => id === "mud")?.palette ??
+    settings.languages[0]?.palette;
+  if (commonPalette !== undefined) {
+    for (const mode of ["light", "dark"] as const) {
+      const palette = commonPalette[mode];
+      rules.push(
+        `.theme-${mode}{` +
+          `--syntax-common-comment:${palette.comment};` +
+          `--syntax-common-keyword:${palette.keyword};` +
+          `--syntax-common-type:${palette.type};` +
+          `--syntax-common-callable:${palette.callable};` +
+          `--syntax-common-declaration:${palette.declaration};` +
+          `--syntax-common-string:${palette.string};` +
+          `--syntax-common-number:${palette.number};` +
+          `--syntax-common-operator:${palette.operator};` +
+          `--syntax-common-delimiter:${palette.delimiter};` +
+          `--syntax-common-punctuation:${palette.punctuation};` +
+          `--syntax-common-meta:${palette.meta}` +
+          `}`,
+      );
+    }
+  }
   for (const language of settings.languages) {
     const descriptor =
       descriptors.get(language.id) ??

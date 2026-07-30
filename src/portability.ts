@@ -103,6 +103,12 @@ export function diagnosticSettings(settings: SyntaxPluginSettings): object {
     markdownReading: settings.markdownReading,
     markdownEditor: settings.markdownEditor,
     sourceEditor: settings.sourceEditor,
+    indentStyle: settings.indentStyle,
+    indentSize: settings.indentSize,
+    lineNumbers: settings.lineNumbers,
+    lineWrapping: settings.lineWrapping,
+    autoClose: settings.autoClose,
+    continueLineComments: settings.continueLineComments,
     previewMode: settings.previewMode,
     contrastWarnings: settings.contrastWarnings,
     profiles: settings.languages.map((profile) => ({

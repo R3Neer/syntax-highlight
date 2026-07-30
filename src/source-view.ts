@@ -4,7 +4,10 @@ import {
   historyKeymap,
   indentWithTab,
 } from "@codemirror/commands";
-import { bracketMatching } from "@codemirror/language";
+import {
+  bracketMatching,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { searchKeymap } from "@codemirror/search";
 import { EditorState } from "@codemirror/state";
 import {
@@ -22,6 +25,12 @@ import {
 import { TextFileView, type WorkspaceLeaf } from "obsidian";
 
 import type { LanguageRegistry } from "./languages";
+import {
+  COMMON_HIGHLIGHT_STYLE,
+  commonLanguageByExtension,
+} from "./common-languages";
+import type { SyntaxPluginSettings } from "./settings";
+import { createSmartEditingExtensions } from "./smart-edit";
 import { tokenClass, tokenColorClass } from "./tokenizer";
 
 export const SOURCE_VIEW_TYPE = "syntax-highlight-source-view";
@@ -78,6 +87,7 @@ export class SyntaxSourceView extends TextFileView {
   constructor(
     leaf: WorkspaceLeaf,
     private readonly registry: LanguageRegistry,
+    private readonly getSettings: () => SyntaxPluginSettings,
   ) {
     super(leaf);
   }
@@ -150,17 +160,44 @@ export class SyntaxSourceView extends TextFileView {
 
   private createEditorState(documentText: string): EditorState {
     const extension = this.file?.extension ?? "";
+    const runtime = this.registry.byExtension(extension);
+    const common = runtime === undefined
+      ? commonLanguageByExtension(extension)
+      : undefined;
+    const settings = this.getSettings();
+    const languageId = runtime?.settings.id ?? common?.id ?? "source";
+    const smartEditing = createSmartEditingExtensions(
+      (state, position) =>
+        position >= 0 && position <= state.doc.length
+          ? {
+              from: 0,
+              to: state.doc.length,
+              languageId,
+              nativeIndentation: common !== undefined,
+            }
+          : undefined,
+      this.getSettings,
+    );
     return EditorState.create({
       doc: documentText,
       extensions: [
-        lineNumbers(),
+        ...(settings.lineNumbers ? [lineNumbers()] : []),
         highlightActiveLineGutter(),
         history(),
         drawSelection(),
         EditorState.allowMultipleSelections.of(true),
         bracketMatching(),
         highlightActiveLine(),
-        createSourceHighlighter(this.registry, extension),
+        ...(runtime === undefined
+          ? []
+          : [createSourceHighlighter(this.registry, extension)]),
+        ...(common === undefined
+          ? []
+          : [
+              common.support(),
+              syntaxHighlighting(COMMON_HIGHLIGHT_STYLE),
+            ]),
+        ...smartEditing,
         keymap.of([
           {
             key: "Mod-s",
@@ -175,7 +212,7 @@ export class SyntaxSourceView extends TextFileView {
           ...historyKeymap,
           ...searchKeymap,
         ]),
-        EditorView.lineWrapping,
+        ...(settings.lineWrapping ? [EditorView.lineWrapping] : []),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged || this.settingData) return;
           this.data = update.state.doc.toString();
@@ -203,6 +240,7 @@ export class SyntaxSourceView extends TextFileView {
   private languageName(): string {
     return (
       this.registry.byExtension(this.file?.extension ?? "")?.descriptor.name ??
+      commonLanguageByExtension(this.file?.extension ?? "")?.name ??
       "Source"
     );
   }

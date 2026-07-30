@@ -97,6 +97,38 @@ export class SyntaxSettingTab extends PluginSettingTab {
     this.behaviorToggle(general, "markdownReading", tr("Highlight Markdown reading view", "Resaltar en lectura Markdown"));
     this.behaviorToggle(general, "markdownEditor", tr("Highlight Markdown editor", "Resaltar en el editor Markdown"));
     this.behaviorToggle(general, "sourceEditor", tr("Open source files in the code editor", "Abrir archivos fuente con el editor de código"));
+    new Setting(general)
+      .setName(tr("Indentation", "Sangría"))
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("spaces", tr("Spaces", "Espacios"))
+          .addOption("tabs", tr("Tabs", "Tabulaciones"))
+          .setValue(this.plugin.pluginSettings.indentStyle)
+          .onChange(async (value) => {
+            this.plugin.pluginSettings.indentStyle =
+              value === "tabs" ? "tabs" : "spaces";
+            await this.plugin.commitSettings(false);
+          }),
+      )
+      .addDropdown((dropdown) => {
+        for (const size of [1, 2, 3, 4, 5, 6, 7, 8]) {
+          dropdown.addOption(String(size), String(size));
+        }
+        return dropdown
+          .setValue(String(this.plugin.pluginSettings.indentSize))
+          .onChange(async (value) => {
+            this.plugin.pluginSettings.indentSize = Number(value);
+            await this.plugin.commitSettings(false);
+          });
+      });
+    this.editorToggle(general, "lineNumbers", tr("Line numbers", "Números de línea"));
+    this.editorToggle(general, "lineWrapping", tr("Wrap long lines", "Ajustar líneas largas"));
+    this.editorToggle(general, "autoClose", tr("Close pairs automatically", "Cerrar parejas automáticamente"));
+    this.editorToggle(
+      general,
+      "continueLineComments",
+      tr("Continue line comments", "Continuar comentarios de línea"),
+    );
 
     const languages = this.section(containerEl, tr("Languages", "Lenguajes"), true);
     for (const language of this.plugin.pluginSettings.languages) {
@@ -711,6 +743,23 @@ export class SyntaxSettingTab extends PluginSettingTab {
             ),
           );
         }
+      }),
+    );
+  }
+
+  private editorToggle(
+    parent: HTMLElement,
+    key:
+      | "lineNumbers"
+      | "lineWrapping"
+      | "autoClose"
+      | "continueLineComments",
+    name: string,
+  ): void {
+    new Setting(parent).setName(name).addToggle((toggle) =>
+      toggle.setValue(this.plugin.pluginSettings[key]).onChange(async (value) => {
+        this.plugin.pluginSettings[key] = value;
+        await this.plugin.commitSettings(false);
       }),
     );
   }

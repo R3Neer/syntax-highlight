@@ -1,8 +1,9 @@
 import { Notice, normalizePath, Plugin } from "obsidian";
 
-import { createEditorHighlighter } from "./editor";
+import { commonLanguages } from "./common-languages";
+import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
-import { renderSyntaxCode } from "./reading";
+import { renderCommonCode, renderSyntaxCode } from "./reading";
 import {
   loadSettings,
   type SyntaxPluginSettings,
@@ -30,12 +31,18 @@ export default class SyntaxHighlightPlugin extends Plugin {
     this.themeManager.apply(this.pluginSettings, this.registry);
     this.registerView(
       SOURCE_VIEW_TYPE,
-      (leaf) => new SyntaxSourceView(leaf, this.registry),
+      (leaf) =>
+        new SyntaxSourceView(leaf, this.registry, () => this.pluginSettings),
     );
     this.registerConfiguredFences();
+    this.registerCommonFences();
     this.registerConfiguredExtensions();
+    this.registerCommonExtensions();
     this.registerEditorExtension(
-      createEditorHighlighter(this.registry, () => this.pluginSettings.markdownEditor),
+      createMarkdownEditorExtensions(
+        this.registry,
+        () => this.pluginSettings,
+      ),
     );
     this.addSettingTab(new SyntaxSettingTab(this));
     this.registerSourceWatchers();
@@ -44,7 +51,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
       this.registry.subscribe(() => {
         this.themeManager?.apply(this.pluginSettings, this.registry);
         this.registerConfiguredFences();
+        this.registerCommonFences();
         this.registerConfiguredExtensions();
+        this.registerCommonExtensions();
       }),
     );
     await this.registry.reloadAll();
@@ -60,7 +69,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
     this.registry.replaceSettings(this.pluginSettings);
     this.themeManager?.apply(this.pluginSettings, this.registry);
     this.registerConfiguredFences();
+    this.registerCommonFences();
     this.registerConfiguredExtensions();
+    this.registerCommonExtensions();
     if (reload) await this.registry.reloadAll();
   }
 
@@ -109,7 +120,12 @@ export default class SyntaxHighlightPlugin extends Plugin {
           }
           const runtime = this.registry.byFence(fence);
           if (runtime !== undefined) {
-            renderSyntaxCode(source, element, runtime);
+            renderSyntaxCode(
+              source,
+              element,
+              runtime,
+              this.pluginSettings.lineNumbers,
+            );
             return;
           }
           const pre = document.createElement("pre");
@@ -122,12 +138,57 @@ export default class SyntaxHighlightPlugin extends Plugin {
     }
   }
 
+  private registerCommonFences(): void {
+    for (const language of commonLanguages()) {
+      for (const rawFence of language.fences) {
+        const fence = rawFence.toLocaleLowerCase();
+        if (this.registeredFences.has(fence)) continue;
+        this.registeredFences.add(fence);
+        this.registerMarkdownCodeBlockProcessor(fence, (source, element) => {
+          if (!this.pluginSettings.markdownReading) {
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = source;
+            pre.append(code);
+            element.replaceChildren(pre);
+            return;
+          }
+          renderCommonCode(
+            source,
+            element,
+            language,
+            this.pluginSettings.lineNumbers,
+          );
+        });
+      }
+    }
+  }
+
   private registerConfiguredExtensions(): void {
     if (!this.pluginSettings.sourceEditor) return;
     for (const runtime of this.registry.enabled()) {
       for (const rawExtension of runtime.descriptor.extensions) {
         const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");
         if (!extension || this.registeredExtensions.has(extension)) continue;
+        this.registerExtensions([extension], SOURCE_VIEW_TYPE);
+        this.registeredExtensions.add(extension);
+      }
+    }
+  }
+
+  private registerCommonExtensions(): void {
+    if (!this.pluginSettings.sourceEditor) return;
+    for (const language of commonLanguages()) {
+      for (const rawExtension of language.extensions) {
+        const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");
+        if (
+          !extension ||
+          extension === "md" ||
+          extension === "markdown" ||
+          this.registeredExtensions.has(extension)
+        ) {
+          continue;
+        }
         this.registerExtensions([extension], SOURCE_VIEW_TYPE);
         this.registeredExtensions.add(extension);
       }

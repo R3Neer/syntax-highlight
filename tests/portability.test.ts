@@ -14,19 +14,23 @@ import {
   THEME_PRESETS,
 } from "../src/settings";
 
-describe("schema v4 and portability", () => {
-  it("migrates v3 settings with portable defaults", () => {
+describe("schema v5 and portability", () => {
+  it("migrates v4 settings with editor defaults", () => {
     const loaded = loadSettings({
-      schemaVersion: 3,
+      schemaVersion: 4,
       autoReloadGrammar: false,
       languages: DEFAULT_SETTINGS.languages,
       customThemes: [],
     });
-    expect(loaded.schemaVersion).toBe(4);
+    expect(loaded.schemaVersion).toBe(5);
     expect(loaded.markdownReading).toBe(true);
     expect(loaded.markdownEditor).toBe(true);
     expect(loaded.sourceEditor).toBe(true);
     expect(loaded.locale).toBe("auto");
+    expect(loaded.indentStyle).toBe("spaces");
+    expect(loaded.indentSize).toBe(4);
+    expect(loaded.lineNumbers).toBe(true);
+    expect(loaded.autoClose).toBe(true);
   });
 
   it("honors explicit locales and English fallback strings", () => {
