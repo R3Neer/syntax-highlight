@@ -16,6 +16,10 @@ describe("reading view rendering", () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]?.getAttribute("data-line-number")).toBe("1");
     expect(lines[1]?.getAttribute("data-line-number")).toBe("2");
+    expect(lines[0]?.querySelector(".syntax-code-line-content")?.textContent)
+      .toBe("thing A {}");
+    expect(lines[1]?.querySelector(".syntax-code-line-content")?.textContent)
+      .toBe("rule Ready { true }");
     expect(badge?.querySelector("text")?.textContent).toBe("Mud");
     expect(code?.textContent).toBe("thing A {}rule Ready { true }");
     expect(code?.textContent).not.toContain("1");

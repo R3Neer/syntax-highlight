@@ -15,12 +15,16 @@
 .syntax-code-line {
   display: block;
   min-height: 1.4em;
-  white-space: pre;
 }
 
 .has-line-numbers .syntax-code-line {
   display: grid;
   grid-template-columns: 3.5em minmax(0, 1fr);
+}
+
+.syntax-code-line-content {
+  min-width: 0;
+  white-space: pre;
 }
 
 .has-line-numbers .syntax-code-line::before {
@@ -38,10 +42,6 @@
   z-index: 2;
   top: 0.45rem;
   right: 0.65rem;
-  padding: 0.1rem 0.4rem;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 0.35rem;
-  background: var(--code-background);
   color: var(--text-muted);
   font-family: var(--font-interface);
   font-size: 0.72rem;
@@ -51,9 +51,8 @@
 }
 
 .syntax-language-badge-mud {
-  width: 2.4rem;
-  height: 1.15rem;
-  padding: 0.05rem 0.25rem;
+  width: 2.25rem;
+  height: 1rem;
 }
 
 .syntax-language-badge-mud svg {
@@ -72,6 +71,10 @@
 
 .has-mud-badge .syntax-code-line:first-child {
   padding-right: 3.5rem;
+}
+
+.syntax-highlight-frame.is-click-editable {
+  cursor: text;
 }
 
 .syntax-editor-line-number {

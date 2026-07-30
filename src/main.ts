@@ -1,4 +1,10 @@
-import { Notice, normalizePath, Plugin } from "obsidian";
+import {
+  MarkdownView,
+  Notice,
+  normalizePath,
+  Plugin,
+  type MarkdownPostProcessorContext,
+} from "obsidian";
 
 import { commonLanguages } from "./common-languages";
 import { createMarkdownEditorExtensions } from "./editor";
@@ -109,31 +115,37 @@ export default class SyntaxHighlightPlugin extends Plugin {
         const fence = rawFence.toLocaleLowerCase();
         if (this.registeredFences.has(fence)) continue;
         this.registeredFences.add(fence);
-        this.registerMarkdownCodeBlockProcessor(fence, (source, element) => {
-          if (!this.pluginSettings.markdownReading) {
+        this.registerMarkdownCodeBlockProcessor(
+          fence,
+          (source, element, context) => {
+            if (!this.pluginSettings.markdownReading) {
+              const pre = document.createElement("pre");
+              const code = document.createElement("code");
+              code.textContent = source;
+              pre.append(code);
+              element.replaceChildren(pre);
+              this.enableReadingBlockEditing(element, context);
+              return;
+            }
+            const runtime = this.registry.byFence(fence);
+            if (runtime !== undefined) {
+              renderSyntaxCode(
+                source,
+                element,
+                runtime,
+                this.pluginSettings.lineNumbers,
+              );
+              this.enableReadingBlockEditing(element, context);
+              return;
+            }
             const pre = document.createElement("pre");
             const code = document.createElement("code");
             code.textContent = source;
             pre.append(code);
             element.replaceChildren(pre);
-            return;
-          }
-          const runtime = this.registry.byFence(fence);
-          if (runtime !== undefined) {
-            renderSyntaxCode(
-              source,
-              element,
-              runtime,
-              this.pluginSettings.lineNumbers,
-            );
-            return;
-          }
-          const pre = document.createElement("pre");
-          const code = document.createElement("code");
-          code.textContent = source;
-          pre.append(code);
-          element.replaceChildren(pre);
-        });
+            this.enableReadingBlockEditing(element, context);
+          },
+        );
       }
     }
   }
@@ -144,24 +156,92 @@ export default class SyntaxHighlightPlugin extends Plugin {
         const fence = rawFence.toLocaleLowerCase();
         if (this.registeredFences.has(fence)) continue;
         this.registeredFences.add(fence);
-        this.registerMarkdownCodeBlockProcessor(fence, (source, element) => {
-          if (!this.pluginSettings.markdownReading) {
-            const pre = document.createElement("pre");
-            const code = document.createElement("code");
-            code.textContent = source;
-            pre.append(code);
-            element.replaceChildren(pre);
-            return;
-          }
-          renderCommonCode(
-            source,
-            element,
-            language,
-            this.pluginSettings.lineNumbers,
-          );
-        });
+        this.registerMarkdownCodeBlockProcessor(
+          fence,
+          (source, element, context) => {
+            if (!this.pluginSettings.markdownReading) {
+              const pre = document.createElement("pre");
+              const code = document.createElement("code");
+              code.textContent = source;
+              pre.append(code);
+              element.replaceChildren(pre);
+              this.enableReadingBlockEditing(element, context);
+              return;
+            }
+            renderCommonCode(
+              source,
+              element,
+              language,
+              this.pluginSettings.lineNumbers,
+            );
+            this.enableReadingBlockEditing(element, context);
+          },
+        );
       }
     }
+  }
+
+  private enableReadingBlockEditing(
+    element: HTMLElement,
+    context: MarkdownPostProcessorContext,
+  ): void {
+    const block =
+      element.querySelector<HTMLElement>(".syntax-highlight-frame") ??
+      element.querySelector<HTMLElement>("pre");
+    if (block === null) return;
+    block.classList.add("is-click-editable");
+    block.title = "Haz clic para editar este bloque";
+    block.addEventListener("click", (event) => {
+      const selection = window.getSelection();
+      if (selection !== null && !selection.isCollapsed) return;
+      const target = event.target;
+      const renderedLine =
+        target instanceof Element
+          ? target.closest<HTMLElement>(".syntax-code-line")
+          : null;
+      const lineNumber = Number(renderedLine?.dataset.lineNumber ?? "1");
+      void this.editReadingBlock(
+        element,
+        context,
+        Number.isFinite(lineNumber) ? lineNumber : 1,
+      );
+    });
+  }
+
+  private async editReadingBlock(
+    element: HTMLElement,
+    context: MarkdownPostProcessorContext,
+    renderedLine: number,
+  ): Promise<void> {
+    const section = context.getSectionInfo(element);
+    const leaf = this.app.workspace
+      .getLeavesOfType("markdown")
+      .find(
+        ({ view }) =>
+          view instanceof MarkdownView &&
+          view.file?.path === context.sourcePath &&
+          view.containerEl.contains(element),
+      );
+    if (leaf === undefined) return;
+
+    const viewState = leaf.getViewState();
+    await leaf.setViewState({
+      ...viewState,
+      state: {
+        ...viewState.state,
+        file: context.sourcePath,
+        mode: "source",
+      },
+    });
+    if (!(leaf.view instanceof MarkdownView)) return;
+    const firstCodeLine = (section?.lineStart ?? 0) + 1;
+    const requestedLine = firstCodeLine + Math.max(0, renderedLine - 1);
+    const line = Math.min(
+      Math.max(0, requestedLine),
+      Math.max(0, leaf.view.editor.lineCount() - 1),
+    );
+    leaf.view.editor.setCursor({ line, ch: 0 });
+    leaf.view.editor.focus();
   }
 
   private registerConfiguredExtensions(): void {

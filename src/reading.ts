@@ -53,6 +53,8 @@ function appendLine(
   const element = document.createElement("span");
   element.className = "syntax-code-line";
   if (showLineNumbers) element.dataset.lineNumber = String(lineNumber);
+  const content = document.createElement("span");
+  content.className = "syntax-code-line-content";
 
   let cursor = line.from;
   for (const range of ranges) {
@@ -60,17 +62,18 @@ function appendLine(
     const from = Math.max(range.from, line.from);
     const to = Math.min(range.to, line.to);
     if (from > cursor) {
-      element.append(document.createTextNode(source.slice(cursor, from)));
+      content.append(document.createTextNode(source.slice(cursor, from)));
     }
     const token = document.createElement("span");
     token.className = range.classes;
     token.textContent = source.slice(from, to);
-    element.append(token);
+    content.append(token);
     cursor = to;
   }
   if (cursor < line.to) {
-    element.append(document.createTextNode(source.slice(cursor, line.to)));
+    content.append(document.createTextNode(source.slice(cursor, line.to)));
   }
+  element.append(content);
   code.append(element);
 }
 
