@@ -145,7 +145,6 @@ type MudLexicalMode =
   | "code"
   | "line-comment"
   | "text"
-  | "character"
   | "multiline-text"
   | "multiline-comment";
 
@@ -246,11 +245,6 @@ function isMudCodePosition(
         cursor += 1;
         continue;
       }
-      if (character === "'") {
-        mode = "character";
-        cursor += 1;
-        continue;
-      }
       cursor += 1;
       continue;
     }
@@ -265,8 +259,8 @@ function isMudCodePosition(
       continue;
     }
 
-    if (mode === "text" || mode === "character") {
-      const delimiter = mode === "text" ? '"' : "'";
+    if (mode === "text") {
+      const delimiter = '"';
       if (character === "\\") {
         cursor += 2;
       } else {
@@ -445,8 +439,8 @@ function scanSpacingTokens(source: string): SpacingToken[] {
       push(close < 0 ? source.length : close + 1, "comment");
       continue;
     }
-    if (character === '"' || character === "'") {
-      const quote = character;
+    if (character === '"') {
+      const quote = '"';
       let end = cursor + 1;
       while (end < source.length) {
         if (source[end] === "\\") end += 2;
@@ -601,8 +595,8 @@ function analyzeCandidate(source: string): CandidateAnalysis {
       invalid = true;
       break;
     }
-    if (character === '"' || character === "'") {
-      const quote = character;
+    if (character === '"') {
+      const quote = '"';
       index += 1;
       while (index < source.length) {
         if (source[index] === "\\") index += 2;
@@ -613,7 +607,7 @@ function analyzeCandidate(source: string): CandidateAnalysis {
       continue;
     }
     const closer = PAIRS[character];
-    if (closer !== undefined && character !== '"' && character !== "'") {
+    if (closer !== undefined && character !== '"') {
       stack.push(closer);
       continue;
     }
@@ -1030,7 +1024,10 @@ function typedProposal(
   if (!settings.autoClose) return undefined;
 
   const close = PAIRS[typed];
-  if (close === undefined || (typed === "#" && context.languageId === "mud")) {
+  if (
+    close === undefined ||
+    (context.languageId === "mud" && (typed === "#" || typed === "'"))
+  ) {
     return undefined;
   }
   if (

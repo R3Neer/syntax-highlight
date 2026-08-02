@@ -25,7 +25,7 @@
     { "id": "invocation-name", "name": "Invocación", "description": "Nombre seguido de paréntesis de llamada.", "group": "names", "role": "callable" },
     { "id": "unit", "name": "Unidad", "description": "Unidad simple o parte de una expresión de unidades.", "group": "literals", "role": "type" },
     { "id": "text", "name": "Texto", "description": "Literal Text de una o varias líneas.", "group": "literals", "role": "string" },
-    { "id": "character", "name": "Carácter", "description": "Literal Char.", "group": "literals", "role": "string" },
+    { "id": "character", "name": "Carácter", "description": "Categoría histórica conservada para temas; Char comparte comillas y resaltado con Text.", "group": "literals", "role": "string" },
     { "id": "exact-number", "name": "Número exacto", "description": "Literal numérico exacto ordinario.", "group": "literals", "role": "number" },
     { "id": "rumber", "name": "Rum", "description": "Literal numérico con prefijo r.", "group": "literals", "role": "number" },
     { "id": "point-literal", "name": "Forma de punto", "description": "Literal con componentes separados por dos puntos.", "group": "literals", "role": "number" },
@@ -48,5 +48,5 @@
     { "slot": "contextual", "grammar": "lexical", "production": "contextual-word", "category": "contextual-word" },
     { "slot": "declaration-name", "grammar": "syntax", "production": "nominal-name", "category": "declared-name" }
   ],
-  "previewSource": "abstract thing Place {\n}\n\nthing Alexandria as City, Place {\n    name: Text = \"Alexandria\"\n    rule CanEnter(actor: Player) { distance(actor, self) <= 10 m }\n}"
+  "previewSource": "abstract thing Place {\n}\n\nthing Alexandria as City, Place {\n    name = \"Alejandría\"\n}\n\naction Inspect for target: Thing {\n}"
 }

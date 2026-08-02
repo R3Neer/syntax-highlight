@@ -77,8 +77,8 @@ describe("MUD retroactive wrapping", () => {
 describe("MUD horizontal spacing", () => {
   it("normalizes declarations, blocks and terminators", () => {
     expect(formatMudHorizontalSpacing("thing  A{")).toBe("thing A {");
-    expect(formatMudHorizontalSpacing('mut  name :Text= "A" ;')).toBe(
-      'mut name: Text = "A";',
+    expect(formatMudHorizontalSpacing('mut  title :Text= "A" ;')).toBe(
+      'mut title: Text = "A";',
     );
     expect(formatMudHorizontalSpacing("{  value  }")).toBe("{ value }");
   });

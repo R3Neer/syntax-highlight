@@ -96,10 +96,10 @@ describe("smart editing integration", () => {
   });
 
   it("normalizes the current MUD instruction when typing a semicolon", () => {
-    const view = editor('    mut  name :Text= "Alexandria" ');
+    const view = editor('    mut  title :Text= "Alexandria" ');
     expect(typeCharacter(view, ";")).toBe(true);
     expect(view.state.doc.toString()).toBe(
-      '    mut name: Text = "Alexandria";',
+      '    mut title: Text = "Alexandria";',
     );
   });
 
@@ -148,6 +148,12 @@ describe("smart editing integration", () => {
     expect(typeCharacter(view, '"')).toBe(true);
     expect(view.state.doc.toString()).toBe('"a" "b"');
     expect(view.state.selection.ranges).toHaveLength(2);
+  });
+
+  it("does not auto-close apostrophes in MUD", () => {
+    const view = editor("");
+    typeText(view, "'");
+    expect(view.state.doc.toString()).toBe("'");
   });
 
   it("undoes retroactive wrapping as one transaction", () => {

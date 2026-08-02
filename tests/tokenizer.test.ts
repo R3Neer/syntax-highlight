@@ -17,6 +17,11 @@ describe("tokenizeMud", () => {
     ]);
   });
 
+  it("recognises Thing as the universal builtin thing type", () => {
+    expect(compact("action Inspect for target: Thing {}"))
+      .toContainEqual(["Thing", "builtin-type"]);
+  });
+
   it("does not treat the replaced numeric names as builtin types", () => {
     expect(
       compact("thing Sample { a: Integer b: Natural c: Number d: Rumber }"),
@@ -205,18 +210,20 @@ describe("tokenizeMud", () => {
     ]);
   });
 
-  it("recognises ordinary and multiline text plus Char", () => {
+  it("uses double quotes for text forms and ignores former Char quotes", () => {
     const source = [
       'name = "Ada',
       "description = \"\"\"",
       "  hello",
       '  """',
-      "letter = 'ñ'",
+      'letter: Char = "ñ"',
+      "formerLetter = 'ñ'",
     ].join("\n");
     const tokens = compact(source);
     expect(tokens).toContainEqual(['"Ada', "text"]);
     expect(tokens.some(([text, categoryId]) => text.startsWith('"""') && categoryId === "text")).toBe(true);
-    expect(tokens).toContainEqual(["'ñ'", "character"]);
+    expect(tokens).toContainEqual(['"ñ"', "text"]);
+    expect(tokens.some(([, categoryId]) => categoryId === "character")).toBe(false);
   });
 
   it("recognises multiline comments as a single token", () => {

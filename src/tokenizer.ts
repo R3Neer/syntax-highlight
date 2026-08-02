@@ -455,7 +455,9 @@ export function tokenizeMud(
         ? "unit"
         : token.categoryId === "word"
         ? classifyWord(source, raw, index, prepared)
-        : token.categoryId;
+        : token.categoryId === "character"
+          ? undefined
+          : token.categoryId;
     if (categoryId !== undefined) {
       result.push({
         from: token.from,
