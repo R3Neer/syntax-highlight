@@ -48,5 +48,5 @@
     { "slot": "contextual", "grammar": "lexical", "production": "contextual-word", "category": "contextual-word" },
     { "slot": "declaration-name", "grammar": "syntax", "production": "nominal-name", "category": "declared-name" }
   ],
-  "previewSource": "abstract thing Place {\n}\n\nthing Alexandria as City, Place {\n    name = \"Alejandría\"\n}\n\naction Inspect for target: Thing {\n}"
+  "previewSource": "abstract thing Place {}\n\nthing Alexandria as City, Place {\n    name = \"Alejandría\"\n}\n\naction Inspect for target: Thing {}"
 }
