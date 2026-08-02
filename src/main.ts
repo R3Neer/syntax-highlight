@@ -7,6 +7,7 @@ import {
 } from "obsidian";
 
 import { commonLanguages } from "./common-languages";
+import { isSafeMarkdownProcessorLanguage } from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
@@ -113,6 +114,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     for (const runtime of this.registry.enabled()) {
       for (const rawFence of runtime.descriptor.fences) {
         const fence = rawFence.toLocaleLowerCase();
+        if (!isSafeMarkdownProcessorLanguage(fence)) continue;
         if (this.registeredFences.has(fence)) continue;
         this.registeredFences.add(fence);
         this.registerMarkdownCodeBlockProcessor(
@@ -154,6 +156,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     for (const language of commonLanguages()) {
       for (const rawFence of language.fences) {
         const fence = rawFence.toLocaleLowerCase();
+        if (!isSafeMarkdownProcessorLanguage(fence)) continue;
         if (this.registeredFences.has(fence)) continue;
         this.registeredFences.add(fence);
         this.registerMarkdownCodeBlockProcessor(

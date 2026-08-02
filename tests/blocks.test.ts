@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { findCodeBlocks, findMudCodeBlocks } from "../src/blocks";
+import {
+  findCodeBlocks,
+  findMudCodeBlocks,
+  isSafeMarkdownProcessorLanguage,
+} from "../src/blocks";
+
+describe("isSafeMarkdownProcessorLanguage", () => {
+  it("rejects aliases that Obsidian cannot embed in a CSS selector", () => {
+    expect(isSafeMarkdownProcessorLanguage("cpp")).toBe(true);
+    expect(isSafeMarkdownProcessorLanguage("c++")).toBe(false);
+  });
+});
 
 describe("findMudCodeBlocks", () => {
   it("finds backtick and tilde MUD fences but ignores other languages", () => {

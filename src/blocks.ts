@@ -4,6 +4,10 @@ export interface MudCodeBlock {
   language: string;
 }
 
+export function isSafeMarkdownProcessorLanguage(language: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(language);
+}
+
 interface SourceLine {
   from: number;
   to: number;
