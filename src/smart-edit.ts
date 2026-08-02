@@ -6,14 +6,12 @@ import { indentUnit } from "@codemirror/language";
 import {
   EditorSelection,
   EditorState,
-  Prec,
   type Extension,
   type SelectionRange,
 } from "@codemirror/state";
 import { EditorView, keymap, type Command } from "@codemirror/view";
 
 import type { SyntaxPluginSettings } from "./settings";
-import { tokenizeMud } from "./tokenizer";
 
 export interface EditingContext {
   from: number;
@@ -101,45 +99,6 @@ const PREFIX_EXPRESSION_WORDS = new Set([
   "with",
   "xor",
 ]);
-
-const PARENTHESIZED_KEYWORDS = new Set([
-  "after",
-  "for",
-  "given",
-  "if",
-  "otherwise",
-  "then",
-  "when",
-  "with",
-]);
-
-const SPACING_SYMBOLS = [
-  ...MUD_OPERATORS,
-  "{",
-  "}",
-  "(",
-  ")",
-  "[",
-  "]",
-  ",",
-  ":",
-  ";",
-  ".",
-].sort((left, right) => right.length - left.length);
-
-type SpacingTokenKind =
-  | "atom"
-  | "comment"
-  | "operator"
-  | "punctuation"
-  | "unknown";
-
-interface SpacingToken {
-  from: number;
-  to: number;
-  text: string;
-  kind: SpacingTokenKind;
-}
 
 type MudLexicalMode =
   | "code"
@@ -409,178 +368,6 @@ function logicalBounds(
   return { from, to };
 }
 
-function spacingNumber(source: string, offset: number): string | undefined {
-  return /^(?:\d(?:[\d_]*\d)?(?::\d(?:[\d_]*\d)?)+|(?:r)?(?:\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?|\.\d(?:[\d_]*\d)?)(?:[eE][+-]?\d(?:[\d_]*\d)?)?)/.exec(
-    source.slice(offset),
-  )?.[0];
-}
-
-function scanSpacingTokens(source: string): SpacingToken[] {
-  const result: SpacingToken[] = [];
-  let cursor = 0;
-  const push = (to: number, kind: SpacingTokenKind): void => {
-    result.push({
-      from: cursor,
-      to,
-      text: source.slice(cursor, to),
-      kind,
-    });
-    cursor = to;
-  };
-
-  while (cursor < source.length) {
-    const character = source[cursor] ?? "";
-    if (/[\t ]/.test(character)) {
-      cursor += 1;
-      continue;
-    }
-    if (source.startsWith('"""', cursor) || source.startsWith("###", cursor)) {
-      const delimiter = source.startsWith('"""', cursor) ? '"""' : "###";
-      const close = source.indexOf(delimiter, cursor + delimiter.length);
-      push(close < 0 ? source.length : close + delimiter.length, delimiter === "###" ? "comment" : "atom");
-      continue;
-    }
-    if (character === "#") {
-      const close = source.indexOf("#", cursor + 1);
-      push(close < 0 ? source.length : close + 1, "comment");
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      const quote = character;
-      let end = cursor + 1;
-      while (end < source.length) {
-        if (source[end] === "\\") end += 2;
-        else if (source[end] === quote) {
-          end += 1;
-          break;
-        } else end += 1;
-      }
-      push(Math.min(end, source.length), "atom");
-      continue;
-    }
-    const number = spacingNumber(source, cursor);
-    if (number !== undefined) {
-      push(cursor + number.length, "atom");
-      continue;
-    }
-    const identifier = /^[A-Za-z][A-Za-z0-9]*/.exec(source.slice(cursor))?.[0];
-    if (identifier !== undefined) {
-      push(cursor + identifier.length, "atom");
-      continue;
-    }
-    const symbol = SPACING_SYMBOLS.find((candidate) =>
-      source.startsWith(candidate, cursor),
-    );
-    if (symbol !== undefined) {
-      push(
-        cursor + symbol.length,
-        MUD_OPERATORS.has(symbol) ? "operator" : "punctuation",
-      );
-      continue;
-    }
-    push(cursor + 1, "unknown");
-  }
-  return result;
-}
-
-function canonicalComment(text: string): string {
-  if (
-    text.startsWith("###") ||
-    text === "#" ||
-    /^#\s/.test(text) ||
-    text.startsWith("##")
-  ) {
-    return text;
-  }
-  return `# ${text.slice(1)}`;
-}
-
-function unaryOperator(tokens: readonly SpacingToken[], index: number): boolean {
-  const token = tokens[index];
-  if (token === undefined || !["+", "-", "!"].includes(token.text)) {
-    return false;
-  }
-  const previous = tokens[index - 1];
-  return (
-    previous === undefined ||
-    previous.kind === "operator" ||
-    ["(", "[", "{", ",", ":", ";"].includes(previous.text) ||
-    PREFIX_EXPRESSION_WORDS.has(previous.text)
-  );
-}
-
-function unitOperators(source: string): Set<number> {
-  return new Set(
-    tokenizeMud(source)
-      .filter(({ categoryId, text }) =>
-        categoryId === "unit" && (text === "*" || text === "/"),
-      )
-      .map(({ from }) => from),
-  );
-}
-
-function canonicalSeparator(
-  source: string,
-  tokens: readonly SpacingToken[],
-  index: number,
-  compactUnits: ReadonlySet<number>,
-): string {
-  const left = tokens[index];
-  const right = tokens[index + 1];
-  if (left === undefined || right === undefined) return "";
-  const original = source.slice(left.to, right.from);
-  if (left.kind === "unknown" || right.kind === "unknown") return original;
-  if (right.kind === "comment") return " ";
-
-  if ([",", ":", ";", ")", "]"].includes(right.text)) return "";
-  if (right.text === "}") return left.text === "{" ? "" : " ";
-  if (["(", "["].includes(left.text)) return "";
-  if (left.text === "{") return right.text === "}" ? "" : " ";
-  if (
-    left.text === ":" &&
-    /^\d[\d_]*$/.test(tokens[index - 1]?.text ?? "") &&
-    /^\d[\d_]*$/.test(right.text)
-  ) {
-    return "";
-  }
-  if ([",", ":", ";"].includes(left.text)) return " ";
-
-  if (left.text === "." || right.text === ".") return "";
-  if (left.text === ".." || right.text === "..") return "";
-
-  if (right.text === "(") {
-    return left.kind === "operator" || PARENTHESIZED_KEYWORDS.has(left.text)
-      ? " "
-      : "";
-  }
-  if (right.text === "[") return left.kind === "operator" ? " " : "";
-  if (right.text === "{") return " ";
-
-  const leftUnit = compactUnits.has(left.from);
-  const rightUnit = compactUnits.has(right.from);
-  if (leftUnit || rightUnit) return "";
-  if (left.kind === "operator") {
-    return unaryOperator(tokens, index) ? "" : " ";
-  }
-  if (right.kind === "operator") return " ";
-  return " ";
-}
-
-export function formatMudHorizontalSpacing(source: string): string {
-  const indentation = /^[\t ]*/.exec(source)?.[0] ?? "";
-  const body = source.slice(indentation.length).trimEnd();
-  if (body === "") return indentation;
-  const tokens = scanSpacingTokens(body);
-  if (tokens.length === 0) return indentation;
-  const compactUnits = unitOperators(body);
-  let result = indentation;
-  tokens.forEach((token, index) => {
-    result += token.kind === "comment" ? canonicalComment(token.text) : token.text;
-    result += canonicalSeparator(body, tokens, index, compactUnits);
-  });
-  return result;
-}
-
 interface CandidateAnalysis {
   commas: number;
   intervals: number;
@@ -800,60 +587,6 @@ function punctuationSpacingProposal(
   };
 }
 
-function terminatorSpacingProposal(
-  state: EditorState,
-  range: SelectionRange,
-  context: EditingContext,
-): EditProposal | undefined {
-  const source = state.doc.toString();
-  if (!isMudCodePosition(source, range.from, context)) return undefined;
-  const line = state.doc.lineAt(range.from);
-  const bounds = logicalBounds(source, range.from, context);
-  const from = Math.max(bounds.from, line.from);
-  const afterSpaces = nextNonHorizontalSpace(source, range.from, line.to);
-  const hasFollowingToken = afterSpaces < line.to;
-  const insert =
-    formatMudHorizontalSpacing(state.sliceDoc(from, range.from) + ";") +
-    (hasFollowingToken ? " " : "");
-  return {
-    from,
-    to: afterSpaces,
-    insert,
-    selectionFrom: insert.length,
-    selectionTo: insert.length,
-  };
-}
-
-function closingSpacingProposal(
-  state: EditorState,
-  range: SelectionRange,
-  typed: string,
-  context: EditingContext,
-  settings: SyntaxPluginSettings,
-): EditProposal | undefined {
-  if (!["}", "]", ")"].includes(typed)) return undefined;
-  const source = state.doc.toString();
-  if (!isMudCodePosition(source, range.from, context)) return undefined;
-  const line = state.doc.lineAt(range.from);
-  const prefix = state.sliceDoc(line.from, range.from);
-  if (/^[\t ]*$/.test(prefix)) return undefined;
-
-  const from = horizontalSpaceStart(source, range.from, line.from);
-  const previous = previousNonHorizontalSpace(source, from, line.from);
-  const previousCharacter = previous >= line.from ? source[previous] ?? "" : "";
-  const leading = typed === "}" && previousCharacter !== "{" ? " " : "";
-  const skipsExisting =
-    settings.autoClose && state.sliceDoc(range.from, range.from + 1) === typed;
-  const insert = leading + (skipsExisting ? "" : typed);
-  return {
-    from,
-    to: range.from,
-    insert,
-    selectionFrom: insert.length + (skipsExisting ? 1 : 0),
-    selectionTo: insert.length + (skipsExisting ? 1 : 0),
-  };
-}
-
 function operatorSpacingProposal(
   state: EditorState,
   range: SelectionRange,
@@ -925,9 +658,6 @@ function smartSpacingProposal(
   if (typed === "{") {
     return braceSpacingProposal(state, range, context, autoClose);
   }
-  if (typed === ";") {
-    return terminatorSpacingProposal(state, range, context);
-  }
   return (
     punctuationSpacingProposal(state, range, typed, context) ??
     operatorSpacingProposal(state, range, typed, context)
@@ -975,15 +705,6 @@ function typedProposal(
     );
     if (retrospective !== undefined) return retrospective;
   }
-
-  const closing = closingSpacingProposal(
-    state,
-    range,
-    typed,
-    context,
-    settings,
-  );
-  if (closing !== undefined) return closing;
 
   if (
     settings.autoClose &&
@@ -1157,35 +878,27 @@ function smartEnter(
         continue;
       }
 
-      const source = view.state.doc.toString();
-      const formattedBefore =
-        context.languageId === "mud" &&
-        isMudCodePosition(source, range.from, context)
-          ? formatMudHorizontalSpacing(before)
-          : before;
       const immediateLeft = view.state.sliceDoc(range.from - 1, range.from);
       const immediateRight = view.state.sliceDoc(range.from, range.from + 1);
       if (PAIRS[immediateLeft] === immediateRight) {
         const inner = indentation + unit(settings);
-        const insert = `${formattedBefore}\n${inner}\n${indentation}`;
+        const insert = `\n${inner}\n${indentation}`;
         proposals.push({
-          from: line.from,
+          from: range.from,
           to: range.from,
           insert,
-          selectionFrom: formattedBefore.length + 1 + inner.length,
-          selectionTo: formattedBefore.length + 1 + inner.length,
+          selectionFrom: 1 + inner.length,
+          selectionTo: 1 + inner.length,
         });
         continue;
       }
 
       const continuation =
-        /(?:[({[]|,|:=|=>|->|\.\.|[=+\-*/%&|^])[\t ]*$/.test(
-          formattedBefore,
-        );
+        /(?:[({[]|,|:=|=>|->|\.\.|[=+\-*/%&|^])[\t ]*$/.test(before);
       const nextIndent = continuation ? indentation + unit(settings) : indentation;
-      const insert = `${formattedBefore}\n${nextIndent}`;
+      const insert = `\n${nextIndent}`;
       proposals.push({
-        from: line.from,
+        from: range.from,
         to: range.from,
         insert,
         selectionFrom: insert.length,
@@ -1250,12 +963,10 @@ export function createSmartEditingExtensions(
       }
       return dispatchProposals(view, proposals);
     }),
-    Prec.highest(
-      keymap.of([
-        { key: "Enter", run: smartEnter(resolver, getSettings) },
-        { key: "Backspace", run: deletePair(resolver) },
-        { key: "Mod-/", run: toggleComment },
-      ]),
-    ),
+    keymap.of([
+      { key: "Enter", run: smartEnter(resolver, getSettings) },
+      { key: "Backspace", run: deletePair(resolver) },
+      { key: "Mod-/", run: toggleComment },
+    ]),
   ];
 }

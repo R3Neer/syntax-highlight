@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatMudHorizontalSpacing,
-  retroactiveWrap,
-  type EditingContext,
-} from "../src/smart-edit";
+import { retroactiveWrap, type EditingContext } from "../src/smart-edit";
 
 function context(source: string): EditingContext {
   return { from: 0, to: source.length, languageId: "mud" };
@@ -71,39 +67,5 @@ describe("MUD retroactive wrapping", () => {
         languageId: "javascript",
       }),
     ).toBeUndefined();
-  });
-});
-
-describe("MUD horizontal spacing", () => {
-  it("normalizes declarations, blocks and terminators", () => {
-    expect(formatMudHorizontalSpacing("thing  A{")).toBe("thing A {");
-    expect(formatMudHorizontalSpacing('mut  name :Text= "A" ;')).toBe(
-      'mut name: Text = "A";',
-    );
-    expect(formatMudHorizontalSpacing("{  value  }")).toBe("{ value }");
-  });
-
-  it("normalizes collections, calls and ordinary operators", () => {
-    expect(formatMudHorizontalSpacing("values=[ 1 ,2,3 ]")).toBe(
-      "values = [1, 2, 3]",
-    );
-    expect(formatMudHorizontalSpacing("call( a,b )")).toBe("call(a, b)");
-    expect(formatMudHorizontalSpacing("a+b* c")).toBe("a + b * c");
-  });
-
-  it("keeps intervals, point literals and units compact", () => {
-    expect(formatMudHorizontalSpacing("range = [ 1 .. 4 )")).toBe(
-      "range = [1..4)",
-    );
-    expect(formatMudHorizontalSpacing("at 12 : 30")).toBe("at 12:30");
-    expect(formatMudHorizontalSpacing("speed = 10 m / s")).toBe(
-      "speed = 10 m/s",
-    );
-  });
-
-  it("does not rewrite string or comment contents", () => {
-    expect(formatMudHorizontalSpacing('name = "a  +  b" #comment  x')).toBe(
-      'name = "a  +  b" # comment  x',
-    );
   });
 });
