@@ -7,6 +7,35 @@ function compact(source: string): Array<[string, string]> {
 }
 
 describe("tokenizeMud", () => {
+  it("recognises the five current numeric type names", () => {
+    expect(compact("Int Nat Num Rum Money")).toEqual([
+      ["Int", "builtin-type"],
+      ["Nat", "builtin-type"],
+      ["Num", "builtin-type"],
+      ["Rum", "builtin-type"],
+      ["Money", "builtin-type"],
+    ]);
+  });
+
+  it("does not treat the replaced numeric names as builtin types", () => {
+    expect(
+      compact("thing Sample { a: Integer b: Natural c: Number d: Rumber }"),
+    ).toEqual([
+      ["thing", "reserved-word"],
+      ["Sample", "declared-name"],
+      ["{", "brace"],
+      [":", "punctuation"],
+      ["Integer", "type-reference"],
+      [":", "punctuation"],
+      ["Natural", "type-reference"],
+      [":", "punctuation"],
+      ["Number", "type-reference"],
+      [":", "punctuation"],
+      ["Rumber", "type-reference"],
+      ["}", "brace"],
+    ]);
+  });
+
   it("leaves fields plain and highlights their types", () => {
     expect(
       compact(
@@ -55,7 +84,7 @@ describe("tokenizeMud", () => {
   it("highlights family members but not their data fields", () => {
     const source = [
       "family Terrain {",
-      "  movementCost: Natural = 1",
+      "  movementCost: Nat = 1",
       "  Plain,",
       "  Forest {",
       "    movementCost = 2",
@@ -68,7 +97,7 @@ describe("tokenizeMud", () => {
       ["Terrain", "declared-name"],
       ["{", "brace"],
       [":", "punctuation"],
-      ["Natural", "builtin-type"],
+      ["Nat", "builtin-type"],
       ["=", "symbolic-operator"],
       ["1", "exact-number"],
       ["Plain", "family-member"],
@@ -86,7 +115,7 @@ describe("tokenizeMud", () => {
 
   it("highlights every magnitude in a derived dimension expression", () => {
     const source = [
-      "magnitude Acceleration: Number :=",
+      "magnitude Acceleration: Num :=",
       "  Length / (Time * Time)",
       "{}",
     ].join("\n");
@@ -94,7 +123,7 @@ describe("tokenizeMud", () => {
       ["magnitude", "reserved-word"],
       ["Acceleration", "declared-name"],
       [":", "punctuation"],
-      ["Number", "builtin-type"],
+      ["Num", "builtin-type"],
       [":=", "symbolic-operator"],
       ["Length", "type-reference"],
       ["/", "symbolic-operator"],

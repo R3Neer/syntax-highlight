@@ -148,7 +148,7 @@ ni crear una segunda instalación, pero el nombre visible es `Syntax Highlight`.
 
 El resaltado de MUD sigue siendo léxico y contextual ligero. Reconoce el
 catálogo normativo vigente, declaraciones, referencias de tipo habituales,
-familias, unidades, literales numéricos, Rumber y formas de punto. No valida
+familias, unidades, literales numéricos, Rum y formas de punto. No valida
 dominios, tipos ni formatos declarados: esos diagnósticos corresponden al futuro
 parser o LSP.
 

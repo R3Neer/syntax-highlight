@@ -33,7 +33,7 @@ const ENGLISH_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   "declared-name": "Declared name", "specialization-reference": "Specialization reference",
   "family-member": "Family member", "type-reference": "Type reference",
   "invocation-name": "Invocation", unit: "Unit", text: "Text",
-  character: "Character", "exact-number": "Exact number", rumber: "Rumber",
+  character: "Character", "exact-number": "Exact number", rumber: "Rum",
   "point-literal": "Point literal", "symbolic-operator": "Symbolic operator",
   brace: "Braces", parenthesis: "Parentheses", bracket: "Brackets",
   punctuation: "Punctuation", "production-definition": "Production definition",

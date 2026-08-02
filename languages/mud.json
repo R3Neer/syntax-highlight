@@ -27,7 +27,7 @@
     { "id": "text", "name": "Texto", "description": "Literal Text de una o varias líneas.", "group": "literals", "role": "string" },
     { "id": "character", "name": "Carácter", "description": "Literal Char.", "group": "literals", "role": "string" },
     { "id": "exact-number", "name": "Número exacto", "description": "Literal numérico exacto ordinario.", "group": "literals", "role": "number" },
-    { "id": "rumber", "name": "Rumber", "description": "Literal numérico con prefijo r.", "group": "literals", "role": "number" },
+    { "id": "rumber", "name": "Rum", "description": "Literal numérico con prefijo r.", "group": "literals", "role": "number" },
     { "id": "point-literal", "name": "Forma de punto", "description": "Literal con componentes separados por dos puntos.", "group": "literals", "role": "number" },
     { "id": "symbolic-operator", "name": "Operador simbólico", "description": "Operador representado mediante símbolos.", "group": "symbols", "role": "operator" },
     { "id": "brace", "name": "Llaves", "description": "Llaves que delimitan cuerpos.", "group": "symbols", "role": "delimiter" },
