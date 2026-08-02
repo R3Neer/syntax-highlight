@@ -25,6 +25,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
   private themeManager?: ThemeManager;
   private readonly registeredFences = new Set<string>();
   private readonly registeredExtensions = new Set<string>();
+  private readonly occupiedExtensions = new Set<string>();
   private readonly descriptorModifiedTimes = new Map<string, number>();
   private reloadTimer?: number;
 
@@ -252,9 +253,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
     for (const runtime of this.registry.enabled()) {
       for (const rawExtension of runtime.descriptor.extensions) {
         const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");
-        if (!extension || this.registeredExtensions.has(extension)) continue;
-        this.registerExtensions([extension], SOURCE_VIEW_TYPE);
-        this.registeredExtensions.add(extension);
+        if (!extension) continue;
+        this.registerSourceExtension(extension);
       }
     }
   }
@@ -268,13 +268,32 @@ export default class SyntaxHighlightPlugin extends Plugin {
           !extension ||
           extension === "md" ||
           extension === "markdown" ||
-          this.registeredExtensions.has(extension)
+          this.registeredExtensions.has(extension) ||
+          this.occupiedExtensions.has(extension)
         ) {
           continue;
         }
-        this.registerExtensions([extension], SOURCE_VIEW_TYPE);
-        this.registeredExtensions.add(extension);
+        this.registerSourceExtension(extension);
       }
+    }
+  }
+
+  private registerSourceExtension(extension: string): void {
+    if (
+      this.registeredExtensions.has(extension) ||
+      this.occupiedExtensions.has(extension)
+    ) {
+      return;
+    }
+    try {
+      this.registerExtensions([extension], SOURCE_VIEW_TYPE);
+      this.registeredExtensions.add(extension);
+    } catch (error) {
+      this.occupiedExtensions.add(extension);
+      console.warn(
+        `[Syntax Highlight] Se omite .${extension}: otra vista ya usa esta extensión.`,
+        error,
+      );
     }
   }
 

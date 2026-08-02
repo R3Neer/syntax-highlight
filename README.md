@@ -21,10 +21,10 @@ MUD añade reglas propias:
   extremos: `1, 2, 3]` se convierte en `[1, 2, 3]`.
 - Un intervalo reconoce el extremo escrito e infiere el otro como cerrado:
   `1..4)` se convierte en `[1..4)`.
-- La escritura normaliza el espaciado inequívoco de MUD: `expression{}` pasa a
-  `expression {}`, las comas y los dos puntos de declaración dejan un espacio
-  a la derecha, y asignaciones, comparaciones y operadores lógicos dejan uno a
-  cada lado.
+- La escritura y el final de una instrucción normalizan el espaciado inequívoco
+  de MUD: Enter convierte `thing  A{` en `thing A {`, `;` formatea la
+  instrucción completa, las comas y los dos puntos de declaración dejan un
+  espacio a la derecha, y los operadores binarios dejan uno a cada lado.
 - Los operadores compuestos pueden escribirse carácter a carácter (`:=`, `->`,
   `==`, `<=>`, etc.). Los signos `+` y `-` solo se espacian cuando son binarios;
   los intervalos, las formas de punto y las expresiones de unidad conservan

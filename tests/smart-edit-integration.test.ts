@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { history, undo } from "@codemirror/commands";
+import { defaultKeymap, history, undo } from "@codemirror/commands";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
@@ -29,6 +29,7 @@ function editor(
     extensions: [
       history(),
       EditorState.allowMultipleSelections.of(true),
+      keymap.of(defaultKeymap),
       ...createSmartEditingExtensions(
         (current) => ({
           from: 0,
@@ -81,6 +82,35 @@ describe("smart editing integration", () => {
     expect(view.state.selection.main.from).toBe(1);
     expect(press(view, "Backspace")).toBe(true);
     expect(view.state.doc.toString()).toBe("");
+  });
+
+  it("formats a block header and splits its empty braces on Enter", () => {
+    const source = "thing  A{}";
+    const view = editor(
+      source,
+      EditorSelection.create([EditorSelection.cursor(source.indexOf("}"))]),
+    );
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("thing A {\n    \n}");
+    expect(view.state.selection.main.from).toBe("thing A {\n    ".length);
+  });
+
+  it("normalizes the current MUD instruction when typing a semicolon", () => {
+    const view = editor('    mut  name :Text= "Alexandria" ');
+    expect(typeCharacter(view, ";")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      '    mut name: Text = "Alexandria";',
+    );
+  });
+
+  it("removes an interior space when skipping an automatic closer", () => {
+    const source = "call(a, )";
+    const view = editor(
+      source,
+      EditorSelection.create([EditorSelection.cursor(source.indexOf(")"))]),
+    );
+    expect(typeCharacter(view, ")")).toBe(true);
+    expect(view.state.doc.toString()).toBe("call(a,)");
   });
 
   it("creates MUD multiline string and comment skeletons", () => {

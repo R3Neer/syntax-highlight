@@ -1,7 +1,7 @@
 {
   "id": "mud-syntax-highlighter",
   "name": "Syntax Highlight",
-  "version": "0.8.1",
+  "version": "0.9.1",
   "minAppVersion": "1.7.2",
   "description": "Syntax highlighting and smart code editing for MUD, common languages and custom profiles.",
   "author": "Samuel",
