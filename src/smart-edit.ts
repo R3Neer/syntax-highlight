@@ -572,7 +572,25 @@ export function formatMudHorizontalSpacing(source: string): string {
     result += token.kind === "comment" ? canonicalComment(token.text) : token.text;
     result += canonicalSeparator(body, tokens, index, compactUnits);
   });
-  return result;
+  return stripRedundantTypeUnionParentheses(result);
+}
+
+function stripRedundantTypeUnionParentheses(source: string): string {
+  const withArmParentheses = source.replace(
+    /(:=|:)\s+\(\(([^()\r\n]+)\)\s*\|\s*\(([^()\r\n]+)\)\)\s*(\[[^\]\r\n]+\])?/g,
+    (_match, introducer: string, left: string, right: string, collection?: string) =>
+      `${introducer} ${left.trim()} | ${right.trim()}${collection === undefined ? "" : ` ${collection}`}`,
+  );
+  const withoutOuterParentheses = withArmParentheses.replace(
+    /(:=|:)\s+\(([^()\r\n]*\|[^()\r\n]*)\)\s*(\[[^\]\r\n]+\])?/g,
+    (_match, introducer: string, union: string, collection?: string) =>
+      `${introducer} ${union.trim()}${collection === undefined ? "" : ` ${collection}`}`,
+  );
+  return withoutOuterParentheses.replace(
+    /((?::=|:)\s+[^=\r\n[]*\|[^=\r\n[]+)\s*(\[[^\]\r\n]+\])/g,
+    (_match, union: string, collection: string) =>
+      `${union.trimEnd()} ${collection}`,
+  );
 }
 
 interface CandidateAnalysis {

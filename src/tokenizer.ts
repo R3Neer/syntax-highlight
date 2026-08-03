@@ -246,6 +246,9 @@ function classifyWord(
   if (previous !== undefined && config.declarationHeads.has(previous.text)) {
     return config.categories["declaration-name"] ?? "declared-name";
   }
+  if (previous?.text === "unit") {
+    return config.categories["declaration-name"] ?? "declared-name";
+  }
   if (isInheritedThing(tokens, index)) return "specialization-reference";
   if (isFamilyMember(source, tokens, index)) return "family-member";
   if (isTypeReference(tokens, index, config)) return "type-reference";
@@ -343,8 +346,15 @@ function isTypeReference(
   config: PreparedHighlightConfig,
 ): boolean {
   const previous = tokens[index - 1]?.text;
-  if (previous === ":" || previous === "to" || previous === "over") return true;
+  if (
+    previous === ":" ||
+    previous === "to" ||
+    previous === "over" ||
+    previous === "is" ||
+    (previous === "not" && tokens[index - 2]?.text === "is")
+  ) return true;
   if (previous === "->") return true;
+  if (previous === "|" && isTypeUnionPosition(tokens, index)) return true;
   if (isMagnitudeDimensionReference(tokens, index, config)) return true;
 
   if (previous !== ":=") return false;
@@ -356,9 +366,32 @@ function isTypeReference(
   );
 }
 
+function isTypeUnionPosition(tokens: RawToken[], index: number): boolean {
+  for (let cursor = index - 2; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === ":") return true;
+    if (text === ":=") {
+      return tokens[cursor - 2]?.text === "alias";
+    }
+    if (text === "=" || text === "{" || text === "}" || text === ";") {
+      return false;
+    }
+  }
+  return false;
+}
+
 function parseUnitFactor(tokens: RawToken[], start: number): number | undefined {
   const token = tokens[start];
-  if (token?.categoryId === "word") return start + 1;
+  if (token?.categoryId === "word") {
+    let cursor = start + 1;
+    while (
+      tokens[cursor]?.text === "." &&
+      tokens[cursor + 1]?.categoryId === "word"
+    ) {
+      cursor += 2;
+    }
+    return cursor;
+  }
   if (token?.text !== "(") return undefined;
   const end = parseUnitExpression(tokens, start + 1);
   if (end === undefined || tokens[end]?.text !== ")") return undefined;
@@ -389,6 +422,7 @@ function markUnitRange(
     const token = tokens[index];
     if (
       token?.categoryId === "word" ||
+      token?.text === "." ||
       token?.text === "*" ||
       token?.text === "/"
     ) {

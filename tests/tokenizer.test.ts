@@ -86,6 +86,29 @@ describe("tokenizeMud", () => {
     ]);
   });
 
+  it("recognises union alternatives and type tests", () => {
+    expect(compact("value: Nat | Text\nvalue is not Nat")).toEqual([
+      [":", "punctuation"],
+      ["Nat", "builtin-type"],
+      ["|", "symbolic-operator"],
+      ["Text", "builtin-type"],
+      ["is", "word-operator"],
+      ["not", "word-operator"],
+      ["Nat", "builtin-type"],
+    ]);
+    expect(compact("alias Result := Left | Right")).toContainEqual([
+      "Right",
+      "type-reference",
+    ]);
+  });
+
+  it("recognises all as a contextual literal", () => {
+    expect(compact("values: Color [*] = all")).toContainEqual([
+      "all",
+      "literal-constant",
+    ]);
+  });
+
   it("highlights family members but not their data fields", () => {
     const source = [
       "family Terrain {",
@@ -162,6 +185,32 @@ describe("tokenizeMud", () => {
       ["30", "exact-number"],
       ["people", "unit"],
     ]);
+  });
+
+  it("separates adjacent numbers and qualified units", () => {
+    expect(compact("3m + 90km/h + r0.1m + 3 Length.meter")).toEqual([
+      ["3", "exact-number"],
+      ["m", "unit"],
+      ["+", "symbolic-operator"],
+      ["90", "exact-number"],
+      ["km", "unit"],
+      ["/", "unit"],
+      ["h", "unit"],
+      ["+", "symbolic-operator"],
+      ["r0.1", "rumber"],
+      ["m", "unit"],
+      ["+", "symbolic-operator"],
+      ["3", "exact-number"],
+      ["Length", "unit"],
+      [".", "unit"],
+      ["meter", "unit"],
+    ]);
+  });
+
+  it("does not split identifiers containing digits or confuse ronto", () => {
+    const tokens = compact("thing R2D2 {}\nronto");
+    expect(tokens).toContainEqual(["R2D2", "declared-name"]);
+    expect(tokens.some(([text, category]) => text === "r" && category === "rumber")).toBe(false);
   });
 
   it("distinguishes compound unit conversion from ordinary arithmetic", () => {

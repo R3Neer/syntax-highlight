@@ -99,6 +99,26 @@ describe("MUD horizontal spacing", () => {
     expect(formatMudHorizontalSpacing("speed = 10 m / s")).toBe(
       "speed = 10 m/s",
     );
+    expect(formatMudHorizontalSpacing("distance=3m")).toBe(
+      "distance = 3 m",
+    );
+    expect(formatMudHorizontalSpacing("speed=90km / h")).toBe(
+      "speed = 90 km/h",
+    );
+    expect(formatMudHorizontalSpacing("error=r0.1m")).toBe(
+      "error = r0.1 m",
+    );
+  });
+
+  it("keeps canonical union types free of inserted parentheses", () => {
+    expect(formatMudHorizontalSpacing("values:Nat in 0..10|Int in -10..-1[1..*]")).toBe(
+      "values: Nat in 0..10 | Int in -10..-1 [1..*]",
+    );
+    expect(
+      formatMudHorizontalSpacing(
+        "values:((Nat in 0..10)|(Int in -10..-1))[1..*]",
+      ),
+    ).toBe("values: Nat in 0..10 | Int in -10..-1 [1..*]");
   });
 
   it("does not rewrite string or comment contents", () => {
