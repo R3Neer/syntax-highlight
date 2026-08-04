@@ -12,6 +12,12 @@ describe("common language catalog", () => {
     expect(commonLanguageByFence("typescript")?.id).toBe("typescript");
     expect(commonLanguageByExtension(".HPP")?.id).toBe("cpp");
     expect(commonLanguageByExtension("py")?.id).toBe("python");
+    expect(commonLanguageByFence("TOML")?.id).toBe("toml");
+    expect(commonLanguageByExtension(".ToMl")?.id).toBe("toml");
+  });
+
+  it("loads TOML language support", () => {
+    expect(() => commonLanguageByExtension("toml")?.support()).not.toThrow();
   });
 
   it("keeps Markdown in the catalog for fences", () => {

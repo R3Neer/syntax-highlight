@@ -8,9 +8,11 @@ import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { yaml } from "@codemirror/lang-yaml";
+import { toml } from "@codemirror/legacy-modes/mode/toml";
 import {
   HighlightStyle,
-  type LanguageSupport,
+  LanguageSupport,
+  StreamLanguage,
 } from "@codemirror/language";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import { tags } from "@lezer/highlight";
@@ -107,6 +109,13 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["yaml", "yml"],
     extensions: ["yaml", "yml"],
     support: yaml,
+  },
+  {
+    id: "toml",
+    name: "TOML",
+    fences: ["toml"],
+    extensions: ["toml"],
+    support: () => new LanguageSupport(StreamLanguage.define(toml)),
   },
   {
     id: "markdown",

@@ -80,7 +80,7 @@ abre el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y
 de línea, guardado automático y `Ctrl+S`.
 
 Además de los perfiles configurables, el editor incluye JavaScript, TypeScript,
-JSON, HTML, CSS, Python, Java, C, C++, C#, SQL y YAML. Markdown se reconoce
+JSON, HTML, CSS, Python, Java, C, C++, C#, SQL, YAML y TOML. Markdown se reconoce
 dentro de fences, pero los archivos `.md` continúan usando la vista nativa de
 Obsidian.
 
