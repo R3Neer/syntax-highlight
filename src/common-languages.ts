@@ -172,7 +172,11 @@ export const COMMON_HIGHLIGHT_STYLE = HighlightStyle.define([
     class: "syntax-common-callable",
   },
   {
-    tag: [tags.definition(tags.variableName), tags.definitionKeyword],
+    tag: [
+      tags.definition(tags.variableName),
+      tags.definitionKeyword,
+      tags.propertyName,
+    ],
     class: "syntax-common-declaration",
   },
   {
@@ -196,4 +200,5 @@ export const COMMON_HIGHLIGHT_STYLE = HighlightStyle.define([
     tag: [tags.meta, tags.processingInstruction, tags.annotation],
     class: "syntax-common-meta",
   },
+  { tag: tags.atom, class: "syntax-common-meta" },
 ]);

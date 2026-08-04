@@ -37,4 +37,22 @@ describe("reading view rendering", () => {
     expect(container.querySelectorAll(".syntax-code-line")).toHaveLength(1);
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
+
+  it("colors TOML keys, atoms, strings, numbers, and comments", () => {
+    const language = commonLanguageByFence("toml");
+    expect(language).toBeDefined();
+    const container = document.createElement("div");
+    renderCommonCode(
+      '[server]\nport = 8080\nenabled = true\nname = "Mud"\n# local',
+      container,
+      language!,
+    );
+
+    expect(container.querySelector("code")?.className).toBe("language-toml");
+    expect(container.querySelector(".syntax-common-declaration")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-meta")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-string")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-number")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-comment")).not.toBeNull();
+  });
 });
