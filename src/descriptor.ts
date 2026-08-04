@@ -2,6 +2,7 @@ import asdlDescriptorSource from "../languages/asdl.json";
 import ebnfDescriptorSource from "../languages/ebnf.json";
 import genericDescriptorSource from "../languages/generic.json";
 import mudDescriptorSource from "../languages/mud.json";
+import tomlDescriptorSource from "../languages/toml.json";
 
 export const VISUAL_ROLES = [
   "text",
@@ -20,7 +21,7 @@ export const VISUAL_ROLES = [
 ] as const;
 
 export type VisualRole = (typeof VISUAL_ROLES)[number];
-export type LanguageEngine = "mud" | "ebnf" | "asdl" | "grammar";
+export type LanguageEngine = "mud" | "ebnf" | "asdl" | "toml" | "grammar";
 export type GrammarMappingSlot =
   | "keyword"
   | "operator-word"
@@ -77,7 +78,7 @@ export interface LanguageDescriptor {
 
 const IDENTIFIER = /^[a-z][a-z0-9-]*$/;
 const FENCE = /^[A-Za-z0-9_-]+$/;
-const ENGINES = new Set<LanguageEngine>(["mud", "ebnf", "asdl", "grammar"]);
+const ENGINES = new Set<LanguageEngine>(["mud", "ebnf", "asdl", "toml", "grammar"]);
 const ROLES = new Set<string>(VISUAL_ROLES);
 const SLOTS = new Set<GrammarMappingSlot>([
   "keyword",
@@ -140,6 +141,19 @@ const ENGINE_REQUIRED_CATEGORIES: Readonly<
     "separator",
     "string",
     "number",
+  ],
+  toml: [
+    "comment",
+    "table-header",
+    "bare-key",
+    "quoted-key",
+    "string",
+    "number",
+    "boolean",
+    "date-time",
+    "assignment",
+    "delimiter",
+    "separator",
   ],
   grammar: ["comment", "string", "character", "number", "invocation"],
 };
@@ -309,6 +323,7 @@ export const BUILTIN_DESCRIPTORS: Readonly<Record<string, LanguageDescriptor>> =
   mud: validateLanguageDescriptor(mudDescriptorSource),
   ebnf: validateLanguageDescriptor(ebnfDescriptorSource),
   asdl: validateLanguageDescriptor(asdlDescriptorSource),
+  toml: validateLanguageDescriptor(tomlDescriptorSource),
   generic: validateLanguageDescriptor(genericDescriptorSource),
 };
 

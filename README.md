@@ -75,14 +75,17 @@ secuencias `*`. La extensión canónica es `.asdl`.
 ## Edición de archivos fuente
 
 Los descriptores declaran, además de los fences Markdown, las extensiones que
-abre el editor integrado. De forma predeterminada son `.mud`, `.ebnf` y
-`.asdl`. La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste
+abre el editor integrado. De forma predeterminada son `.mud`, `.ebnf`, `.asdl`
+y `.toml`. La vista incluye números de línea, búsqueda, deshacer/rehacer, ajuste
 de línea, guardado automático y `Ctrl+S`.
 
 Además de los perfiles configurables, el editor incluye JavaScript, TypeScript,
-JSON, HTML, CSS, Python, Java, C, C++, C#, SQL, YAML y TOML. Markdown se reconoce
+JSON, HTML, CSS, Python, Java, C, C++, C#, SQL y YAML. Markdown se reconoce
 dentro de fences, pero los archivos `.md` continúan usando la vista nativa de
 Obsidian.
+
+TOML dispone de un perfil principal integrado, con categorías, vista previa y
+colores personalizables mediante los mismos temas que MUD, EBNF y ASDL.
 
 Los bloques soportados muestran números reiniciados en `1` tanto en lectura
 como en edición. Los números son decorativos y no se copian con el código. Los

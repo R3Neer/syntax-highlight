@@ -335,7 +335,7 @@ export function themeFromPreset(id: string): Pick<ThemePreset, "palette" | "over
 }
 
 function defaultProfile(
-  id: "mud" | "ebnf" | "asdl",
+  id: "mud" | "ebnf" | "asdl" | "toml",
   themePreset: string,
 ): LanguageProfileSettings {
   const theme = themeFromPreset(themePreset);
@@ -379,6 +379,7 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
     defaultProfile("mud", "catppuccin"),
     defaultProfile("ebnf", "vscode-classic"),
     defaultProfile("asdl", "vscode-classic"),
+    defaultProfile("toml", "vscode-classic"),
   ],
 };
 
@@ -502,7 +503,7 @@ function loadCustomThemes(value: unknown): ThemePreset[] {
     }
     const palette = mergePalette(candidate.palette, CATPPUCCIN);
     const overrides = mergeThemeOverrides(candidate.overrides, {});
-    for (const languageId of ["mud", "ebnf", "asdl"]) {
+    for (const languageId of ["mud", "ebnf", "asdl", "toml"]) {
       migrateLegacyPalette(languageId, candidate.palette, palette, overrides);
     }
     result.push({

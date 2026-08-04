@@ -16,6 +16,7 @@ import { buildThemeCss } from "../src/themes";
 import { tokenizeAsdl } from "../src/asdl-tokenizer";
 import { tokenizeEbnf } from "../src/ebnf-tokenizer";
 import { tokenizeMud } from "../src/tokenizer";
+import { tokenizeToml } from "../src/toml-tokenizer";
 
 describe("settings, descriptors and themes", () => {
   it("loads and validates smart editor preferences", () => {
@@ -57,6 +58,8 @@ describe("settings, descriptors and themes", () => {
     expect(BUILTIN_DESCRIPTORS.ebnf.previewSource).toContain("expression ::=");
     expect(BUILTIN_DESCRIPTORS.asdl.previewSource).toContain("module Mud");
     expect(BUILTIN_DESCRIPTORS.asdl.extensions).toEqual(["asdl"]);
+    expect(BUILTIN_DESCRIPTORS.toml.previewSource).toContain("[export]");
+    expect(settings.languages.find(({ id }) => id === "toml")?.enabled).toBe(true);
   });
 
   it("emits separate light and dark rules for real categories", () => {
@@ -70,6 +73,7 @@ describe("settings, descriptors and themes", () => {
       ".theme-dark .syntax-color-ebnf-production-definition{color:#569cd6!important}",
     );
     expect(css).toContain("--syntax-common-keyword:#f5c2e7");
+    expect(css).toContain(".syntax-color-toml-bare-key");
     expect(css).not.toContain("syntax-color-mud-function");
   });
 
@@ -165,6 +169,10 @@ describe("settings, descriptors and themes", () => {
           "module Mud { expr = Name(identifier id) | Binary(expr* values) }",
         ),
       ],
+      [
+        BUILTIN_DESCRIPTORS.toml,
+        tokenizeToml('[export]\nroot = ".."\nenabled = true'),
+      ],
     ] as const;
     for (const [descriptor, tokens] of samples) {
       const declared = new Set(descriptor.categories.map(({ id }) => id));
@@ -238,6 +246,20 @@ describe("language registry", () => {
     expect(registry.byExtension(".mud")?.settings.id).toBe("mud");
     expect(registry.byExtension("EBNF")?.settings.id).toBe("ebnf");
     expect(registry.byExtension("asdl")?.settings.id).toBe("asdl");
+    expect(registry.byExtension("TOML")?.settings.id).toBe("toml");
+  });
+
+  it("adds the built-in TOML profile when loading older settings", () => {
+    const stored = structuredClone(DEFAULT_SETTINGS);
+    stored.languages = stored.languages.filter(({ id }) => id !== "toml");
+
+    const loaded = loadSettings(stored);
+
+    expect(loaded.languages.find(({ id }) => id === "toml")).toMatchObject({
+      enabled: true,
+      descriptorOrigin: "builtin",
+      themePreset: "vscode-classic",
+    });
   });
 
   it("reports active collisions as configuration errors", async () => {

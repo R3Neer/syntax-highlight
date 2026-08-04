@@ -345,7 +345,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
           this.display();
         }),
       );
-    } else if (["mud", "ebnf", "asdl"].includes(language.id)) {
+    } else if (["mud", "ebnf", "asdl", "toml"].includes(language.id)) {
       actions.addButton((button) =>
         button.setButtonText(tr("Use built-in", "Volver al integrado")).onClick(async () => {
           const fallback = structuredClone(
@@ -368,7 +368,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
         }),
       );
     }
-    if (!["mud", "ebnf", "asdl"].includes(language.id)) {
+    if (!["mud", "ebnf", "asdl", "toml"].includes(language.id)) {
       actions.addButton((button) =>
         button.setButtonText("Eliminar perfil").setWarning().onClick(async () => {
           this.plugin.pluginSettings.languages =

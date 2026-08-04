@@ -3,7 +3,9 @@
 import { describe, expect, it } from "vitest";
 
 import { commonLanguageByFence } from "../src/common-languages";
-import { renderCommonCode, renderMudCode } from "../src/reading";
+import { LanguageRegistry } from "../src/languages";
+import { renderCommonCode, renderMudCode, renderSyntaxCode } from "../src/reading";
+import { DEFAULT_SETTINGS } from "../src/settings";
 
 describe("reading view rendering", () => {
   it("renders decorative line numbers and the exact Mud badge", () => {
@@ -38,21 +40,25 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
 
-  it("colors TOML keys, atoms, strings, numbers, and comments", () => {
-    const language = commonLanguageByFence("toml");
-    expect(language).toBeDefined();
+  it("colors TOML through its configurable primary profile", () => {
+    const registry = new LanguageRegistry(
+      structuredClone(DEFAULT_SETTINGS),
+      () => Promise.resolve(""),
+    );
+    const runtime = registry.get("toml");
+    expect(runtime).toBeDefined();
     const container = document.createElement("div");
-    renderCommonCode(
+    renderSyntaxCode(
       '[server]\nport = 8080\nenabled = true\nname = "Mud"\n# local',
       container,
-      language!,
+      runtime!,
     );
 
     expect(container.querySelector("code")?.className).toBe("language-toml");
-    expect(container.querySelector(".syntax-common-declaration")).not.toBeNull();
-    expect(container.querySelector(".syntax-common-meta")).not.toBeNull();
-    expect(container.querySelector(".syntax-common-string")).not.toBeNull();
-    expect(container.querySelector(".syntax-common-number")).not.toBeNull();
-    expect(container.querySelector(".syntax-common-comment")).not.toBeNull();
+    expect(container.querySelector(".syntax-color-toml-bare-key")).not.toBeNull();
+    expect(container.querySelector(".syntax-color-toml-table-header")).not.toBeNull();
+    expect(container.querySelector(".syntax-color-toml-string")).not.toBeNull();
+    expect(container.querySelector(".syntax-color-toml-number")).not.toBeNull();
+    expect(container.querySelector(".syntax-color-toml-comment")).not.toBeNull();
   });
 });

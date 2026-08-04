@@ -11,6 +11,7 @@ import {
 } from "./descriptor";
 import { tokenizeAsdl } from "./asdl-tokenizer";
 import { tokenizeEbnf } from "./ebnf-tokenizer";
+import { tokenizeToml } from "./toml-tokenizer";
 import type {
   LanguageProfileSettings,
   SyntaxPluginSettings,
@@ -333,6 +334,7 @@ export class LanguageRegistry {
     if (runtime === undefined) return [];
     if (runtime.descriptor.engine === "ebnf") return tokenizeEbnf(source);
     if (runtime.descriptor.engine === "asdl") return tokenizeAsdl(source);
+    if (runtime.descriptor.engine === "toml") return tokenizeToml(source);
     const config = runtime.highlightConfig ?? DEFAULT_HIGHLIGHT_CONFIG;
     return runtime.descriptor.engine === "mud"
       ? tokenizeMud(source, config)

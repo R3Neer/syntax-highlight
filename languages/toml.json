@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "toml",
+  "name": "TOML",
+  "engine": "toml",
+  "fences": ["toml"],
+  "extensions": ["toml"],
+  "groups": [
+    { "id": "structure", "name": "Tablas y claves" },
+    { "id": "values", "name": "Valores" },
+    { "id": "notation", "name": "Notación" }
+  ],
+  "categories": [
+    { "id": "comment", "name": "Comentario", "description": "Comentario de línea introducido por #.", "group": "structure", "role": "comment" },
+    { "id": "table-header", "name": "Cabecera de tabla", "description": "Nombre de una tabla o de un elemento de array de tablas.", "group": "structure", "role": "type" },
+    { "id": "bare-key", "name": "Clave desnuda", "description": "Segmento de clave sin comillas situado antes de una asignación.", "group": "structure", "role": "declaration" },
+    { "id": "quoted-key", "name": "Clave entre comillas", "description": "Segmento de clave escrito como cadena básica o literal.", "group": "structure", "role": "declaration" },
+    { "id": "string", "name": "Cadena", "description": "Cadena básica o literal, de una línea o multilínea.", "group": "values", "role": "string" },
+    { "id": "number", "name": "Número", "description": "Entero o flotante decimal, hexadecimal, octal o binario.", "group": "values", "role": "number" },
+    { "id": "boolean", "name": "Booleano", "description": "Valor true o false.", "group": "values", "role": "constant" },
+    { "id": "date-time", "name": "Fecha u hora", "description": "Fecha, hora o fecha-hora conforme a TOML.", "group": "values", "role": "meta" },
+    { "id": "assignment", "name": "Asignación", "description": "Signo igual que separa una clave de su valor.", "group": "notation", "role": "operator" },
+    { "id": "delimiter", "name": "Delimitador", "description": "Corchete o llave de una colección o tabla inline.", "group": "notation", "role": "delimiter" },
+    { "id": "separator", "name": "Separador", "description": "Coma o punto que separa elementos o segmentos de clave.", "group": "notation", "role": "punctuation" }
+  ],
+  "grammarMappings": [],
+  "previewSource": "[export]\nroot = \"..\"\noutput_dir = \"exports\"\nfollow_links = false\nmax_chars = 0\nformats = [\"markdown\", \"zip\"]\nreleased_at = 2026-08-04T12:30:00Z\n\n[[profiles]]\nname = \"language\""
+}

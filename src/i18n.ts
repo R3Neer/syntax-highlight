@@ -49,6 +49,8 @@ const ENGLISH_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   string: "String", keyword: "Keyword", "operator-word": "Word operator",
   builtin: "Built-in element", constant: "Constant", contextual: "Contextual word",
   declaration: "Declared name", invocation: "Invocation", operator: "Operator",
+  "table-header": "Table header", "bare-key": "Bare key",
+  "quoted-key": "Quoted key", boolean: "Boolean", "date-time": "Date or time",
 };
 
 export function descriptorName(

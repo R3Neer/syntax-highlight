@@ -6,18 +6,16 @@ import { renderCommonLanguageCatalog } from "../src/common-language-catalog";
 import { commonLanguages } from "../src/common-languages";
 
 describe("common language settings catalog", () => {
-  it("shows every built-in language and exposes TOML support", () => {
+  it("shows every auxiliary common language without duplicating primary profiles", () => {
     const container = document.createElement("div");
     renderCommonLanguageCatalog(container, (_english, spanish) => spanish);
 
     const details = container.querySelector("details");
     const items = container.querySelectorAll(".syntax-common-language-item");
-    const toml = container.querySelector('[data-language-id="toml"]');
     expect(details?.open).toBe(true);
     expect(items).toHaveLength(commonLanguages().length);
-    expect(toml?.textContent).toContain("TOML");
-    expect(toml?.textContent).toContain("bloques: toml");
-    expect(toml?.textContent).toContain("extensiones: .toml");
+    expect(container.querySelector('[data-language-id="toml"]')).toBeNull();
+    expect(container.querySelector('[data-language-id="yaml"]')).not.toBeNull();
   });
 
   it("explains that Markdown keeps the native Obsidian editor", () => {
