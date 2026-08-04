@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 
 import type SyntaxHighlightPlugin from "./main";
+import { renderCommonLanguageCatalog } from "./common-language-catalog";
 import { LanguageRegistry } from "./languages";
 import { createJsonEditor } from "./json-editor";
 import {
@@ -141,6 +142,8 @@ export class SyntaxSettingTab extends PluginSettingTab {
       }
       this.renderLanguage(language, languages);
     }
+
+    renderCommonLanguageCatalog(languages, tr);
 
     new Setting(languages)
       .setName("Añadir lenguaje")
