@@ -4,11 +4,29 @@
   "description": "Headless CLI for highlighting and formatting source code.",
   "type": "module",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/R3Neer/syntax-highlight.git", "directory": "packages/cli" },
-  "files": ["dist", "src", "README.md"],
-  "exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js" } },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/R3Neer/syntax-highlight.git",
+    "directory": "packages/cli"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "types": "./src/index.ts",
-  "bin": { "syntax-highlight": "./dist/index.js" },
-  "dependencies": { "@r3nner/syntax-highlight-core": "1.0.0", "@r3nner/syntax-highlight-language-mud": "1.0.0" },
+  "bin": {
+    "syntax-highlight": "dist/index.js"
+  },
+  "dependencies": {
+    "@r3nner/syntax-highlight-core": "1.0.0",
+    "@r3nner/syntax-highlight-language-mud": "1.0.0"
+  },
   "sideEffects": false
 }
