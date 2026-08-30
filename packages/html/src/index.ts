@@ -1,4 +1,4 @@
-import type { HighlightDocument, ThemeDefinition } from "@r3neer/syntax-highlight-core";
+import type { HighlightDocument, ThemeDefinition } from "@r3nner/syntax-highlight-core";
 
 function escapeHtml(value: string): string {
   return value

@@ -10,20 +10,20 @@ const projectPath = (...parts) => resolve(projectRoot, ...parts);
 
 const packages = [
   ["core", "neutral", []],
-  ["language-mud", "neutral", ["@r3neer/syntax-highlight-core"]],
-  ["html", "browser", ["@r3neer/syntax-highlight-core"]],
+  ["language-mud", "neutral", ["@r3nner/syntax-highlight-core"]],
+  ["html", "browser", ["@r3nner/syntax-highlight-core"]],
   ["codemirror", "browser", [
-    "@r3neer/syntax-highlight-core",
+    "@r3nner/syntax-highlight-core",
     "@codemirror/state",
     "@codemirror/view"
   ]],
   ["mcp", "browser", [
-    "@r3neer/syntax-highlight-core",
-    "@r3neer/syntax-highlight-html"
+    "@r3nner/syntax-highlight-core",
+    "@r3nner/syntax-highlight-html"
   ]],
   ["cli", "node", [
-    "@r3neer/syntax-highlight-core",
-    "@r3neer/syntax-highlight-language-mud"
+    "@r3nner/syntax-highlight-core",
+    "@r3nner/syntax-highlight-language-mud"
   ]]
 ];
 

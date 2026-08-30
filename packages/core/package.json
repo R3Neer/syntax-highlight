@@ -1,5 +1,5 @@
 {
-  "name": "@r3neer/syntax-highlight-core",
+  "name": "@r3nner/syntax-highlight-core",
   "version": "1.0.0",
   "description": "Host-neutral syntax highlighting and formatting contracts.",
   "type": "module",

@@ -1,4 +1,4 @@
-import type { HighlightDocument } from "@r3neer/syntax-highlight-core";
+import type { HighlightDocument } from "@r3nner/syntax-highlight-core";
 
 export const MCP_HIGHLIGHT_RESOURCE_URI = "ui://syntax-highlight/code.html";
 export const MCP_HIGHLIGHT_MIME_TYPE = "text/html;profile=mcp-app";

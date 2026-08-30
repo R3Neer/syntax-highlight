@@ -1,4 +1,4 @@
-import { minimalEdit, type FormatResult } from "@r3neer/syntax-highlight-core";
+import { minimalEdit, type FormatResult } from "@r3nner/syntax-highlight-core";
 
 import {
   DEFAULT_HIGHLIGHT_CONFIG,

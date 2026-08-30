@@ -7,7 +7,7 @@ import {
   literalsBeforeReference,
   parseEbnf,
   validateEbnf,
-} from "@r3neer/syntax-highlight-core";
+} from "@r3nner/syntax-highlight-core";
 import {
   type GrammarCategoryMapping,
   type GrammarMappingSlot,

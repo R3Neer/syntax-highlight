@@ -1,1 +1,1 @@
-export * from "@r3neer/syntax-highlight-core";
+export * from "@r3nner/syntax-highlight-core";

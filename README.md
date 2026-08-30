@@ -9,13 +9,13 @@ CLI, CodeMirror 6, Obsidian, an MCP App, or a server.
 
 | Package | Responsibility |
 | --- | --- |
-| `@r3neer/syntax-highlight-core` | Stable language-pack, span, edit, and formatter contracts |
-| `@r3neer/syntax-highlight-language-mud` | Grammar-derived MUD tokenizer and formatter |
-| `@r3neer/syntax-highlight-html` | Escaped HTML and theme CSS renderer |
-| `@r3neer/syntax-highlight-codemirror` | CodeMirror 6 decorations and formatting changes |
-| `@r3neer/syntax-highlight-mcp` | MCP App resource and tool-result helpers |
-| `@r3neer/syntax-highlight-cli` | Headless `highlight` and `format` commands |
-| `@r3neer/syntax-highlight-obsidian` | Obsidian reading and editing integration |
+| `@r3nner/syntax-highlight-core` | Stable language-pack, span, edit, and formatter contracts |
+| `@r3nner/syntax-highlight-language-mud` | Grammar-derived MUD tokenizer and formatter |
+| `@r3nner/syntax-highlight-html` | Escaped HTML and theme CSS renderer |
+| `@r3nner/syntax-highlight-codemirror` | CodeMirror 6 decorations and formatting changes |
+| `@r3nner/syntax-highlight-mcp` | MCP App resource and tool-result helpers |
+| `@r3nner/syntax-highlight-cli` | Headless `highlight` and `format` commands |
+| `@r3nner/syntax-highlight-obsidian` | Obsidian reading and editing integration |
 
 ## Development
 

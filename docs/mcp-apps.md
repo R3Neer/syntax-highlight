@@ -1,6 +1,6 @@
 # MCP Apps integration
 
-`@r3neer/syntax-highlight-mcp` exposes helpers for a portable MCP App. Register
+`@r3nner/syntax-highlight-mcp` exposes helpers for a portable MCP App. Register
 the returned HTML as `ui://syntax-highlight/code.html` with MIME type
 `text/html;profile=mcp-app`, and attach the same URI to the highlighting tool as
 `_meta.ui.resourceUri`.

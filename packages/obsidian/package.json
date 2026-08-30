@@ -1,5 +1,5 @@
 {
-  "name": "@r3neer/syntax-highlight-obsidian",
+  "name": "@r3nner/syntax-highlight-obsidian",
   "version": "1.0.0",
   "description": "Obsidian adapter for syntax-highlight.",
   "type": "module",
@@ -16,8 +16,8 @@
     "install-local": "node scripts/install-local.mjs"
   },
   "dependencies": {
-    "@r3neer/syntax-highlight-core": "1.0.0",
-    "@r3neer/syntax-highlight-language-mud": "1.0.0"
+    "@r3nner/syntax-highlight-core": "1.0.0",
+    "@r3nner/syntax-highlight-language-mud": "1.0.0"
   },
   "peerDependencies": {
     "obsidian": "^1.7.2"

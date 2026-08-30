@@ -1,1 +1,1 @@
-export * from "@r3neer/syntax-highlight-language-mud";
+export * from "@r3nner/syntax-highlight-language-mud";

@@ -2,8 +2,8 @@
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 
-import { format, highlight } from "@r3neer/syntax-highlight-core";
-import { createMudAdapter } from "@r3neer/syntax-highlight-language-mud";
+import { format, highlight } from "@r3nner/syntax-highlight-core";
+import { createMudAdapter } from "@r3nner/syntax-highlight-language-mud";
 
 async function stdin(): Promise<string> {
   const chunks: Buffer[] = [];

@@ -15,11 +15,11 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"],
     "paths": {
-      "@r3neer/syntax-highlight-core": ["./packages/core/src/index.ts"],
-      "@r3neer/syntax-highlight-language-mud": ["./packages/language-mud/src/index.ts"],
-      "@r3neer/syntax-highlight-html": ["./packages/html/src/index.ts"],
-      "@r3neer/syntax-highlight-codemirror": ["./packages/codemirror/src/index.ts"],
-      "@r3neer/syntax-highlight-mcp": ["./packages/mcp/src/index.ts"]
+      "@r3nner/syntax-highlight-core": ["./packages/core/src/index.ts"],
+      "@r3nner/syntax-highlight-language-mud": ["./packages/language-mud/src/index.ts"],
+      "@r3nner/syntax-highlight-html": ["./packages/html/src/index.ts"],
+      "@r3nner/syntax-highlight-codemirror": ["./packages/codemirror/src/index.ts"],
+      "@r3nner/syntax-highlight-mcp": ["./packages/mcp/src/index.ts"]
     }
   },
   "include": ["packages/**/*.ts", "scripts/**/*.mjs", "vitest.config.ts"]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { format, highlight } from "@r3neer/syntax-highlight-core";
+import { format, highlight } from "@r3nner/syntax-highlight-core";
 import {
   DEFAULT_HIGHLIGHT_CONFIG,
   createMudAdapter,

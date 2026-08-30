@@ -4,7 +4,7 @@ Obsidian host adapter for syntax-highlight. It highlights Markdown fences in
 reading and editing views, opens configured source extensions in a CodeMirror 6
 editor, supports semantic themes, and provides smart editing for MUD.
 
-The built-in MUD profile uses `@r3neer/syntax-highlight-language-mud`; compound
+The built-in MUD profile uses `@r3nner/syntax-highlight-language-mud`; compound
 operators and indirect contextual words are therefore shared with every other
 host. EBNF, ASDL, TOML, and configurable generic profiles remain available.
 

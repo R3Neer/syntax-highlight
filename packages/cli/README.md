@@ -1,4 +1,4 @@
-# @r3neer/syntax-highlight-cli
+# @r3nner/syntax-highlight-cli
 
 Headless CLI for MUD highlighting and formatting.
 

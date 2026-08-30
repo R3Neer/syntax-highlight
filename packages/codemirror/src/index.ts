@@ -1,4 +1,4 @@
-import type { FormatResult, HighlightDocument } from "@r3neer/syntax-highlight-core";
+import type { FormatResult, HighlightDocument } from "@r3nner/syntax-highlight-core";
 import type { ChangeSpec, Extension } from "@codemirror/state";
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, EditorView, type DecorationSet } from "@codemirror/view";

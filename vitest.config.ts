@@ -13,13 +13,13 @@ export default defineConfig({
   }],
   resolve: {
     alias: {
-      "@r3neer/syntax-highlight-core": fileURLToPath(
+      "@r3nner/syntax-highlight-core": fileURLToPath(
         new URL("./packages/core/src/index.ts", import.meta.url),
       ),
-      "@r3neer/syntax-highlight-language-mud": fileURLToPath(
+      "@r3nner/syntax-highlight-language-mud": fileURLToPath(
         new URL("./packages/language-mud/src/index.ts", import.meta.url),
       ),
-      "@r3neer/syntax-highlight-html": fileURLToPath(
+      "@r3nner/syntax-highlight-html": fileURLToPath(
         new URL("./packages/html/src/index.ts", import.meta.url),
       ),
     },

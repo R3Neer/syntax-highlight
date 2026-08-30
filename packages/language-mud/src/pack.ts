@@ -3,7 +3,7 @@ import {
   type LanguageAdapter,
   type LanguagePackV2,
   type VisualRole,
-} from "@r3neer/syntax-highlight-core";
+} from "@r3nner/syntax-highlight-core";
 
 import lexicalGrammar from "../grammars/mud-lexico.ebnf";
 import syntaxGrammar from "../grammars/mud.ebnf";
