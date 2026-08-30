@@ -12,14 +12,14 @@ jobs:
   grammar-snapshot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: syntax-highlight
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: R3Neer/Mud
           path: Mud
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
