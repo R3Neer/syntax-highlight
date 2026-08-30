@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   publish:
@@ -22,12 +21,12 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run pack:all
-      - name: Publish npm packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify npm packages
         run: |
           for package in core language-mud html codemirror mcp cli obsidian; do
-            npm publish "packages/$package" --access public --provenance
+            name=$(node -p "require('./packages/$package/package.json').name")
+            version=$(node -p "require('./packages/$package/package.json').version")
+            npm view "$name@$version" version
           done
       - name: Publish GitHub release
         env:
