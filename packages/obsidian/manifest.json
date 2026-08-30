@@ -1,0 +1,9 @@
+{
+  "id": "syntax-highlight",
+  "name": "Syntax Highlight",
+  "version": "1.0.0",
+  "minAppVersion": "1.7.2",
+  "description": "Portable syntax highlighting and smart code editing with reusable language packs.",
+  "author": "R3Neer",
+  "isDesktopOnly": false
+}

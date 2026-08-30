@@ -1,0 +1,244 @@
+(* MUD 1.0 — gramática léxica normativa.
+   Dialecto descrito en README.md.
+   Las producciones SPECIAL_* remiten a algoritmos normativos de 06-lexico.md. *)
+
+mud-source ::= [ bom ] , { lexical-element } , eof ;
+
+lexical-element
+    ::= horizontal-space
+      | newline
+      | comment
+      | multiline-text-literal
+      | text-literal
+      | rumber-literal
+      | exact-number-literal
+      | reserved-word
+      | identifier
+      | operator-or-delimiter
+      ;
+
+bom              ::= ? U+FEFF, únicamente como primer carácter ? ;
+eof              ::= ? fin de archivo ? ;
+horizontal-space ::= " " | tab ;
+tab              ::= ? U+0009 ? ;
+newline          ::= cr , [ lf ] | lf ;
+cr               ::= ? U+000D ? ;
+lf               ::= ? U+000A ? ;
+
+(* El scanner intenta las formas multilínea antes que las ordinarias. *)
+comment
+    ::= multiline-comment
+      | closed-line-comment
+      | open-line-comment
+      ;
+
+open-line-comment
+    ::= "#" , { line-comment-character } ;
+
+closed-line-comment
+    ::= "#" , { closed-comment-character } , "#" ;
+
+line-comment-character
+    ::= ? cualquier escalar Unicode salvo NEWLINE ? ;
+
+closed-comment-character
+    ::= ? cualquier escalar Unicode salvo "#", NEWLINE ? ;
+
+multiline-comment
+    ::= special-multiline-comment ;
+
+special-multiline-comment
+    ::= ? bloque ### validado por MUD-LEX-020 a MUD-LEX-024 ? ;
+
+(* Las formas SPECIAL_TEMPLATE_HOLE vuelven al léxico ordinario y emiten
+   delimitadores separados para que mud.ebnf analice la expresión interior. *)
+text-literal
+    ::= quote
+        , { text-character
+          | text-escape-sequence
+          | value-template-hole
+          }
+        , [ quote ]
+        ;
+
+quote ::= ? U+0022 COMILLA DOBLE ? ;
+
+text-character
+    ::= ? escalar Unicode salvo '"', "\", "{", "}", CR y LF ? ;
+
+value-template-hole
+    ::= special-value-template-hole ;
+
+special-value-template-hole
+    ::= ? bloque {...} equilibrado según MUD-LEX-036 ? ;
+
+
+multiline-text-literal
+    ::= special-multiline-text ;
+
+special-multiline-text
+    ::= ? bloque triple comilla validado por MUD-LEX-030 a MUD-LEX-036 ? ;
+
+apostrophe ::= ? U+0027 COMILLA SIMPLE ? ;
+
+text-escape-sequence
+    ::= common-escape-sequence
+      | reverse-solidus , ( "{" | "}" )
+      ;
+
+common-escape-sequence
+    ::= reverse-solidus
+        , ( reverse-solidus | quote | apostrophe | "n" | "r" | "t" )
+      | unicode-escape
+      ;
+
+unicode-escape
+    ::= reverse-solidus , "u" , "{" , hex-digit , { hex-digit } , "}" ;
+
+reverse-solidus ::= ? U+005C BARRA INVERSA ? ;
+
+exact-number-literal
+    ::= decimal-mantissa , [ exponent-part ] ;
+
+rumber-literal
+    ::= "r" , decimal-mantissa , [ exponent-part ] ;
+
+decimal-mantissa
+    ::= integer-digits , [ "." , fractional-digits ]
+      | "." , fractional-digits
+      ;
+
+exponent-part
+    ::= ( "e" | "E" ) , [ "+" | "-" ] , integer-digits ;
+
+integer-digits
+    ::= plain-digits | grouped-integer-digits ;
+
+fractional-digits
+    ::= plain-digits | grouped-fractional-digits ;
+
+plain-digits
+    ::= digit , { digit } ;
+
+grouped-integer-digits
+    ::= one-to-three-digits , "_" , three-digits
+        , { "_" , three-digits }
+      ;
+
+grouped-fractional-digits
+    ::= three-digits , "_" , grouped-fractional-tail ;
+
+grouped-fractional-tail
+    ::= one-to-three-digits
+      | three-digits , "_" , grouped-fractional-tail
+      ;
+
+one-to-three-digits
+    ::= digit , [ digit , [ digit ] ] ;
+
+three-digits
+    ::= digit , digit , digit ;
+
+digit     ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+hex-digit ::= digit | "A" | "B" | "C" | "D" | "E" | "F"
+                    | "a" | "b" | "c" | "d" | "e" | "f" ;
+
+reserved-word
+    ::= keyword-word
+      | operator-word
+      | builtin-word
+      | constant-word
+      ;
+
+keyword-word
+    ::= "using"
+      | "thing" | "as" | "alias" | "family" | "magnitude"
+      | "rule" | "action" | "subaction" | "look" | "message" | "test"
+      | "for" | "on" | "given" | "when" | "changes"
+      | "if" | "then" | "after" | "with" | "otherwise"
+      | "mut" | "unique" | "ordered"
+      | "create" | "destroy" | "add" | "remove" | "from"
+      | "each" | "by" | "through" | "take"
+      | "exists" | "forall" | "count" | "min" | "max"
+      ;
+
+operator-word
+    ::= "to" | "eventually" | "allowed" | "old"
+      | "is" | "iis" | "in" | "has"
+      | "not" | "and" | "or" | "xor"
+      ;
+
+builtin-word
+    ::= "Text" | "Char" | "Bool" | "Thing" | "Any" | "Nat" | "Int"
+      | "Num" | "Rum" | "Money" | "Rand"
+      | "Name" | "MudPath" | "Anchor" | "MudFile" | "Prefix"
+      ;
+
+constant-word
+    ::= "true" | "false" | "empty" | "all" | "_" ;
+
+(* Estas formas se emiten como IDENTIFIER fuera de las posiciones que
+   mud.ebnf reserva contextualmente. La producción hace inventariable el
+   catálogo sin convertirlo en palabras reservadas duras. *)
+contextual-word
+    ::= "abstract" | "always" | "start"
+      | "value" | "type"
+      | "name" | "path" | "anchor" | "file"
+      | "plural" | "abbreviation" | "prefixes" | "format"
+      | "root" | "unit" | "point" | "over" | "cycle"
+      ;
+
+identifier
+    ::= contextual-word
+      | identifier-form
+      ;
+
+identifier-form
+    ::= ascii-letter , { ascii-letter | digit } ;
+
+ascii-letter
+    ::= "A" | "B" | "C" | "D" | "E" | "F" | "G"
+      | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+      | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+      | "V" | "W" | "X" | "Y" | "Z"
+      | "a" | "b" | "c" | "d" | "e" | "f" | "g"
+      | "h" | "i" | "j" | "k" | "l" | "m" | "n"
+      | "o" | "p" | "q" | "r" | "s" | "t" | "u"
+      | "v" | "w" | "x" | "y" | "z"
+      ;
+
+(* UNIT_FORM y POINT_LITERAL no son producciones del scanner base.
+   Se definen como clasificaciones contextuales sobre spans fuente. *)
+
+operator-or-delimiter
+    ::= operator-token
+      | brace-token
+      | parenthesis-token
+      | bracket-token
+      | punctuation-token
+      ;
+
+operator-token
+    ::= three-character-token
+      | two-character-token
+      | one-character-operator
+      ;
+
+three-character-token
+    ::= "<=>" | "-->" | "--=" ;
+
+two-character-token
+    ::= ":=" | "->" | ".." | "==" | "!=" | "<=" | ">="
+      | "=>" | "+=" | "-=" | "*=" | "/="
+      | "|=" | "&=" | "^=" | "--"
+      ;
+
+one-character-operator
+    ::= "=" | "+" | "-" | "*" | "/" | "%"
+      | "<" | ">" | "&" | "|" | "^" | "~"
+      ;
+
+brace-token       ::= "{" | "}" ;
+parenthesis-token ::= "(" | ")" ;
+bracket-token     ::= "[" | "]" ;
+punctuation-token ::= "," | "." | ":" | ";" ;

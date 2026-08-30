@@ -1,19 +1,21 @@
-import eslint from "@eslint/js";
+import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
+  { ignores: ["**/dist/**", "**/node_modules/**", "**/*.d.ts"] },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    ignores: ["dist/**", "node_modules/**"]
+    files: ["packages/**/*.ts"],
+    rules: {
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/no-explicit-any": "off"
+    }
   },
-  eslint.configs.recommended,
   {
-    files: ["**/*.ts"],
-    extends: [...tseslint.configs.recommendedTypeChecked],
+    files: ["**/*.mjs"],
     languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname
-      }
+      globals: { console: "readonly", URL: "readonly" }
     }
   }
 );

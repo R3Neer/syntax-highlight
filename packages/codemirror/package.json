@@ -1,0 +1,14 @@
+{
+  "name": "@r3neer/syntax-highlight-codemirror",
+  "version": "1.0.0",
+  "description": "CodeMirror 6 adapter for syntax-highlight.",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/R3Neer/syntax-highlight.git", "directory": "packages/codemirror" },
+  "files": ["dist", "src", "README.md"],
+  "exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js" } },
+  "types": "./src/index.ts",
+  "dependencies": { "@r3neer/syntax-highlight-core": "1.0.0" },
+  "peerDependencies": { "@codemirror/state": "^6.5.0", "@codemirror/view": "^6.38.6" },
+  "sideEffects": false
+}

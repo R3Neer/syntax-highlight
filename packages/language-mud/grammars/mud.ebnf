@@ -1,0 +1,1179 @@
+(* MUD 1.0 — gramática concreta normativa.
+   Los terminales en MAYÚSCULAS proceden de mud-lexico.ebnf o del
+   clasificador contextual descrito en 06-lexico.md. *)
+
+mud-file
+    ::= layout
+        , [ file-metadata-assignment , { required-separation , file-metadata-assignment } , required-separation ]
+        , [ using-file-body | declaration-file-body ]
+        , EOF
+        ;
+
+using-file-body
+    ::= using-declaration
+        , { required-separation , using-declaration }
+        , [ required-separation
+            , top-level-declaration
+            , { required-separation , top-level-declaration }
+          ]
+        , [ required-separation ]
+        ;
+
+declaration-file-body
+    ::= top-level-declaration
+        , { required-separation , top-level-declaration }
+        , [ required-separation ]
+      ;
+
+using-declaration
+    ::= "using" , mud-path , [ "." , "*" ] ;
+
+top-level-declaration
+    ::= thing-declaration
+      | alias-declaration
+      | family-declaration
+      | magnitude-declaration
+      | boolean-rule-declaration
+      | reactive-rule-declaration
+      | always-rule-declaration
+      | action-declaration
+      | subaction-declaration
+      | look-declaration
+      | message-declaration
+      | test-declaration
+      | module-start-declaration
+      ;
+
+(* ------------------------------------------------------------------ *)
+(* Nombres y referencias                                               *)
+(* ------------------------------------------------------------------ *)
+
+mud-path
+    ::= lower-name , { "." , lower-name } ;
+
+qualified-name
+    ::= identifier , { "." , identifier } ;
+
+nominal-name      ::= identifier ;
+lower-name        ::= identifier ;
+member-name       ::= identifier ;
+field-name        ::= identifier ;
+metadata-name     ::= identifier | "for" | "on" | "given" ;
+order-key-path    ::= field-name , { "." , field-name } ;
+role-name         ::= identifier ;
+given-name        ::= identifier ;
+component-name    ::= identifier ;
+variable-name     ::= identifier ;
+declaration-reference ::= qualified-name ;
+type-reference    ::= qualified-name ;
+
+identifier ::= IDENTIFIER ;
+
+(* PascalCase/lowerCamelCase y palabras prohibidas son reglas estáticas. *)
+
+(* ------------------------------------------------------------------ *)
+(* Declaraciones nominales                                             *)
+(* ------------------------------------------------------------------ *)
+
+thing-declaration
+    ::= [ "abstract" ] , "thing" , nominal-name
+        , [ "as" , type-reference , { "," , type-reference } ]
+        , [ thing-body ]
+        ;
+
+thing-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , [ thing-body-declaration
+            , { required-separation , thing-body-declaration }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+thing-body-declaration
+    ::= field-declaration
+      | thing-initializer
+      ;
+
+thing-initializer
+    ::= field-name , "=" , value-body
+      ;
+
+file-metadata-assignment
+    ::= "~" , metadata-name
+        , ( "=" , constant-expression
+          | ":" , type-expression , [ "=" , constant-expression ]
+          )
+        ;
+
+metadata-assignment
+    ::= "~" , metadata-name
+        , ( "=" , value-body
+          | ":" , type-expression , [ "=" , value-body ]
+          | [ derived-value-shape ] , ":=" , value-body
+          )
+        ;
+
+metadata-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+descriptor-value-body
+    ::= value-expression , [ metadata-body ]
+      | "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , required-separation
+          ]
+        , value-block
+        , [ required-separation ]
+        , "}"
+        ;
+
+alias-declaration
+    ::= "alias" , nominal-name
+        , [ "as" , type-reference , { "," , type-reference } ]
+        , [ alias-definition ]
+        ;
+
+alias-definition
+    ::= ":=" , type-expression
+        , [ "{" , declaration-layout
+            , [ metadata-assignment
+                , { required-separation , metadata-assignment }
+                , [ required-separation ]
+              ]
+            , "}"
+          ]
+      | structural-alias-body
+        ;
+
+structural-alias-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , [ alias-body-declaration
+            , { required-separation , alias-body-declaration }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+alias-body-declaration
+    ::= component-declaration
+      | calculated-field-declaration
+      | inherited-default-override
+        ;
+
+component-declaration
+    ::= component-name , ":" , type-expression
+        , ( "=" , descriptor-value-body | [ metadata-body ] )
+        ;
+
+inherited-default-override
+    ::= component-name , "=" , value-body ;
+
+family-declaration
+    ::= [ "ordered" ] , "family" , nominal-name
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , { family-data-declaration , required-separation }
+        , family-member
+        , { "," , declaration-layout , family-member }
+        , [ required-separation ]
+        , "}"
+        ;
+
+family-data-declaration
+    ::= stored-family-data-declaration
+      | calculated-family-data-declaration
+      ;
+
+stored-family-data-declaration
+    ::= field-name , ":" , type-expression
+        , ( "=" , descriptor-value-body | [ metadata-body ] )
+        ;
+
+calculated-family-data-declaration
+    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
+        ;
+
+family-member
+    ::= member-name , [ family-member-body ] ;
+
+family-member-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , required-separation
+          ]
+        , [ family-member-entry
+            , { required-separation , family-member-entry }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+family-member-entry
+    ::= family-data-assignment
+      ;
+
+family-data-assignment
+    ::= field-name , "=" , value-body ;
+
+(* ------------------------------------------------------------------ *)
+(* Magnitudes y unidades                                               *)
+(* ------------------------------------------------------------------ *)
+
+magnitude-declaration
+    ::= base-magnitude-declaration
+      | derived-magnitude-declaration
+      | point-magnitude-declaration
+      ;
+
+base-magnitude-declaration
+    ::= "magnitude" , nominal-name
+        , [ ":" , declared-type ]
+        , [ "in" , interval-expression ]
+        , magnitude-body
+        ;
+
+derived-magnitude-declaration
+    ::= "magnitude" , nominal-name
+        , [ ":" , declared-type ]
+        , [ "in" , interval-expression ]
+        , ":=" , dimension-expression
+        , [ derived-unit-body ]
+        ;
+
+point-magnitude-declaration
+    ::= "magnitude" , nominal-name
+        , "point" , "over" , type-reference
+        , [ "in" , point-domain ]
+        , point-magnitude-body
+        ;
+
+point-domain
+    ::= interval-expression , [ "cycle" ] ;
+
+magnitude-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , [ root-unit-declaration
+            , { required-separation , alternative-unit-declaration }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+derived-unit-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , [ alternative-unit-declaration
+            , { required-separation , alternative-unit-declaration }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+point-magnitude-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+root-unit-declaration
+    ::= "root" , "unit" , unit-name , unit-body ;
+
+alternative-unit-declaration
+    ::= "unit" , unit-name , ":=" , quantity-expression , unit-body ;
+
+unit-name ::= identifier ;
+
+unit-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+dimension-expression
+    ::= dimension-factor , { ( "*" | "/" ) , dimension-factor } ;
+
+dimension-factor
+    ::= type-reference
+      | "(" , dimension-expression , ")"
+      ;
+
+(* ------------------------------------------------------------------ *)
+(* Campos y tipos                                                      *)
+(* ------------------------------------------------------------------ *)
+
+field-declaration
+    ::= stored-field-declaration
+      | calculated-field-declaration
+      ;
+
+stored-field-declaration
+    ::= [ "mut" ] , field-name , ":" , type-expression
+        , ( "=" , descriptor-value-body | [ metadata-body ] )
+        ;
+
+calculated-field-declaration
+    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
+        ;
+
+public-field-declaration
+    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
+        ;
+
+derived-value-shape
+    ::= ":" , type-expression
+      | "in" , type-alternative-domain , [ collection-specification ]
+      | collection-specification
+        ;
+
+type-expression
+    ::= union-type-expression
+        , [ collection-specification | dictionary-type ]
+        ;
+
+union-type-expression
+    ::= type-alternative , { "|" , type-alternative }
+        ;
+
+type-alternative
+    ::= declared-type , [ "in" , type-alternative-domain ]
+      | "(" , type-expression , ")"
+        ;
+
+type-alternative-domain
+    ::= stepped-domain
+      | interval-expression
+      | collection-literal
+      | qualified-name
+      | "(" , domain-expression , ")"
+        ;
+
+declared-type
+    ::= type-reference
+      | callable-type
+      | reflected-type
+      | interval-type
+      | product-type
+      ;
+
+callable-type
+    ::= callable-receiver , "." , callable-kind
+        , "(" , [ type-expression , { "," , type-expression } ] , ")"
+        ;
+
+callable-receiver
+    ::= type-reference
+      | "(" , type-reference , "," , type-reference
+          , { "," , type-reference } , ")"
+      ;
+
+callable-kind
+    ::= "action" | "rule" | "look" ;
+
+reflected-type
+    ::= postfix-expression , "~" , "type" ;
+
+interval-type
+    ::= type-reference , "Interval" ;
+
+product-type
+    ::= positional-product-type
+      | named-product-type
+      ;
+
+positional-product-type
+    ::= "(" , type-expression , "," , type-expression
+        , { "," , type-expression } , ")"
+      ;
+
+named-product-type
+    ::= "(" , named-product-component
+        , "," , named-product-component
+        , { "," , named-product-component } , ")"
+      ;
+
+named-product-component
+    ::= component-name , ":" , type-expression ;
+
+dictionary-type
+    ::= dictionary-link , { dictionary-link } ;
+
+dictionary-link
+    ::= dictionary-arrow , dictionary-value-type
+        , [ collection-specification ]
+      ;
+
+dictionary-arrow
+    ::= "->" | "-->" ;
+
+dictionary-value-type
+    ::= union-type-expression ;
+
+collection-specification
+    ::= "["
+        , ( cardinality
+            , [ optional-comma , collection-modifier
+                , { optional-comma , collection-modifier }
+              ]
+          | collection-modifier
+            , { optional-comma , collection-modifier }
+          )
+        , "]"
+        ;
+
+cardinality
+    ::= cardinality-bound
+      | cardinality-bound , ".." , cardinality-bound
+      ;
+
+cardinality-bound
+    ::= exact-integer | "*" ;
+
+collection-modifier
+    ::= "unique"
+      | "ordered" , [ "by" , order-key-path ]
+      | "mut"
+      ;
+
+optional-comma ::= [ "," ] ;
+
+(* ------------------------------------------------------------------ *)
+(* Participantes, given y declaraciones de comportamiento              *)
+(* ------------------------------------------------------------------ *)
+
+for-clause
+    ::= "for" , for-participant , { "," , for-participant } ;
+
+on-clause
+    ::= "on" , on-participant , { "," , on-participant } ;
+
+for-participant
+    ::= [ "mut" ] , role-name , { "," , role-name } , ":" , type-expression
+        , [ "{" , declaration-layout , [ metadata-assignment , { required-separation , metadata-assignment } , [ required-separation ] ] , "}" ]
+        ;
+
+on-participant
+    ::= role-name , { "," , role-name } , ":" , type-reference , [ member-capability ] , [ "{" , declaration-layout , [ metadata-assignment , { required-separation , metadata-assignment } , [ required-separation ] ] , "}" ]
+      | role-name , { "," , role-name } , [ ":" , type-reference ] , "in" , expression , [ member-capability ] , [ "{" , declaration-layout , [ metadata-assignment , { required-separation , metadata-assignment } , [ required-separation ] ] , "}" ]
+      ;
+
+member-capability
+    ::= "[" , "mut" , "]" ;
+
+given-clause
+    ::= "given" , given-declaration , { "," , given-declaration } ;
+
+given-declaration
+    ::= given-name , { "," , given-name } , ":" , type-expression , [ "=" , constant-expression ]
+        , [ "{" , declaration-layout , [ metadata-assignment , { required-separation , metadata-assignment } , [ required-separation ] ] , "}" ]
+        ;
+
+boolean-rule-declaration
+    ::= "rule" , nominal-name
+        , [ for-clause ]
+        , [ given-clause ]
+        , boolean-body
+        ;
+
+boolean-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment
+            , { required-separation , metadata-assignment }
+            , required-separation
+          ]
+        , expression-block
+        , [ required-separation ] , "}"
+        ;
+
+expression-block
+    ::= { local-value-declaration , required-separation }
+        , expression
+        ;
+
+value-body
+    ::= value-expression
+      | value-block-body
+      ;
+
+value-block-body
+    ::= "{" , declaration-layout , value-block
+        , [ required-separation ] , "}"
+        ;
+
+value-block
+    ::= { value-statement , required-separation }
+        , value-expression
+        ;
+
+value-statement
+    ::= value-local-declaration
+      | local-mutation
+      | local-for-each
+      ;
+
+value-local-declaration
+    ::= local-calculated-declaration
+      | local-stored-declaration
+      ;
+
+local-calculated-declaration
+    ::= variable-name , [ derived-value-shape ] , ":=" , value-body ;
+
+local-stored-declaration
+    ::= [ "mut" ] , variable-name , ":" , type-expression
+        , "=" , value-body
+        ;
+
+local-mutation
+    ::= local-assignment
+      | local-add
+      | local-remove
+      ;
+
+local-assignment
+    ::= assignable-expression , assignment-operator , value-expression ;
+
+local-add
+    ::= "add" , expression , "to" , assignable-expression ;
+
+local-remove
+    ::= "remove" , expression , "from" , assignable-expression ;
+
+local-for-each
+    ::= "for" , "each" , iteration-binding , "in" , expression
+        , [ "by" , expression ]
+        , [ "if" , expression-body ]
+        , ":"
+        , [ required-separation ]
+        , ( value-statement | local-statement-block )
+        ;
+
+local-statement-block
+    ::= "{" , declaration-layout
+        , value-statement
+        , { required-separation , value-statement }
+        , [ required-separation ]
+        , "}"
+        ;
+
+reactive-rule-declaration
+    ::= "rule" , nominal-name
+        , [ on-clause ]
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , { local-value-declaration , required-separation }
+        , when-clause
+        , required-separation
+        , [ if-clause , required-separation ]
+        , then-clause
+        , [ required-separation ]
+        , "}"
+        ;
+
+always-rule-declaration
+    ::= "always" , "rule" , nominal-name
+        , [ on-clause ]
+        , invariant-body
+        , [ diagnostic-tail ]
+        ;
+
+invariant-body
+    ::= "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , expression-block
+        , [ required-separation ]
+        , "}"
+        ;
+
+action-declaration
+    ::= "action" , action-signature-body ;
+
+subaction-declaration
+    ::= "subaction" , action-signature-body ;
+
+action-signature-body
+    ::= nominal-name
+        , [ for-clause ]
+        , [ given-clause ]
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , { local-value-declaration , required-separation }
+        , [ action-if-clause , required-separation ]
+        , then-clause
+        , [ required-separation , action-after-clause ]
+        , [ required-separation ]
+        , "}"
+        ;
+
+look-declaration
+    ::= "look" , nominal-name
+        , [ for-clause ]
+        , [ given-clause ]
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , [ public-field-declaration
+            , { required-separation , public-field-declaration }
+            , [ required-separation ]
+          ]
+        , "}"
+        ;
+
+message-declaration
+    ::= "message" , nominal-name
+        , [ on-clause ]
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , { local-value-declaration , required-separation }
+        , when-clause
+        , [ required-separation , if-clause ]
+        , [ required-separation , public-field-declaration
+            , { required-separation , public-field-declaration }
+          ]
+        , [ required-separation ]
+        , "}"
+        ;
+
+when-clause
+    ::= "when" , expression-body ;
+
+if-clause
+    ::= "if" , expression-body ;
+
+action-if-clause
+    ::= "if" , expression-body , [ diagnostic-tail ] ;
+
+action-after-clause
+    ::= "after" , expression-body , [ diagnostic-tail ] ;
+
+diagnostic-tail
+    ::= [ required-separation ] , "otherwise" , text-expression ;
+
+expression-body
+    ::= expression
+      | "{" , declaration-layout , expression-block
+          , [ required-separation ] , "}"
+      ;
+
+then-clause
+    ::= ( "then" , effect
+        | "then" , effect-block
+        )
+        , [ diagnostic-tail ]
+      ;
+
+effect-block
+    ::= "{" , declaration-layout
+        , then-statement
+        , { required-separation , then-statement }
+        , [ required-separation ]
+        , "}"
+        ;
+
+then-statement
+    ::= effect
+      | value-local-declaration
+      ;
+
+local-value-declaration
+    ::= variable-name , [ derived-value-shape ] , ":=" , value-expression ;
+
+(* ------------------------------------------------------------------ *)
+(* Activación inicial y tests                                          *)
+(* ------------------------------------------------------------------ *)
+
+module-start-declaration
+    ::= start-with-declaration ;
+
+start-with-declaration
+    ::= "start" , "with"
+        , ( expression | start-contribution-body )
+        ;
+
+start-contribution-body
+    ::= "{" , declaration-layout
+        , expression
+        , { "," , declaration-layout , expression }
+        , [ "," ]
+        , declaration-layout , "}"
+        ;
+
+test-declaration
+    ::= "test" , nominal-name
+        , "{" , declaration-layout
+        , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
+        , start-with-declaration
+        , required-separation
+        , then-clause
+        , required-separation
+        , test-after-clause
+        , [ required-separation ]
+        , "}"
+        ;
+
+test-after-clause
+    ::= "after" , test-assertion
+      | "after" , "{"
+          , declaration-layout
+          , { local-value-declaration , required-separation }
+          , test-assertion
+          , { required-separation , test-assertion }
+          , [ required-separation ]
+          , "}"
+      ;
+
+test-assertion
+    ::= boolean-expression , [ diagnostic-tail ] ;
+
+(* ------------------------------------------------------------------ *)
+(* Efectos                                                             *)
+(* ------------------------------------------------------------------ *)
+
+effect
+    ::= assignment-effect
+      | add-effect
+      | remove-effect
+      | create-effect
+      | destroy-effect
+      | action-call-effect
+      | for-each-effect
+      ;
+
+assignment-effect
+    ::= assignable-expression , assignment-operator , value-expression ;
+
+assignment-operator
+    ::= "=" | "+=" | "-=" | "*=" | "/="
+      | "|=" | "&=" | "^=" | "--="
+      ;
+
+add-effect
+    ::= "add" , expression , "to" , assignable-expression
+      | "add" , [ "mut" ] , field-name , ":" , type-expression , [ "=" , constant-expression ] , "to" , declaration-reference
+      ;
+
+remove-effect
+    ::= "remove" , expression , "from" , assignable-expression ;
+
+create-effect
+    ::= "create" , declaration-reference ;
+
+destroy-effect
+    ::= "destroy" , declaration-reference ;
+
+action-call-effect
+    ::= postfix-expression ;
+
+for-each-effect
+    ::= "for" , "each" , iteration-binding , "in" , expression
+        , [ "by" , expression ]
+        , [ "if" , expression-body ]
+        , ":"
+        , [ required-separation ]
+        , ( effect | effect-block )
+        ;
+
+iteration-binding
+    ::= variable-name
+      | "(" , variable-name , "," , variable-name , ")"
+      ;
+
+assignable-expression
+    ::= primary-expression , { member-access | index-access } ;
+
+(* ------------------------------------------------------------------ *)
+(* Expresiones                                                         *)
+(* ------------------------------------------------------------------ *)
+
+expression
+    ::= mapping-expression ;
+
+mapping-expression
+    ::= mapping-left , [ mapping-arrow , mapping-right ] ;
+
+mapping-left
+    ::= eventually-expression
+      | mapping-key-body
+      ;
+
+mapping-key-body
+    ::= "{" , declaration-layout , expression-block
+        , [ required-separation ] , "}"
+        ;
+
+mapping-right
+    ::= mapping-expression
+      | value-block-body
+      ;
+
+mapping-arrow
+    ::= "->" | "-->" ;
+
+value-expression
+    ::= expression , [ "," , expression , { "," , expression } ] ;
+
+boolean-expression
+    ::= expression ;
+
+text-expression
+    ::= expression ;
+
+constant-expression
+    ::= value-expression ;
+
+domain-expression
+    ::= expression ;
+
+stepped-domain
+    ::= interval-expression , "by" , constant-expression ;
+
+eventually-expression
+    ::= biconditional-expression
+      | "eventually" , biconditional-expression , "through" , action-reference-list
+      ;
+
+action-reference-list
+    ::= action-reference , { "," , action-reference }
+      | "[" , action-reference , { "," , action-reference } , "]"
+      ;
+
+action-reference
+    ::= qualified-name
+      | receiver-tuple , "." , qualified-name
+      ;
+
+biconditional-expression
+    ::= implication-expression
+        , { biconditional-operator , implication-expression }
+        ;
+
+biconditional-operator
+    ::= "<=>" ;
+
+implication-expression
+    ::= xor-expression , [ implication-operator , implication-expression ] ;
+
+implication-operator
+    ::= "=>" ;
+
+xor-expression
+    ::= or-expression , { xor-operator , or-expression } ;
+
+xor-operator
+    ::= "xor" | "^" ;
+
+or-expression
+    ::= and-expression , { or-operator , and-expression } ;
+
+or-operator
+    ::= "or" | "|" ;
+
+and-expression
+    ::= change-expression , { and-operator , change-expression } ;
+
+and-operator
+    ::= "and" | "&" ;
+
+change-expression
+    ::= comparison-expression , [ "changes" ] ;
+
+comparison-expression
+    ::= restriction-expression , [ comparison-tail ] ;
+
+restriction-expression
+    ::= quantitative-expression , [ "in" , type-alternative-domain ] ;
+
+comparison-tail
+    ::= chainable-comparison , quantitative-expression
+        , { chainable-comparison , quantitative-expression }
+      | nonchainable-comparison , quantitative-expression
+      ;
+
+chainable-comparison
+    ::= "==" | "<" | "<=" | ">" | ">=" ;
+
+nonchainable-comparison
+    ::= "!="
+      | "is" , [ "not" ]
+      | "iis" , [ "not" ]
+      | membership-has
+      ;
+
+membership-has
+    ::= "has" , [ "not" ] ;
+
+(* quantitative-expression admite barreras postfix to/in. El parser
+   aplica la tabla de 07-gramatica-concreta y continúa sobre el resultado. *)
+quantitative-expression
+    ::= arithmetic-expression
+        , { conversion-suffix , [ arithmetic-continuation ] }
+        ;
+
+conversion-suffix
+    ::= "to" , type-reference
+      | "in" , unit-expression
+      ;
+
+arithmetic-continuation
+    ::= arithmetic-operator , arithmetic-expression ;
+
+arithmetic-operator
+    ::= "+" | "-" | "--" | "*" | "/" | "%" ;
+
+arithmetic-expression
+    ::= multiplicative-expression
+        , { ( "+" | "-" | "--" ) , multiplicative-expression }
+        ;
+
+multiplicative-expression
+    ::= prefix-expression
+        , { ( "*" | "/" | "%" ) , prefix-expression }
+        ;
+
+prefix-expression
+    ::= { prefix-operator } , postfix-expression ;
+
+prefix-operator
+    ::= "not" | "+" | "-" | "old" | "allowed" | "all" ;
+
+postfix-expression
+    ::= primary-expression
+        , { member-access | metadata-access | index-access | call-arguments | collection-transform-suffix }
+        ;
+
+collection-transform-suffix
+    ::= "[" , local-collection-transform , "]" ;
+
+local-collection-transform
+    ::= cardinality-bound , ".." , cardinality-bound
+        , [ optional-comma , local-collection-modifier , { optional-comma , local-collection-modifier } ]
+      | cardinality-bound , optional-comma , local-collection-modifier , { optional-comma , local-collection-modifier }
+      | local-collection-modifier , { optional-comma , local-collection-modifier }
+      ;
+
+local-collection-modifier
+    ::= "unique" | "ordered" , [ "by" , order-key-path ] ;
+
+member-access
+    ::= "." , identifier ;
+
+metadata-access
+    ::= "~" , metadata-name ;
+
+index-access
+    ::= "[" , expression , { "," , expression } , "]" ;
+
+call-arguments
+    ::= "(" , [ call-argument , { "," , call-argument } ] , ")" ;
+
+call-argument
+    ::= [ given-name , "=" ] , expression ;
+
+receiver-tuple
+    ::= "(" , receiver-entry , "," , receiver-entry
+        , { "," , receiver-entry } , ")"
+        ;
+
+receiver-entry
+    ::= expression
+      | role-name , "=" , expression
+      ;
+
+primary-expression
+    ::= literal
+      | take-expression
+      | selection-expression
+      | qualified-name
+      | structural-literal
+      | collection-literal
+      | interval-expression
+      | quantity-expression
+      | point-component-expression
+      | quantifier-expression
+      | random-expression
+      | "thing" | "alias" | "family" | "magnitude" | "rule"
+      | "action" | "subaction" | "look" | "message" | "test"
+      | "(" , expression , ")"
+      ;
+
+take-expression
+    ::= "take" , expression , "from" , expression ;
+
+selection-expression
+    ::= iteration-binding , "in" , expression
+        , [ "by" , expression ]
+        , ":" , [ required-separation ] , expression-body
+        ;
+
+point-component-expression
+    ::= unit-expression , "from" , unit-expression
+        , "in" , postfix-expression
+        ;
+
+literal
+    ::= exact-number
+      | rumber-number
+      | text-template
+      | POINT_LITERAL
+      | "true"
+      | "false"
+      | "empty"
+      | "all"
+      | "_"
+      ;
+
+text-template
+    ::= TEXT_START
+        , { TEXT_FRAGMENT | value-interpolation }
+        , TEXT_END
+        ;
+
+value-interpolation
+    ::= INTERPOLATION_START
+        , ( expression | contextual-point-component )
+        , [ numeric-text-format ]
+        , INTERPOLATION_END
+        ;
+
+contextual-point-component
+    ::= unit-expression , "from" , unit-expression ;
+
+numeric-text-format
+    ::= ":" , exact-integer , [ ":" , exact-integer ]
+      | ":" , ":" , exact-integer
+      ;
+
+
+exact-number  ::= EXACT_NUMBER_LITERAL ;
+rumber-number ::= RUMBER_LITERAL ;
+exact-integer ::= EXACT_INTEGER_LITERAL ;
+
+structural-literal
+    ::= "(" , ( positional-structural-elements | named-structural-elements ) , ")" ;
+
+positional-structural-elements
+    ::= expression , "," , expression , { "," , expression } ;
+
+named-structural-elements
+    ::= named-structural-element , { "," , named-structural-element } ;
+
+named-structural-element
+    ::= component-name , "=" , expression ;
+
+collection-literal
+    ::= "[" , [ expression , { "," , expression } ] , "]" ;
+
+quantity-expression
+    ::= ( exact-number | rumber-number ) , unit-expression ;
+
+unit-expression
+    ::= unit-factor , { ( "*" | "/" ) , unit-factor } ;
+
+unit-factor
+    ::= UNIT_FORM
+      | identifier
+      | "(" , unit-expression , ")"
+      ;
+
+random-expression
+    ::= "Rand" , "(" , expression , ")" ;
+
+quantifier-expression
+    ::= quantifier , variable-name , "in" , expression
+        , [ "by" , expression ]
+        , ":" , [ required-separation ] , expression-body
+        ;
+
+quantifier
+    ::= "exists" | "forall" | "count" | "min" | "max" ;
+
+(* ------------------------------------------------------------------ *)
+(* Intervalos                                                          *)
+(* ------------------------------------------------------------------ *)
+
+interval-expression
+    ::= shared-unit-interval
+      | bounded-interval
+      | closed-interval-sugar
+      | singleton-interval
+      ;
+
+shared-unit-interval
+    ::= shared-unit-bounded-interval , unit-expression
+      | shared-unit-closed-interval , unit-expression
+      | shared-unit-singleton-interval , unit-expression
+      | "[" , "]" , unit-expression
+      ;
+
+shared-unit-bounded-interval
+    ::= "[" , shared-unit-bound , ".." , shared-unit-bound , "]"
+      | "(" , finite-shared-unit-bound , ".."
+        , finite-shared-unit-bound , ")"
+      | "[" , shared-unit-bound , ".."
+        , finite-shared-unit-bound , ")"
+      | "(" , finite-shared-unit-bound , ".."
+        , shared-unit-bound , "]"
+      ;
+
+shared-unit-closed-interval
+    ::= shared-unit-bound , ".." , shared-unit-bound ;
+
+shared-unit-singleton-interval
+    ::= "[" , shared-unit-bound , "]" ;
+
+shared-unit-bound
+    ::= finite-shared-unit-bound | "*" ;
+
+finite-shared-unit-bound
+    ::= [ "+" | "-" ] , ( exact-number | rumber-number ) ;
+
+bounded-interval
+    ::= "[" , interval-bound , ".." , interval-bound , "]"
+      | "(" , finite-interval-bound , ".." , finite-interval-bound , ")"
+      | "[" , interval-bound , ".." , finite-interval-bound , ")"
+      | "(" , finite-interval-bound , ".." , interval-bound , "]"
+      ;
+
+closed-interval-sugar
+    ::= interval-bound , ".." , interval-bound ;
+
+singleton-interval
+    ::= "[" , interval-bound , "]" ;
+
+interval-bound
+    ::= finite-interval-bound | "*" ;
+
+finite-interval-bound
+    ::= expression-without-interval ;
+
+expression-without-interval
+    ::= quantitative-expression ;
+
+(* ------------------------------------------------------------------ *)
+(* Separación física                                                   *)
+(* ------------------------------------------------------------------ *)
+
+layout
+    ::= { TERMINATOR } ;
+
+declaration-layout
+    ::= { TERMINATOR } ;
+
+required-separation
+    ::= TERMINATOR , { TERMINATOR } ;

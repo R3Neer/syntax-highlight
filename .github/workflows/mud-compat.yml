@@ -1,0 +1,32 @@
+name: MUD compatibility
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  grammar-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: syntax-highlight
+      - uses: actions/checkout@v4
+        with:
+          repository: R3Neer/Mud
+          path: Mud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: syntax-highlight/package-lock.json
+      - run: npm ci
+        working-directory: syntax-highlight
+      - run: node scripts/check-mud-compat.mjs --mud-root ../Mud
+        working-directory: syntax-highlight
+      - run: npm test -- packages/language-mud
+        working-directory: syntax-highlight

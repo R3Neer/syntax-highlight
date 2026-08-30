@@ -1,22 +1,26 @@
 {
   "compilerOptions": {
-    "typeRoots": ["node_modules/@types", "node_modules"],
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "module": "ESNext",
     "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "lib": ["DOM", "ES2022"],
+    "skipLibCheck": true,
     "types": ["node", "vitest/globals"],
-    "skipLibCheck": true
+    "paths": {
+      "@r3neer/syntax-highlight-core": ["./packages/core/src/index.ts"],
+      "@r3neer/syntax-highlight-language-mud": ["./packages/language-mud/src/index.ts"],
+      "@r3neer/syntax-highlight-html": ["./packages/html/src/index.ts"],
+      "@r3neer/syntax-highlight-codemirror": ["./packages/codemirror/src/index.ts"],
+      "@r3neer/syntax-highlight-mcp": ["./packages/mcp/src/index.ts"]
+    }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": ["packages/**/*.ts", "scripts/**/*.mjs", "vitest.config.ts"]
 }

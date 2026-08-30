@@ -1,0 +1,12 @@
+{
+  "name": "@r3neer/syntax-highlight-core",
+  "version": "1.0.0",
+  "description": "Host-neutral syntax highlighting and formatting contracts.",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/R3Neer/syntax-highlight.git", "directory": "packages/core" },
+  "files": ["dist", "src", "README.md"],
+  "exports": { ".": { "types": "./src/index.ts", "import": "./dist/index.js" } },
+  "types": "./src/index.ts",
+  "sideEffects": false
+}
