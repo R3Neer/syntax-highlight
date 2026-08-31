@@ -24,7 +24,7 @@ function hash(source: string): string {
 export const mudLanguagePack: LanguagePackV2 = validateLanguagePack({
   schemaVersion: 2,
   id: "mud",
-  version: "1.0.0",
+  version: "1.1.0",
   name: "MUD",
   aliases: ["MUD"],
   fences: ["mud"],

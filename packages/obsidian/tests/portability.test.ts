@@ -14,7 +14,7 @@ import {
   THEME_PRESETS,
 } from "../src/settings";
 
-describe("schema v5 and portability", () => {
+describe("schema v6 and portability", () => {
   it("migrates v4 settings with editor defaults", () => {
     const loaded = loadSettings({
       schemaVersion: 4,
@@ -22,7 +22,7 @@ describe("schema v5 and portability", () => {
       languages: DEFAULT_SETTINGS.languages,
       customThemes: [],
     });
-    expect(loaded.schemaVersion).toBe(5);
+    expect(loaded.schemaVersion).toBe(6);
     expect(loaded.markdownReading).toBe(true);
     expect(loaded.markdownEditor).toBe(true);
     expect(loaded.sourceEditor).toBe(true);

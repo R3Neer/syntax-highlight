@@ -21,12 +21,17 @@ export interface ContextualKeyword {
   next?: string;
 }
 
+export interface SemanticKeyword extends ContextualKeyword {
+  category: string;
+}
+
 export interface MudHighlightConfig {
   schemaVersion: 3;
   words: Readonly<Record<string, readonly string[]>>;
   symbols: Readonly<Record<string, readonly string[]>>;
   declarationHeads: readonly string[];
   contextualKeywords: readonly ContextualKeyword[];
+  semanticKeywords: readonly SemanticKeyword[];
   categories: Readonly<Partial<Record<GrammarMappingSlot, string>>>;
 }
 
@@ -35,8 +40,45 @@ export interface PreparedHighlightConfig {
   symbols: readonly { text: string; categoryId: string }[];
   declarationHeads: ReadonlySet<string>;
   contextualKeywords: readonly ContextualKeyword[];
+  semanticKeywords: readonly SemanticKeyword[];
   categories: Readonly<Partial<Record<GrammarMappingSlot, string>>>;
 }
+
+const MUD_SEMANTIC_KEYWORDS: readonly {
+  category: string;
+  words: readonly string[];
+  previous?: string;
+  next?: string;
+}[] = [
+  { category: "quantifier-keyword", words: ["for"], next: "each" },
+  {
+    category: "declaration-keyword",
+    words: [
+      "using", "thing", "alias", "family", "magnitude", "rule", "action",
+      "subaction", "look", "message", "test", "start", "unit",
+    ],
+  },
+  {
+    category: "declaration-modifier",
+    words: ["mut", "unique", "ordered", "abstract", "always", "root", "point"],
+  },
+  {
+    category: "control-flow",
+    words: ["when", "changes", "if", "then", "after", "otherwise"],
+  },
+  {
+    category: "quantifier-keyword",
+    words: ["each", "exists", "forall", "count", "min", "max"],
+  },
+  {
+    category: "effect-keyword",
+    words: ["create", "destroy", "add", "remove", "take"],
+  },
+  {
+    category: "clause-keyword",
+    words: ["as", "for", "on", "given", "with", "from", "by", "through"],
+  },
+];
 
 const REQUIRED_SLOTS: readonly GrammarMappingSlot[] = [
   "keyword",
@@ -91,6 +133,39 @@ function contextualRules(
       `${right.word}\0${right.previous ?? ""}\0${right.next ?? ""}`,
     ),
   );
+}
+
+function semanticRules(
+  lexicalGrammarSource: string,
+  mappings: ReadonlyMap<GrammarMappingSlot, GrammarCategoryMapping>,
+  descriptor: LegacyLanguageDescriptor,
+): SemanticKeyword[] {
+  if (descriptor.id !== "mud") return [];
+  const lexical = parseEbnf(lexicalGrammarSource);
+  const keyword = mappings.get("keyword");
+  const contextual = mappings.get("contextual");
+  if (keyword === undefined || contextual === undefined) return [];
+  const known = new Set([
+    ...collectLiterals(lexical, keyword.production),
+    ...collectLiterals(lexical, contextual.production),
+  ]);
+  const categoryIds = new Set(descriptor.categories.map(({ id }) => id));
+  const result: SemanticKeyword[] = [];
+  for (const definition of MUD_SEMANTIC_KEYWORDS) {
+    if (!categoryIds.has(definition.category)) {
+      throw new Error(`Falta la categoría semántica MUD ${definition.category}`);
+    }
+    for (const word of definition.words) {
+      if (!known.has(word)) continue;
+      result.push({
+        word,
+        category: definition.category,
+        ...(definition.previous === undefined ? {} : { previous: definition.previous }),
+        ...(definition.next === undefined ? {} : { next: definition.next }),
+      });
+    }
+  }
+  return result;
 }
 
 export function compileMudHighlightConfig(
@@ -185,6 +260,11 @@ export function compileGrammarHighlightConfig(
             syntaxGrammarSource,
             contextual.production,
           ),
+    semanticKeywords: semanticRules(
+      lexicalGrammarSource,
+      mappings,
+      descriptor,
+    ),
     categories: Object.fromEntries(
       [...mappings].map(([slot, mapping]) => [slot, mapping.category]),
     ),
@@ -208,6 +288,7 @@ export function prepareHighlightConfig(
     symbols,
     declarationHeads: new Set(config.declarationHeads),
     contextualKeywords: config.contextualKeywords,
+    semanticKeywords: config.semanticKeywords,
     categories: config.categories,
   };
 }

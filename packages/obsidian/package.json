@@ -1,6 +1,6 @@
 {
   "name": "@r3nner/syntax-highlight-obsidian",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Obsidian adapter for syntax-highlight.",
   "type": "module",
   "license": "MIT",
@@ -9,18 +9,25 @@
     "url": "git+https://github.com/R3Neer/syntax-highlight.git",
     "directory": "packages/obsidian"
   },
-  "files": ["dist", "manifest.json", "styles.css", "README.md"],
+  "files": [
+    "dist",
+    "manifest.json",
+    "styles.css",
+    "README.md"
+  ],
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
     "install-local": "node scripts/install-local.mjs"
   },
   "dependencies": {
-    "@r3nner/syntax-highlight-core": "1.0.0",
-    "@r3nner/syntax-highlight-language-mud": "1.0.0"
+    "@r3nner/syntax-highlight-core": "1.1.0",
+    "@r3nner/syntax-highlight-language-mud": "1.1.0"
   },
   "peerDependencies": {
     "obsidian": "^1.7.2"
   },
-  "sideEffects": ["styles.css"]
+  "sideEffects": [
+    "styles.css"
+  ]
 }

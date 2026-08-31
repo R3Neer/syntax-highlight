@@ -26,7 +26,7 @@ describe("tokenizeMud", () => {
     expect(
       compact("thing Sample { a: Integer b: Natural c: Number d: Rumber }"),
     ).toEqual([
-      ["thing", "reserved-word"],
+      ["thing", "declaration-keyword"],
       ["Sample", "declared-name"],
       ["{", "brace"],
       [":", "punctuation"],
@@ -47,8 +47,8 @@ describe("tokenizeMud", () => {
         "ordered family Color { value: Char owner: PlayerName owner = owner }",
       ),
     ).toEqual([
-      ["ordered", "reserved-word"],
-      ["family", "reserved-word"],
+      ["ordered", "declaration-modifier"],
+      ["family", "declaration-keyword"],
       ["Color", "declared-name"],
       ["{", "brace"],
       [":", "punctuation"],
@@ -62,9 +62,9 @@ describe("tokenizeMud", () => {
 
   it("highlights inherited things like the thing being declared", () => {
     expect(compact("thing A as B, C {}")).toEqual([
-      ["thing", "reserved-word"],
+      ["thing", "declaration-keyword"],
       ["A", "declared-name"],
-      ["as", "reserved-word"],
+      ["as", "clause-keyword"],
       ["B", "specialization-reference"],
       [",", "punctuation"],
       ["C", "specialization-reference"],
@@ -75,7 +75,7 @@ describe("tokenizeMud", () => {
 
   it("recognises user types in conversions and alias definitions", () => {
     expect(compact("alias Names := PlayerName -> Score\nraw to PlayerName")).toEqual([
-      ["alias", "reserved-word"],
+      ["alias", "declaration-keyword"],
       ["Names", "declared-name"],
       [":=", "symbolic-operator"],
       ["PlayerName", "type-reference"],
@@ -121,7 +121,7 @@ describe("tokenizeMud", () => {
       "}",
     ].join("\n");
     expect(compact(source)).toEqual([
-      ["family", "reserved-word"],
+      ["family", "declaration-keyword"],
       ["Terrain", "declared-name"],
       ["{", "brace"],
       [":", "punctuation"],
@@ -148,7 +148,7 @@ describe("tokenizeMud", () => {
       "{}",
     ].join("\n");
     expect(compact(source)).toEqual([
-      ["magnitude", "reserved-word"],
+      ["magnitude", "declaration-keyword"],
       ["Acceleration", "declared-name"],
       [":", "punctuation"],
       ["Num", "builtin-type"],
@@ -222,13 +222,13 @@ describe("tokenizeMud", () => {
       ["+", "symbolic-operator"],
       ["10", "exact-number"],
       ["*", "symbolic-operator"],
-      ["count", "reserved-word"],
+      ["count", "quantifier-keyword"],
     ]);
   });
 
   it("distinguishes braces, parentheses and brackets", () => {
     expect(compact("rule R(A) { values[0] }")).toEqual([
-      ["rule", "reserved-word"],
+      ["rule", "declaration-keyword"],
       ["R", "declared-name"],
       ["(", "parenthesis"],
       [")", "parenthesis"],
@@ -243,7 +243,7 @@ describe("tokenizeMud", () => {
   it("recognises contextual keywords only in their grammar positions", () => {
     expect(compact("abstract thing Place {}\nthing abstract {}")).toContainEqual([
       "abstract",
-      "contextual-word",
+      "declaration-modifier",
     ]);
     const secondAbstract = compact("thing abstract {}").find(
       ([text]) => text === "abstract",

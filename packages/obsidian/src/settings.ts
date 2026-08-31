@@ -44,7 +44,7 @@ export interface LanguageProfileSettings {
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 5;
+  schemaVersion: 6;
   locale: "auto" | "en" | "es";
   autoReloadGrammar: boolean;
   markdownReading: boolean;
@@ -232,6 +232,15 @@ const LEGACY_MUD_DARK: Record<string, string> = {
   brace: "#f38ba8", parenthesis: "#f9e2af", bracket: "#89b4fa",
   punctuation: "#cba6f7",
 };
+const LEGACY_MUD_PALETTE = semanticPalette(
+  {
+    text: "#cdd6f4", comment: "#a6adc8", keyword: "#f5c2e7",
+    type: "#89dceb", constant: "#fab387", declaration: "#f9e2af",
+    callable: "#f9e2af", string: "#a6e3a1", number: "#fab387",
+    operator: "#f5e0dc", delimiter: "#89b4fa", punctuation: "#cba6f7",
+    meta: "#cdd6f4",
+  },
+);
 const LEGACY_EBNF_LIGHT: Record<string, string> = {
   definition: "#0000ff", reference: "#001080", terminal: "#267f99",
   string: "#a31515", comment: "#008000", meta: "#795e26",
@@ -272,22 +281,95 @@ function mergeOverrides(...values: ThemeOverrides[]): ThemeOverrides {
   return result;
 }
 
-const CATPPUCCIN_OVERRIDES = categoryOverrides(
+const LEGACY_CATPPUCCIN_MUD_OVERRIDES = categoryOverrides(
   "mud",
   LEGACY_MUD_DARK,
   LEGACY_MUD_DARK,
 );
+
+function mudSemanticOverrides(
+  values: Readonly<Record<string, readonly [light: string, dark: string]>>,
+): ThemeOverrides {
+  return {
+    mud: Object.fromEntries(
+      Object.entries(values).map(([category, [light, dark]]) => [
+        category,
+        { light, dark },
+      ]),
+    ),
+  };
+}
+
+const MUD_SEMANTIC_CATEGORIES = [
+  "declaration-keyword",
+  "declaration-modifier",
+  "control-flow",
+  "quantifier-keyword",
+  "effect-keyword",
+  "clause-keyword",
+] as const;
+
+const CATPPUCCIN_OVERRIDES = mudSemanticOverrides({
+  "reserved-word": ["#ea76cb", "#f5c2e7"],
+  "declaration-keyword": ["#8839ef", "#cba6f7"],
+  "declaration-modifier": ["#1e66f5", "#89b4fa"],
+  "control-flow": ["#d20f39", "#f38ba8"],
+  "quantifier-keyword": ["#179299", "#94e2d5"],
+  "effect-keyword": ["#fe640b", "#fab387"],
+  "clause-keyword": ["#ea76cb", "#f5c2e7"],
+  "contextual-word": ["#7287fd", "#b4befe"],
+});
 const VSCODE_OVERRIDES = mergeOverrides(
+  mudSemanticOverrides({
+    "reserved-word": ["#af00db", "#c586c0"],
+    "declaration-keyword": ["#0000ff", "#569cd6"],
+    "declaration-modifier": ["#795e26", "#d7ba7d"],
+    "control-flow": ["#af00db", "#c586c0"],
+    "quantifier-keyword": ["#267f99", "#4ec9b0"],
+    "effect-keyword": ["#a31515", "#ce9178"],
+    "clause-keyword": ["#001080", "#9cdcfe"],
+    "contextual-word": ["#795e26", "#d7ba7d"],
+  }),
   categoryOverrides("ebnf", LEGACY_EBNF_LIGHT, LEGACY_EBNF_DARK),
   categoryOverrides("asdl", LEGACY_EBNF_LIGHT, LEGACY_EBNF_DARK),
 );
+const SOLARIZED_OVERRIDES = mudSemanticOverrides({
+  "reserved-word": ["#859900", "#859900"],
+  "declaration-keyword": ["#268bd2", "#268bd2"],
+  "declaration-modifier": ["#cb4b16", "#cb4b16"],
+  "control-flow": ["#dc322f", "#dc322f"],
+  "quantifier-keyword": ["#2aa198", "#2aa198"],
+  "effect-keyword": ["#d33682", "#d33682"],
+  "clause-keyword": ["#859900", "#859900"],
+  "contextual-word": ["#6c71c4", "#6c71c4"],
+});
+const GITHUB_OVERRIDES = mudSemanticOverrides({
+  "reserved-word": ["#cf222e", "#ff7b72"],
+  "declaration-keyword": ["#8250df", "#d2a8ff"],
+  "declaration-modifier": ["#953800", "#ffa657"],
+  "control-flow": ["#cf222e", "#ff7b72"],
+  "quantifier-keyword": ["#0550ae", "#79c0ff"],
+  "effect-keyword": ["#953800", "#ffa657"],
+  "clause-keyword": ["#8250df", "#d2a8ff"],
+  "contextual-word": ["#0969da", "#58a6ff"],
+});
+const GRUVBOX_OVERRIDES = mudSemanticOverrides({
+  "reserved-word": ["#9d0006", "#fb4934"],
+  "declaration-keyword": ["#076678", "#83a598"],
+  "declaration-modifier": ["#b57614", "#fabd2f"],
+  "control-flow": ["#9d0006", "#fb4934"],
+  "quantifier-keyword": ["#427b58", "#8ec07c"],
+  "effect-keyword": ["#af3a03", "#fe8019"],
+  "clause-keyword": ["#8f3f71", "#d3869b"],
+  "contextual-word": ["#79740e", "#b8bb26"],
+});
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
   { id: "catppuccin", name: "Catppuccin", palette: CATPPUCCIN, overrides: CATPPUCCIN_OVERRIDES },
   { id: "vscode-classic", name: "Visual Studio Code Dark+/Light+", palette: VSCODE, overrides: VSCODE_OVERRIDES },
-  { id: "solarized", name: "Solarized", palette: SOLARIZED, overrides: {} },
-  { id: "github-default", name: "GitHub Default", palette: GITHUB, overrides: {} },
-  { id: "gruvbox", name: "Gruvbox", palette: GRUVBOX, overrides: {} },
+  { id: "solarized", name: "Solarized", palette: SOLARIZED, overrides: SOLARIZED_OVERRIDES },
+  { id: "github-default", name: "GitHub Default", palette: GITHUB, overrides: GITHUB_OVERRIDES },
+  { id: "gruvbox", name: "Gruvbox", palette: GRUVBOX, overrides: GRUVBOX_OVERRIDES },
 ];
 
 function clonePalette(value: ThemePalette): ThemePalette {
@@ -358,7 +440,7 @@ function defaultProfile(
 }
 
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   locale: "auto",
   autoReloadGrammar: true,
   markdownReading: true,
@@ -429,6 +511,62 @@ function mergeThemeOverrides(value: unknown, fallback: ThemeOverrides): ThemeOve
   return result;
 }
 
+function sameCategoryColor(left: unknown, right: CategoryColor | undefined): boolean {
+  if (typeof left !== "object" || left === null || Array.isArray(left) || right === undefined) {
+    return false;
+  }
+  const value = left as Record<string, unknown>;
+  return value.light === right.light && value.dark === right.dark;
+}
+
+function samePalette(left: unknown, right: ThemePalette): boolean {
+  if (typeof left !== "object" || left === null || Array.isArray(left)) return false;
+  const value = left as Partial<Record<ColorMode, Record<string, unknown>>>;
+  return (["light", "dark"] as const).every((mode) =>
+    VISUAL_ROLES.every((role) => value[mode]?.[role] === right[mode][role]),
+  );
+}
+
+function migrateMudSemanticProfile(value: unknown, schemaVersion: number): unknown {
+  if (
+    schemaVersion >= 6 ||
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return value;
+  }
+  const result = structuredClone(value) as Record<string, unknown>;
+  const legacyCatppuccin =
+    migratedPreset(String(result.themePreset ?? "catppuccin")) === "catppuccin";
+  if (legacyCatppuccin && samePalette(result.palette, LEGACY_MUD_PALETTE)) {
+    delete result.palette;
+  }
+  const overrides = result.categoryColors;
+  if (typeof overrides !== "object" || overrides === null || Array.isArray(overrides)) {
+    return result;
+  }
+  const mud = (overrides as Record<string, unknown>).mud;
+  if (typeof mud !== "object" || mud === null || Array.isArray(mud)) return result;
+  const categories = mud as Record<string, unknown>;
+  const legacy = legacyCatppuccin
+    ? (LEGACY_CATPPUCCIN_MUD_OVERRIDES.mud ?? {})
+    : {};
+  const reserved = categories["reserved-word"];
+  const customizedReserved =
+    reserved !== undefined &&
+    (!legacyCatppuccin || !sameCategoryColor(reserved, legacy["reserved-word"]));
+  for (const [categoryId, color] of Object.entries(legacy)) {
+    if (sameCategoryColor(categories[categoryId], color)) delete categories[categoryId];
+  }
+  if (customizedReserved) {
+    for (const categoryId of MUD_SEMANTIC_CATEGORIES) {
+      categories[categoryId] ??= structuredClone(reserved);
+    }
+  }
+  return result;
+}
+
 function migrateLegacyPalette(
   id: string,
   value: unknown,
@@ -487,7 +625,16 @@ function migrateLegacyPalette(
   }
 }
 
-function loadCustomThemes(value: unknown): ThemePreset[] {
+function inheritMudSemanticColors(overrides: ThemeOverrides): void {
+  const reserved = overrides.mud?.["reserved-word"];
+  if (reserved === undefined) return;
+  const categories = (overrides.mud ??= {});
+  for (const categoryId of MUD_SEMANTIC_CATEGORIES) {
+    categories[categoryId] = structuredClone(reserved);
+  }
+}
+
+function loadCustomThemes(value: unknown, migrateLegacy: boolean): ThemePreset[] {
   if (!Array.isArray(value)) return [];
   const result: ThemePreset[] = [];
   for (const entry of value) {
@@ -503,8 +650,11 @@ function loadCustomThemes(value: unknown): ThemePreset[] {
     }
     const palette = mergePalette(candidate.palette, CATPPUCCIN);
     const overrides = mergeThemeOverrides(candidate.overrides, {});
-    for (const languageId of ["mud", "ebnf", "asdl", "toml"]) {
-      migrateLegacyPalette(languageId, candidate.palette, palette, overrides);
+    if (migrateLegacy) {
+      for (const languageId of ["mud", "ebnf", "asdl", "toml"]) {
+        migrateLegacyPalette(languageId, candidate.palette, palette, overrides);
+      }
+      inheritMudSemanticColors(overrides);
     }
     result.push({
       id: candidate.id,
@@ -529,6 +679,7 @@ function mergeLanguage(
   value: unknown,
   fallback: LanguageProfileSettings,
   customThemes: readonly ThemePreset[],
+  migrateLegacy: boolean,
 ): LanguageProfileSettings {
   const object =
     typeof value === "object" && value !== null
@@ -551,7 +702,10 @@ function mergeLanguage(
     object.categoryColors,
     baseTheme.overrides,
   );
-  migrateLegacyPalette(fallback.id, object.palette, palette, categoryColors);
+  if (migrateLegacy) {
+    migrateLegacyPalette(fallback.id, object.palette, palette, categoryColors);
+    if (fallback.id === "mud") inheritMudSemanticColors(categoryColors);
+  }
   return {
     id: fallback.id,
     enabled:
@@ -639,7 +793,13 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     return structuredClone(DEFAULT_SETTINGS);
   }
   const object = value as Record<string, unknown>;
-  const customThemes = loadCustomThemes(object.customThemes);
+  const storedSchemaVersion =
+    typeof object.schemaVersion === "number" ? object.schemaVersion : 0;
+  const migrateLegacyPaletteValues = storedSchemaVersion < 5;
+  const customThemes = loadCustomThemes(
+    object.customThemes,
+    migrateLegacyPaletteValues,
+  );
   const stored: unknown[] = Array.isArray(object.languages)
     ? (object.languages as unknown[])
     : [];
@@ -650,7 +810,14 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
         entry !== null &&
         (entry as Record<string, unknown>).id === fallback.id,
     );
-    return mergeLanguage(match, fallback, customThemes);
+    return mergeLanguage(
+      fallback.id === "mud"
+        ? migrateMudSemanticProfile(match, storedSchemaVersion)
+        : match,
+      fallback,
+      customThemes,
+      migrateLegacyPaletteValues,
+    );
   });
   for (const entry of stored) {
     if (typeof entry !== "object" || entry === null) continue;
@@ -662,10 +829,12 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     ) {
       continue;
     }
-    languages.push(mergeLanguage(entry, genericFallback(id), customThemes));
+    languages.push(
+      mergeLanguage(entry, genericFallback(id), customThemes, migrateLegacyPaletteValues),
+    );
   }
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     locale:
       object.locale === "en" || object.locale === "es" || object.locale === "auto"
         ? object.locale

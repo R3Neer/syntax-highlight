@@ -1,6 +1,6 @@
 {
   "name": "@r3nner/syntax-highlight-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Headless CLI for highlighting and formatting source code.",
   "type": "module",
   "license": "MIT",
@@ -25,8 +25,8 @@
     "syntax-highlight": "dist/index.js"
   },
   "dependencies": {
-    "@r3nner/syntax-highlight-core": "1.0.0",
-    "@r3nner/syntax-highlight-language-mud": "1.0.0"
+    "@r3nner/syntax-highlight-core": "1.1.0",
+    "@r3nner/syntax-highlight-language-mud": "1.1.0"
   },
   "sideEffects": false
 }

@@ -30,7 +30,7 @@ describe("settings, descriptors and themes", () => {
       continueLineComments: false,
     });
     expect(loaded).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 6,
       indentStyle: "tabs",
       indentSize: 2,
       lineNumbers: false,
@@ -47,14 +47,20 @@ describe("settings, descriptors and themes", () => {
     const mud = settings.languages.find(({ id }) => id === "mud");
     const ebnf = settings.languages.find(({ id }) => id === "ebnf");
 
-    expect(mud?.categoryColors.mud?.["reserved-word"]?.dark).toBe("#f5c2e7");
+    expect(mud?.categoryColors.mud?.["declaration-keyword"]).toEqual({
+      light: "#8839ef",
+      dark: "#cba6f7",
+    });
+    expect(mud?.categoryColors.mud?.["declaration-modifier"]?.dark).toBe(
+      "#89b4fa",
+    );
     expect(ebnf?.categoryColors.ebnf?.["production-definition"]?.dark).toBe(
       "#569cd6",
     );
     expect(ebnf?.categoryColors.ebnf?.["production-definition"]?.light).toBe(
       "#0000ff",
     );
-    expect(BUILTIN_DESCRIPTORS.mud.previewSource).toContain("thing Alexandria");
+    expect(BUILTIN_DESCRIPTORS.mud.previewSource).toContain("for each");
     expect(BUILTIN_DESCRIPTORS.ebnf.previewSource).toContain("expression ::=");
     expect(BUILTIN_DESCRIPTORS.asdl.previewSource).toContain("module Mud");
     expect(BUILTIN_DESCRIPTORS.asdl.extensions).toEqual(["asdl"]);
@@ -67,7 +73,10 @@ describe("settings, descriptors and themes", () => {
     const css = buildThemeCss(settings);
 
     expect(css).toContain(
-      ".theme-light .syntax-color-mud-reserved-word{color:#f5c2e7!important}",
+      ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
+    );
+    expect(css).toContain(
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
     );
     expect(css).toContain(
       ".theme-dark .syntax-color-ebnf-production-definition{color:#569cd6!important}",
@@ -110,6 +119,54 @@ describe("settings, descriptors and themes", () => {
     expect(
       loaded.languages[0].categoryColors.mud?.["reserved-word"]?.dark,
     ).toBe("#654321");
+    expect(
+      loaded.languages[0].categoryColors.mud?.["declaration-modifier"]?.dark,
+    ).toBe("#654321");
+  });
+
+  it("replaces untouched legacy Catppuccin defaults but preserves custom colors", () => {
+    const legacyPalette = {
+      text: "#cdd6f4", comment: "#a6adc8", keyword: "#f5c2e7",
+      type: "#89dceb", constant: "#fab387", declaration: "#f9e2af",
+      callable: "#f9e2af", string: "#a6e3a1", number: "#fab387",
+      operator: "#f5e0dc", delimiter: "#89b4fa", punctuation: "#cba6f7",
+      meta: "#cdd6f4",
+    };
+    const migrated = loadSettings({
+      schemaVersion: 5,
+      languages: [{
+        id: "mud",
+        themePreset: "catppuccin",
+        palette: { light: legacyPalette, dark: legacyPalette },
+        categoryColors: {
+          mud: {
+            "reserved-word": { light: "#f5c2e7", dark: "#f5c2e7" },
+            "contextual-word": { light: "#f5c2e7", dark: "#f5c2e7" },
+          },
+        },
+      }],
+    }).languages[0];
+    expect(migrated.palette.light.keyword).toBe("#8839ef");
+    expect(migrated.palette.dark.keyword).toBe("#f5c2e7");
+    expect(migrated.categoryColors.mud?.["control-flow"]).toEqual({
+      light: "#d20f39",
+      dark: "#f38ba8",
+    });
+
+    const customized = loadSettings({
+      schemaVersion: 5,
+      languages: [{
+        id: "mud",
+        themePreset: "catppuccin",
+        categoryColors: {
+          mud: { "reserved-word": { light: "#123456", dark: "#654321" } },
+        },
+      }],
+    }).languages[0];
+    expect(customized.categoryColors.mud?.["effect-keyword"]).toEqual({
+      light: "#123456",
+      dark: "#654321",
+    });
   });
 
   it("loads and resolves named global custom themes with overrides", () => {
@@ -191,13 +248,13 @@ describe("language registry", () => {
     );
 
     expect(registry.get("mud")?.tokenize("thing")[0]?.categoryId).toBe(
-      "reserved-word",
+      "declaration-keyword",
     );
     await registry.reload("mud");
 
     expect(registry.get("mud")?.status.state).toBe("error");
     expect(registry.get("mud")?.tokenize("thing")[0]?.categoryId).toBe(
-      "reserved-word",
+      "declaration-keyword",
     );
   });
 

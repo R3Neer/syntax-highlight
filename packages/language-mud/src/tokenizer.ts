@@ -227,6 +227,23 @@ function contextualKeyword(
   );
 }
 
+function semanticKeywordCategory(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): string | undefined {
+  const token = tokens[index];
+  if (token === undefined) return undefined;
+  const previous = tokens[index - 1]?.text;
+  const next = tokens[index + 1]?.text;
+  return config.semanticKeywords.find(
+    (entry) =>
+      entry.word === token.text &&
+      (entry.previous === undefined || entry.previous === previous) &&
+      (entry.next === undefined || entry.next === next),
+  )?.category;
+}
+
 function classifyWord(
   source: string,
   tokens: RawToken[],
@@ -236,9 +253,11 @@ function classifyWord(
   const token = tokens[index];
   if (token === undefined || token.categoryId !== "word") return undefined;
   const configuredKind = config.words.get(token.text);
-  if (configuredKind !== undefined) return configuredKind;
+  if (configuredKind !== undefined) {
+    return semanticKeywordCategory(tokens, index, config) ?? configuredKind;
+  }
   if (contextualKeyword(tokens, index, config)) {
-    return config.categories.contextual;
+    return semanticKeywordCategory(tokens, index, config) ?? config.categories.contextual;
   }
 
   const previous = tokens[index - 1];

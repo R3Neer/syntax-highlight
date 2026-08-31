@@ -15,8 +15,10 @@ DOM, Obsidian, CodeMirror, or MUD dependency.
 Language packs own tokenization and formatting. The MUD pack parses the
 canonical EBNF snapshot at startup. Its operator inventory comes from the
 lexical grammar, while contextual metadata names and keywords come from
-fixed-point grammar boundary analysis; host adapters do not duplicate these
-tables.
+fixed-point grammar boundary analysis. Its presentation taxonomy separates
+declaration heads and modifiers, control flow, effects, clauses, and
+quantifiers/iterators. Host adapters neither duplicate these tables nor
+reclassify MUD words.
 
 Renderers consume `HighlightDocument`. Hosts may add transport or editor state,
 but must preserve source text and UTF-16 span coordinates. Formatters return

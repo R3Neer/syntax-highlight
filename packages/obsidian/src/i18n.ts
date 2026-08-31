@@ -28,6 +28,12 @@ export function translate(
 
 const ENGLISH_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   comment: "Comment", "reserved-word": "Reserved word",
+  "declaration-keyword": "Declaration keyword",
+  "declaration-modifier": "Declaration modifier",
+  "control-flow": "Control flow",
+  "quantifier-keyword": "Quantifier or iterator",
+  "effect-keyword": "Effect keyword",
+  "clause-keyword": "Clause keyword",
   "word-operator": "Word operator", "builtin-type": "Built-in type",
   "literal-constant": "Literal constant", "contextual-word": "Contextual word",
   "declared-name": "Declared name", "specialization-reference": "Specialization reference",

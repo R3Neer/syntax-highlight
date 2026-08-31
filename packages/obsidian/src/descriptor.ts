@@ -1,8 +1,8 @@
 import asdlDescriptorSource from "../languages/asdl.json";
 import ebnfDescriptorSource from "../languages/ebnf.json";
 import genericDescriptorSource from "../languages/generic.json";
-import mudDescriptorSource from "../languages/mud.json";
 import tomlDescriptorSource from "../languages/toml.json";
+import { MUD_DESCRIPTOR_V1 } from "@r3nner/syntax-highlight-language-mud";
 
 export const VISUAL_ROLES = [
   "text",
@@ -320,7 +320,7 @@ export function validateLanguageDescriptor(value: unknown): LanguageDescriptor {
 }
 
 export const BUILTIN_DESCRIPTORS: Readonly<Record<string, LanguageDescriptor>> = {
-  mud: validateLanguageDescriptor(mudDescriptorSource),
+  mud: validateLanguageDescriptor(MUD_DESCRIPTOR_V1),
   ebnf: validateLanguageDescriptor(ebnfDescriptorSource),
   asdl: validateLanguageDescriptor(asdlDescriptorSource),
   toml: validateLanguageDescriptor(tomlDescriptorSource),
