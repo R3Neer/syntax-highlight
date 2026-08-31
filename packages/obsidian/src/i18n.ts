@@ -30,6 +30,7 @@ const ENGLISH_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   comment: "Comment", "reserved-word": "Reserved word",
   "declaration-keyword": "Declaration keyword",
   "declaration-modifier": "Declaration modifier",
+  "top-level-declaration-modifier": "Top-level declaration modifier",
   "control-flow": "Control flow",
   "quantifier-keyword": "Quantifier or iterator",
   "effect-keyword": "Effect keyword",

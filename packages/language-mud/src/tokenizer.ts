@@ -244,6 +244,91 @@ function semanticKeywordCategory(
   )?.category;
 }
 
+function iterationBindingStartBefore(
+  tokens: RawToken[],
+  index: number,
+): number | undefined {
+  const previous = tokens[index - 1];
+  if (previous?.categoryId === "word") return index - 1;
+  if (
+    previous?.text === ")" &&
+    tokens[index - 2]?.categoryId === "word" &&
+    tokens[index - 3]?.text === "," &&
+    tokens[index - 4]?.categoryId === "word" &&
+    tokens[index - 5]?.text === "("
+  ) return index - 5;
+  return undefined;
+}
+
+function isForEachMembership(tokens: RawToken[], index: number): boolean {
+  if (tokens[index]?.text !== "in") return false;
+  const bindingStart = iterationBindingStartBefore(tokens, index);
+  return (
+    bindingStart !== undefined &&
+    tokens[bindingStart - 1]?.text === "each" &&
+    tokens[bindingStart - 2]?.text === "for"
+  );
+}
+
+function isIterationBodyColon(
+  tokens: RawToken[],
+  index: number,
+  config: PreparedHighlightConfig,
+): boolean {
+  if (tokens[index]?.text !== ":") return false;
+  let parentheses = 0;
+  let brackets = 0;
+  let braces = 0;
+
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === ")") {
+      parentheses += 1;
+      continue;
+    }
+    if (text === "]") {
+      brackets += 1;
+      continue;
+    }
+    if (text === "}") {
+      braces += 1;
+      continue;
+    }
+    if (text === "(") {
+      if (parentheses === 0) return false;
+      parentheses -= 1;
+      continue;
+    }
+    if (text === "[") {
+      if (brackets === 0) return false;
+      brackets -= 1;
+      continue;
+    }
+    if (text === "{") {
+      if (braces === 0) return false;
+      braces -= 1;
+      continue;
+    }
+    if (parentheses > 0 || brackets > 0 || braces > 0) continue;
+
+    if (text === "in" && iterationBindingStartBefore(tokens, cursor) !== undefined) {
+      return true;
+    }
+    if (
+      text === ":" ||
+      text === ":=" ||
+      text === "=" ||
+      text === ";" ||
+      text === "for" ||
+      text === "on" ||
+      text === "given" ||
+      text === "with" ||
+      (text !== undefined && config.declarationHeads.has(text))
+    ) return false;
+  }
+  return false;
+}
+
 function classifyWord(
   source: string,
   tokens: RawToken[],
@@ -252,6 +337,7 @@ function classifyWord(
 ): string | undefined {
   const token = tokens[index];
   if (token === undefined || token.categoryId !== "word") return undefined;
+  if (isForEachMembership(tokens, index)) return "quantifier-keyword";
   const configuredKind = config.words.get(token.text);
   if (configuredKind !== undefined) {
     return semanticKeywordCategory(tokens, index, config) ?? configuredKind;
@@ -373,7 +459,7 @@ function isTypeReference(
   ) return true;
   if (isCallableReceiverType(tokens, index)) return true;
   if (
-    previous === ":" ||
+    (previous === ":" && !isIterationBodyColon(tokens, index - 1, config)) ||
     previous === "to" ||
     previous === "over" ||
     previous === "is" ||

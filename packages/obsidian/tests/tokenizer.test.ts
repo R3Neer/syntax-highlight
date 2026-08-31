@@ -47,7 +47,7 @@ describe("tokenizeMud", () => {
         "ordered family Color { value: Char owner: PlayerName owner = owner }",
       ),
     ).toEqual([
-      ["ordered", "declaration-modifier"],
+      ["ordered", "top-level-declaration-modifier"],
       ["family", "declaration-keyword"],
       ["Color", "declared-name"],
       ["{", "brace"],
@@ -243,7 +243,7 @@ describe("tokenizeMud", () => {
   it("recognises contextual keywords only in their grammar positions", () => {
     expect(compact("abstract thing Place {}\nthing abstract {}")).toContainEqual([
       "abstract",
-      "declaration-modifier",
+      "top-level-declaration-modifier",
     ]);
     const secondAbstract = compact("thing abstract {}").find(
       ([text]) => text === "abstract",

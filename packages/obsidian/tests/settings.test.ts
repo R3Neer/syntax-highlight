@@ -54,6 +54,9 @@ describe("settings, descriptors and themes", () => {
     expect(mud?.categoryColors.mud?.["declaration-modifier"]?.dark).toBe(
       "#89b4fa",
     );
+    expect(mud?.categoryColors.mud?.["top-level-declaration-modifier"]).toEqual(
+      mud?.categoryColors.mud?.["declaration-keyword"],
+    );
     expect(ebnf?.categoryColors.ebnf?.["production-definition"]?.dark).toBe(
       "#569cd6",
     );
@@ -76,7 +79,7 @@ describe("settings, descriptors and themes", () => {
       ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
     );
     expect(css).toContain(
-      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#f38ba8!important}",
     );
     expect(css).toContain(
       ".theme-dark .syntax-color-ebnf-production-definition{color:#569cd6!important}",
@@ -174,6 +177,7 @@ describe("settings, descriptors and themes", () => {
     const semantic = new Set([
       "declaration-keyword",
       "declaration-modifier",
+      "top-level-declaration-modifier",
       "control-flow",
       "quantifier-keyword",
       "effect-keyword",
@@ -205,7 +209,7 @@ describe("settings, descriptors and themes", () => {
       ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
     );
     expect(css).toContain(
-      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#f38ba8!important}",
     );
 
     const personal = structuredClone(storedProfile);

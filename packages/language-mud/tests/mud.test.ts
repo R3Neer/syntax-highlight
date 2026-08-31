@@ -42,8 +42,10 @@ describe("MUD language pack", () => {
     expect(category("for each item in items: destroy item", "for")).toBe("quantifier-keyword");
     expect(category("for each item in items: destroy item", "each")).toBe("quantifier-keyword");
     expect(category("action Move for actor: Thing {}", "for")).toBe("clause-keyword");
-    expect(category("abstract thing Place {}", "abstract")).toBe("declaration-modifier");
-    expect(category("always rule Stable { true }", "always")).toBe("declaration-modifier");
+    expect(category("abstract thing Place {}", "abstract")).toBe("top-level-declaration-modifier");
+    expect(category("always rule Stable { true }", "always")).toBe("top-level-declaration-modifier");
+    expect(category("unique ordered family Rank {}", "unique")).toBe("top-level-declaration-modifier");
+    expect(category("unique ordered family Rank {}", "ordered")).toBe("top-level-declaration-modifier");
     expect(category("root unit meter", "unit")).toBe("declaration-keyword");
 
     for (const word of DEFAULT_HIGHLIGHT_CONFIG.words["reserved-word"] ?? []) {
@@ -64,6 +66,24 @@ describe("MUD language pack", () => {
     expect(category("allowedRange: Int Interval", "Interval")).toBe("type-reference");
     expect(category("selection: Score Interval", "Score")).toBe("type-reference");
     expect(category("selection: Score Interval", "Interval")).toBe("type-reference");
+  });
+
+  it("distinguishes iteration body colons from type annotations", () => {
+    const multiline = "for each item in items if item.taxable:\n    total += item.price";
+    const inline = "for each item in items if item.taxable: total += item.price";
+    expect(category(multiline, "for")).toBe("quantifier-keyword");
+    expect(category(multiline, "each")).toBe("quantifier-keyword");
+    expect(category(multiline, "in")).toBe("quantifier-keyword");
+    expect(category(multiline, "if")).toBe("control-flow");
+    expect(category(multiline, "total")).toBeUndefined();
+    expect(category(inline, "total")).toBeUndefined();
+    expect(category("for each item in items if { ready }: changed", "changed")).toBeUndefined();
+    expect(category("item in items: selected", "selected")).toBeUndefined();
+    expect(category("exists item in items: candidate", "candidate")).toBeUndefined();
+    expect(category("total: Score = initial", "Score")).toBe("type-reference");
+    expect(category("action Pick on item in items given amount: Score {}", "Score"))
+      .toBe("type-reference");
+    expect(category("value in items", "in")).toBe("word-operator");
   });
 
   it("formats idempotently and returns reproducible edits", () => {

@@ -16,6 +16,7 @@
     { "id": "reserved-word", "name": "Palabra reservada", "description": "Palabra estructural reservada por MUD.", "group": "words", "role": "keyword" },
     { "id": "declaration-keyword", "name": "Palabra de declaración", "description": "Introduce una declaración o directiva estructural.", "group": "words", "role": "declaration" },
     { "id": "declaration-modifier", "name": "Modificador de declaración", "description": "Modifica la naturaleza, mutabilidad u orden de una declaración.", "group": "words", "role": "meta" },
+    { "id": "top-level-declaration-modifier", "name": "Modificador de declaración de primer nivel", "description": "Modifica la forma de una declaración de primer nivel sin introducir un campo.", "group": "words", "role": "declaration" },
     { "id": "control-flow", "name": "Control de flujo", "description": "Dirige condiciones, transiciones y alternativas de ejecución.", "group": "words", "role": "keyword" },
     { "id": "quantifier-keyword", "name": "Cuantificador o iterador", "description": "Cuantifica valores o introduce una iteración, incluido «for each».", "group": "words", "role": "keyword" },
     { "id": "effect-keyword", "name": "Palabra de efecto", "description": "Introduce una operación que modifica el mundo o el estado.", "group": "words", "role": "keyword" },
