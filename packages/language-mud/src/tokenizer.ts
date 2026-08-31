@@ -270,6 +270,49 @@ function isForEachMembership(tokens: RawToken[], index: number): boolean {
   );
 }
 
+function isForEachFilter(tokens: RawToken[], index: number): boolean {
+  if (tokens[index]?.text !== "if") return false;
+  let parentheses = 0;
+  let brackets = 0;
+  let braces = 0;
+
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const text = tokens[cursor]?.text;
+    if (text === ")") {
+      parentheses += 1;
+      continue;
+    }
+    if (text === "]") {
+      brackets += 1;
+      continue;
+    }
+    if (text === "}") {
+      braces += 1;
+      continue;
+    }
+    if (text === "(") {
+      if (parentheses === 0) return false;
+      parentheses -= 1;
+      continue;
+    }
+    if (text === "[") {
+      if (brackets === 0) return false;
+      brackets -= 1;
+      continue;
+    }
+    if (text === "{") {
+      if (braces === 0) return false;
+      braces -= 1;
+      continue;
+    }
+    if (parentheses > 0 || brackets > 0 || braces > 0) continue;
+
+    if (text === "in" && isForEachMembership(tokens, cursor)) return true;
+    if (text === ":" || text === ";") return false;
+  }
+  return false;
+}
+
 function isIterationBodyColon(
   tokens: RawToken[],
   index: number,
@@ -337,7 +380,10 @@ function classifyWord(
 ): string | undefined {
   const token = tokens[index];
   if (token === undefined || token.categoryId !== "word") return undefined;
-  if (isForEachMembership(tokens, index)) return "quantifier-keyword";
+  if (
+    isForEachMembership(tokens, index) ||
+    isForEachFilter(tokens, index)
+  ) return "quantifier-keyword";
   const configuredKind = config.words.get(token.text);
   if (configuredKind !== undefined) {
     return semanticKeywordCategory(tokens, index, config) ?? configuredKind;

@@ -8,8 +8,9 @@
   stored as personal copies, restoring the six Catppuccin semantic accents
   without replacing genuinely edited descriptors.
 - Give structural top-level modifiers their declaration color while grouping
-  `cycle`, `ordered`, and `unique` with `mut`, and visually group loop
-  quantifiers with control flow instead of type names.
+  `cycle`, `ordered`, and `unique` with `mut`.
+- Keep quantifiers and iteration headers visually distinct from inner declaration
+  clauses, including the contextual `if` filter of `for each`.
 - Treat `in` inside `for each` as part of the loop header and distinguish body
   colons in iteration, selection, and quantifier expressions from type annotations.
 

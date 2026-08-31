@@ -79,7 +79,7 @@ describe("settings, descriptors and themes", () => {
       ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
     );
     expect(css).toContain(
-      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#f38ba8!important}",
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
     );
     expect(css).toContain(
       ".theme-dark .syntax-color-ebnf-production-definition{color:#569cd6!important}",
@@ -209,7 +209,7 @@ describe("settings, descriptors and themes", () => {
       ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
     );
     expect(css).toContain(
-      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#f38ba8!important}",
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
     );
 
     const personal = structuredClone(storedProfile);

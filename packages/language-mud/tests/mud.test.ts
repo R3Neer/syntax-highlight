@@ -74,7 +74,7 @@ describe("MUD language pack", () => {
     expect(category(multiline, "for")).toBe("quantifier-keyword");
     expect(category(multiline, "each")).toBe("quantifier-keyword");
     expect(category(multiline, "in")).toBe("quantifier-keyword");
-    expect(category(multiline, "if")).toBe("control-flow");
+    expect(category(multiline, "if")).toBe("quantifier-keyword");
     expect(category(multiline, "total")).toBeUndefined();
     expect(category(inline, "total")).toBeUndefined();
     expect(category("for each item in items if { ready }: changed", "changed")).toBeUndefined();
@@ -84,6 +84,7 @@ describe("MUD language pack", () => {
     expect(category("action Pick on item in items given amount: Score {}", "Score"))
       .toBe("type-reference");
     expect(category("value in items", "in")).toBe("word-operator");
+    expect(category("if ready then destroy target", "if")).toBe("control-flow");
   });
 
   it("formats idempotently and returns reproducible edits", () => {
