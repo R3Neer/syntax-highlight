@@ -60,11 +60,11 @@ const MUD_SEMANTIC_KEYWORDS: readonly {
   },
   {
     category: "declaration-modifier",
-    words: ["mut"],
+    words: ["mut", "cycle", "unique", "ordered"],
   },
   {
     category: "top-level-declaration-modifier",
-    words: ["unique", "ordered", "abstract", "always", "root", "point"],
+    words: ["abstract", "always", "root", "point"],
   },
   {
     category: "control-flow",

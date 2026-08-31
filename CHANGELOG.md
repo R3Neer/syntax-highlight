@@ -7,9 +7,9 @@
 - Migrate the known bundled MUD descriptors that older Obsidian installations
   stored as personal copies, restoring the six Catppuccin semantic accents
   without replacing genuinely edited descriptors.
-- Separate top-level declaration modifiers from field modifiers while giving
-  them the declaration color, and visually group loop quantifiers with control
-  flow instead of type names.
+- Give structural top-level modifiers their declaration color while grouping
+  `cycle`, `ordered`, and `unique` with `mut`, and visually group loop
+  quantifiers with control flow instead of type names.
 - Treat `in` inside `for each` as part of the loop header and distinguish body
   colons in iteration, selection, and quantifier expressions from type annotations.
 

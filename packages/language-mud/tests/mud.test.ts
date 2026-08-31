@@ -29,7 +29,7 @@ describe("MUD language pack", () => {
 
   it("highlights indirect metadata and point-domain cycle", () => {
     expect(category("~format = value", "format")).toBe("contextual-word");
-    expect(category("[0..10] cycle", "cycle")).toBe("contextual-word");
+    expect(category("[0..10] cycle", "cycle")).toBe("declaration-modifier");
   });
 
   it("distinguishes semantic keyword families without host-specific rules", () => {
@@ -44,8 +44,8 @@ describe("MUD language pack", () => {
     expect(category("action Move for actor: Thing {}", "for")).toBe("clause-keyword");
     expect(category("abstract thing Place {}", "abstract")).toBe("top-level-declaration-modifier");
     expect(category("always rule Stable { true }", "always")).toBe("top-level-declaration-modifier");
-    expect(category("unique ordered family Rank {}", "unique")).toBe("top-level-declaration-modifier");
-    expect(category("unique ordered family Rank {}", "ordered")).toBe("top-level-declaration-modifier");
+    expect(category("unique ordered family Rank {}", "unique")).toBe("declaration-modifier");
+    expect(category("unique ordered family Rank {}", "ordered")).toBe("declaration-modifier");
     expect(category("root unit meter", "unit")).toBe("declaration-keyword");
 
     for (const word of DEFAULT_HIGHLIGHT_CONFIG.words["reserved-word"] ?? []) {

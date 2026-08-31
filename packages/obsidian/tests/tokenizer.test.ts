@@ -47,7 +47,7 @@ describe("tokenizeMud", () => {
         "ordered family Color { value: Char owner: PlayerName owner = owner }",
       ),
     ).toEqual([
-      ["ordered", "top-level-declaration-modifier"],
+      ["ordered", "declaration-modifier"],
       ["family", "declaration-keyword"],
       ["Color", "declared-name"],
       ["{", "brace"],

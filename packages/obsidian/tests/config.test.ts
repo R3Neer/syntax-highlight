@@ -50,7 +50,7 @@ describe("compilación EBNF del resaltado MUD", () => {
       ["..", "symbolic-operator"],
       ["10", "exact-number"],
       ["]", "bracket"],
-      ["cycle", "contextual-word"],
+      ["cycle", "declaration-modifier"],
     ]);
   });
 
