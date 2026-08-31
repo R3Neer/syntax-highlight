@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- Highlight `Interval` as the type constructor in declarations such as
+  `Int Interval` and user-defined interval types.
+- Migrate the known bundled MUD descriptors that older Obsidian installations
+  stored as personal copies, restoring the six Catppuccin semantic accents
+  without replacing genuinely edited descriptors.
+
 ## 1.1.0
 
 - Split MUD reserved words into semantic declaration, modifier, control-flow,

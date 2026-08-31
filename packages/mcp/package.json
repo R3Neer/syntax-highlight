@@ -1,6 +1,6 @@
 {
   "name": "@r3nner/syntax-highlight-mcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Portable MCP Apps syntax highlighting component.",
   "type": "module",
   "license": "MIT",
@@ -22,8 +22,8 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@r3nner/syntax-highlight-core": "1.1.0",
-    "@r3nner/syntax-highlight-html": "1.1.0"
+    "@r3nner/syntax-highlight-core": "1.1.1",
+    "@r3nner/syntax-highlight-html": "1.1.1"
   },
   "sideEffects": false
 }

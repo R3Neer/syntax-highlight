@@ -59,6 +59,13 @@ describe("MUD language pack", () => {
     expect(types).toEqual(expect.arrayContaining(["Player", "Room"]));
   });
 
+  it("highlights Interval as the type constructor in interval types", () => {
+    expect(category("allowedRange: Int Interval", "Int")).toBe("builtin-type");
+    expect(category("allowedRange: Int Interval", "Interval")).toBe("type-reference");
+    expect(category("selection: Score Interval", "Score")).toBe("type-reference");
+    expect(category("selection: Score Interval", "Interval")).toBe("type-reference");
+  });
+
   it("formats idempotently and returns reproducible edits", () => {
     const once = format("value  |=  other\nnext ~ format", adapter);
     expect(once.formatted).toBe("value |= other\nnext~format");

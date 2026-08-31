@@ -1,6 +1,6 @@
 {
   "name": "@r3nner/syntax-highlight-html",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Safe HTML renderer for syntax-highlight documents.",
   "type": "module",
   "license": "MIT",
@@ -22,7 +22,7 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@r3nner/syntax-highlight-core": "1.1.0"
+    "@r3nner/syntax-highlight-core": "1.1.1"
   },
   "sideEffects": false
 }

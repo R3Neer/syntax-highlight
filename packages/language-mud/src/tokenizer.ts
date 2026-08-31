@@ -364,7 +364,13 @@ function isTypeReference(
   index: number,
   config: PreparedHighlightConfig,
 ): boolean {
+  const token = tokens[index];
   const previous = tokens[index - 1]?.text;
+  if (
+    token?.text === "Interval" &&
+    index > 0 &&
+    isTypeReference(tokens, index - 1, config)
+  ) return true;
   if (isCallableReceiverType(tokens, index)) return true;
   if (
     previous === ":" ||

@@ -44,7 +44,7 @@ export interface LanguageProfileSettings {
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 6;
+  schemaVersion: 7;
   locale: "auto" | "en" | "es";
   autoReloadGrammar: boolean;
   markdownReading: boolean;
@@ -309,6 +309,46 @@ const MUD_SEMANTIC_CATEGORIES = [
   "clause-keyword",
 ] as const;
 
+function legacyBundledMudDescriptor(
+  variant: "standalone-1.0" | "vendored",
+): LanguageDescriptor {
+  const descriptor = structuredClone(BUILTIN_DESCRIPTORS.mud);
+  const semantic = new Set<string>(MUD_SEMANTIC_CATEGORIES);
+  descriptor.categories = descriptor.categories.filter(({ id }) => !semantic.has(id));
+  if (variant === "standalone-1.0") {
+    descriptor.previewSource =
+      'abstract thing Place {}\n\nthing Alexandria as City, Place {\n    name = "Alejandría"\n}\n\naction Inspect for target: Thing {}';
+    return descriptor;
+  }
+  const character = descriptor.categories.find(({ id }) => id === "character");
+  if (character !== undefined) {
+    character.description = "Literal Char.";
+  }
+  const rumber = descriptor.categories.find(({ id }) => id === "rumber");
+  if (rumber !== undefined) {
+    rumber.name = "Rumber";
+  }
+  descriptor.previewSource =
+    'abstract thing Place {\n}\n\nthing Alexandria as City, Place {\n    name: Text = "Alexandria"\n    rule CanEnter(actor: Player) { distance(actor, self) <= 10 m }\n}';
+  return descriptor;
+}
+
+const LEGACY_BUNDLED_MUD_DESCRIPTORS = [
+  legacyBundledMudDescriptor("standalone-1.0"),
+  legacyBundledMudDescriptor("vendored"),
+] as const;
+
+function isLegacyBundledMudDescriptor(value: unknown): boolean {
+  try {
+    const descriptor = validateLanguageDescriptor(value);
+    return LEGACY_BUNDLED_MUD_DESCRIPTORS.some(
+      (legacy) => JSON.stringify(descriptor) === JSON.stringify(legacy),
+    );
+  } catch {
+    return false;
+  }
+}
+
 const CATPPUCCIN_OVERRIDES = mudSemanticOverrides({
   "reserved-word": ["#ea76cb", "#f5c2e7"],
   "declaration-keyword": ["#8839ef", "#cba6f7"],
@@ -440,7 +480,7 @@ function defaultProfile(
 }
 
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   locale: "auto",
   autoReloadGrammar: true,
   markdownReading: true,
@@ -529,7 +569,7 @@ function samePalette(left: unknown, right: ThemePalette): boolean {
 
 function migrateMudSemanticProfile(value: unknown, schemaVersion: number): unknown {
   if (
-    schemaVersion >= 6 ||
+    schemaVersion >= 7 ||
     typeof value !== "object" ||
     value === null ||
     Array.isArray(value)
@@ -537,6 +577,14 @@ function migrateMudSemanticProfile(value: unknown, schemaVersion: number): unkno
     return value;
   }
   const result = structuredClone(value) as Record<string, unknown>;
+  if (
+    result.descriptorOrigin === "personal" &&
+    isLegacyBundledMudDescriptor(result.embeddedDescriptor)
+  ) {
+    delete result.embeddedDescriptor;
+    result.descriptorOrigin = "builtin";
+  }
+  if (schemaVersion >= 6) return result;
   const legacyCatppuccin =
     migratedPreset(String(result.themePreset ?? "catppuccin")) === "catppuccin";
   if (legacyCatppuccin && samePalette(result.palette, LEGACY_MUD_PALETTE)) {
@@ -834,7 +882,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     );
   }
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     locale:
       object.locale === "en" || object.locale === "es" || object.locale === "auto"
         ? object.locale

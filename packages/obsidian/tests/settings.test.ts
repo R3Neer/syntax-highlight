@@ -30,7 +30,7 @@ describe("settings, descriptors and themes", () => {
       continueLineComments: false,
     });
     expect(loaded).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       indentStyle: "tabs",
       indentSize: 2,
       lineNumbers: false,
@@ -167,6 +167,52 @@ describe("settings, descriptors and themes", () => {
       light: "#123456",
       dark: "#654321",
     });
+  });
+
+  it("restores known bundled MUD descriptors without replacing personal edits", () => {
+    const legacy = structuredClone(BUILTIN_DESCRIPTORS.mud);
+    const semantic = new Set([
+      "declaration-keyword",
+      "declaration-modifier",
+      "control-flow",
+      "quantifier-keyword",
+      "effect-keyword",
+      "clause-keyword",
+    ]);
+    legacy.categories = legacy.categories.filter(({ id }) => !semantic.has(id));
+    const character = legacy.categories.find(({ id }) => id === "character");
+    if (character !== undefined) character.description = "Literal Char.";
+    const rumber = legacy.categories.find(({ id }) => id === "rumber");
+    if (rumber !== undefined) rumber.name = "Rumber";
+    legacy.previewSource =
+      'abstract thing Place {\n}\n\nthing Alexandria as City, Place {\n    name: Text = "Alexandria"\n    rule CanEnter(actor: Player) { distance(actor, self) <= 10 m }\n}';
+
+    const storedProfile = {
+      id: "mud",
+      descriptorOrigin: "personal",
+      embeddedDescriptor: legacy,
+      themePreset: "catppuccin",
+    };
+    const migrated = loadSettings({
+      schemaVersion: 6,
+      languages: [storedProfile],
+    });
+    const mud = migrated.languages[0];
+    expect(mud.descriptorOrigin).toBe("builtin");
+    expect(mud.embeddedDescriptor).toBeUndefined();
+    const css = buildThemeCss(migrated);
+    expect(css).toContain(
+      ".theme-light .syntax-color-mud-declaration-keyword{color:#8839ef!important}",
+    );
+    expect(css).toContain(
+      ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
+    );
+
+    const personal = structuredClone(storedProfile);
+    personal.embeddedDescriptor.previewSource = "# personalized";
+    const preserved = loadSettings({ schemaVersion: 6, languages: [personal] }).languages[0];
+    expect(preserved.descriptorOrigin).toBe("personal");
+    expect(preserved.embeddedDescriptor?.previewSource).toBe("# personalized");
   });
 
   it("loads and resolves named global custom themes with overrides", () => {
