@@ -17,7 +17,7 @@ import {
   DEFAULT_HIGHLIGHT_CONFIG,
   prepareHighlightConfig,
 } from "./config";
-import { tokenizeMud } from "./tokenizer";
+import { iterationBodyColonOffsets, tokenizeMud } from "./tokenizer";
 
 export interface EditingContext {
   from: number;
@@ -507,6 +507,7 @@ function canonicalSeparator(
   tokens: readonly SpacingToken[],
   index: number,
   compactUnits: ReadonlySet<number>,
+  bodyColons: ReadonlySet<number>,
 ): string {
   const left = tokens[index];
   const right = tokens[index + 1];
@@ -515,6 +516,7 @@ function canonicalSeparator(
   if (left.kind === "unknown" || right.kind === "unknown") return original;
   if (right.kind === "comment") return " ";
 
+  if (right.text === ":" && bodyColons.has(right.from)) return " ";
   if ([",", ":", ";", ")", "]"].includes(right.text)) return "";
   if (right.text === "}") return left.text === "{" ? "" : " ";
   if (["(", "["].includes(left.text)) return "";
@@ -557,10 +559,11 @@ export function formatMudHorizontalSpacing(source: string): string {
   const tokens = scanSpacingTokens(body);
   if (tokens.length === 0) return indentation;
   const compactUnits = unitOperators(body);
+  const bodyColons = iterationBodyColonOffsets(body);
   let result = indentation;
   tokens.forEach((token, index) => {
     result += token.kind === "comment" ? canonicalComment(token.text) : token.text;
-    result += canonicalSeparator(body, tokens, index, compactUnits);
+    result += canonicalSeparator(body, tokens, index, compactUnits, bodyColons);
   });
   return stripRedundantTypeUnionParentheses(result);
 }

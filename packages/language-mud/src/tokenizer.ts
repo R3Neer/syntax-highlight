@@ -372,6 +372,23 @@ function isIterationBodyColon(
   return false;
 }
 
+export function iterationBodyColonOffsets(
+  source: string,
+  config: MudHighlightConfig = DEFAULT_HIGHLIGHT_CONFIG,
+): ReadonlySet<number> {
+  const prepared = preparedConfig(config);
+  const tokens = scanRaw(source, prepared);
+  return new Set(
+    tokens
+      .map((token, index) =>
+        token.text === ":" && isIterationBodyColon(tokens, index, prepared)
+          ? token.from
+          : undefined,
+      )
+      .filter((offset): offset is number => offset !== undefined),
+  );
+}
+
 function classifyWord(
   source: string,
   tokens: RawToken[],

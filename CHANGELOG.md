@@ -13,6 +13,8 @@
   clauses, including the contextual `if` filter of `for each`.
 - Treat `in` inside `for each` as part of the loop header and distinguish body
   colons in iteration, selection, and quantifier expressions from type annotations.
+- Format iteration, selection, and quantifier body colons with a leading space,
+  as in `forall x in 1..10 : x is A`, without changing type annotations.
 
 ## 1.1.0
 

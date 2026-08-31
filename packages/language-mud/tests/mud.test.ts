@@ -92,4 +92,22 @@ describe("MUD language pack", () => {
     expect(once.formatted).toBe("value |= other\nnext~format");
     expect(format(once.formatted, adapter).edits).toEqual([]);
   });
+
+  it("separates iteration body colons without changing type annotations", () => {
+    for (const source of [
+      "for each x in values: destroy x",
+      "forall x in 1..10: x is A",
+      "exists x in values: allowed(x)",
+      "count x in values: x.active",
+      "min x in values by x.score: x.score",
+      "max x in values: x.score",
+      "x in values: x.score",
+    ]) {
+      const formatted = format(source, adapter).formatted;
+      expect(formatted).toContain(" : ");
+      expect(format(formatted, adapter).edits).toEqual([]);
+    }
+    expect(format("value: Score", adapter).formatted).toBe("value: Score");
+    expect(format("at 12:30", adapter).formatted).toBe("at 12:30");
+  });
 });

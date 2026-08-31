@@ -122,6 +122,16 @@ describe("MUD horizontal spacing", () => {
     );
   });
 
+  it("spaces iteration body colons but keeps annotations compact", () => {
+    expect(formatMudHorizontalSpacing("forall x in 1..10:x is A")).toBe(
+      "forall x in 1..10 : x is A",
+    );
+    expect(formatMudHorizontalSpacing("for each x in values:destroy x")).toBe(
+      "for each x in values : destroy x",
+    );
+    expect(formatMudHorizontalSpacing("value : Score")).toBe("value: Score");
+  });
+
   it("keeps canonical union types free of inserted parentheses", () => {
     expect(formatMudHorizontalSpacing("values:Nat in 0..10|Int in -10..-1[1..*]")).toBe(
       "values: Nat in 0..10 | Int in -10..-1 [1..*]",

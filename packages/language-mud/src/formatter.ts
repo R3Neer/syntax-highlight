@@ -4,7 +4,7 @@ import {
   DEFAULT_HIGHLIGHT_CONFIG,
   type MudHighlightConfig,
 } from "./config";
-import { tokenizeMud } from "./tokenizer";
+import { iterationBodyColonOffsets, tokenizeMud } from "./tokenizer";
 
 type Kind = "atom" | "comment" | "operator" | "punctuation" | "unknown";
 interface Token { from: number; to: number; text: string; kind: Kind }
@@ -100,6 +100,7 @@ function separator(
   tokens: readonly Token[],
   index: number,
   unitOperators: ReadonlySet<number>,
+  bodyColons: ReadonlySet<number>,
 ): string {
   const left = tokens[index];
   const right = tokens[index + 1];
@@ -108,6 +109,7 @@ function separator(
   if (left.kind === "unknown" || right.kind === "unknown") return original;
   if (right.kind === "comment") return " ";
   if (COMPACT.has(left.text) || COMPACT.has(right.text)) return "";
+  if (right.text === ":" && bodyColons.has(right.from)) return " ";
   if ([",", ":", ";", ")", "]"].includes(right.text)) return "";
   if (right.text === "}") return left.text === "{" ? "" : " ";
   if (["(", "["].includes(left.text)) return "";
@@ -132,10 +134,11 @@ export function formatMudHorizontalSpacing(
   if (body === "") return indentation;
   const tokens = scan(body, config);
   const units = compactUnits(body);
+  const bodyColons = iterationBodyColonOffsets(body, config);
   let result = indentation;
   tokens.forEach((token, index) => {
     result += token.text;
-    result += separator(body, tokens, index, units);
+    result += separator(body, tokens, index, units, bodyColons);
   });
   return result;
 }
