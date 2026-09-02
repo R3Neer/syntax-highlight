@@ -22,6 +22,24 @@ describe("tokenizeMud", () => {
       .toContainEqual(["Thing", "builtin-type"]);
   });
 
+  it("styles metadata prefixes and names as one semantic unit", () => {
+    expect(compact("~name kingdom~format ~for ~on ~given value~type ~")).toEqual([
+      ["~", "metadata-name"],
+      ["name", "metadata-name"],
+      ["~", "metadata-name"],
+      ["format", "metadata-name"],
+      ["~", "metadata-name"],
+      ["for", "metadata-name"],
+      ["~", "metadata-name"],
+      ["on", "metadata-name"],
+      ["~", "metadata-name"],
+      ["given", "metadata-name"],
+      ["~", "metadata-name"],
+      ["type", "metadata-name"],
+      ["~", "symbolic-operator"],
+    ]);
+  });
+
   it("does not treat the replaced numeric names as builtin types", () => {
     expect(
       compact("thing Sample { a: Integer b: Natural c: Number d: Rumber }"),

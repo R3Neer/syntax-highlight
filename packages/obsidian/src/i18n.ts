@@ -37,6 +37,7 @@ const ENGLISH_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   "clause-keyword": "Clause keyword",
   "word-operator": "Word operator", "builtin-type": "Built-in type",
   "literal-constant": "Literal constant", "contextual-word": "Contextual word",
+  "metadata-name": "Metadata",
   "declared-name": "Declared name", "specialization-reference": "Specialization reference",
   "family-member": "Family member", "type-reference": "Type reference",
   "invocation-name": "Invocation", unit: "Unit", text: "Text",

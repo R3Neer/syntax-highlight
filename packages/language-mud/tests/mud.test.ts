@@ -27,8 +27,9 @@ describe("MUD language pack", () => {
     expect(formatMudHorizontalSpacing("value ~ format")).toBe("value~format");
   });
 
-  it("highlights indirect metadata and point-domain cycle", () => {
-    expect(category("~format = value", "format")).toBe("contextual-word");
+  it("highlights metadata as one semantic unit and point-domain cycle", () => {
+    expect(category("~format = value", "~")).toBe("metadata-name");
+    expect(category("~format = value", "format")).toBe("metadata-name");
     expect(category("[0..10] cycle", "cycle")).toBe("declaration-modifier");
   });
 

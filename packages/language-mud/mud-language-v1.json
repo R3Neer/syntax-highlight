@@ -25,6 +25,7 @@
     { "id": "builtin-type", "name": "Tipo básico", "description": "Tipo incorporado definido por el lenguaje.", "group": "words", "role": "type" },
     { "id": "literal-constant", "name": "Constante literal", "description": "Constante incorporada que puede aparecer como literal.", "group": "words", "role": "constant" },
     { "id": "contextual-word", "name": "Palabra contextual", "description": "Palabra especial únicamente en una posición gramatical concreta.", "group": "words", "role": "keyword" },
+    { "id": "metadata-name", "name": "Metadato", "description": "Nombre de metadato junto con su prefijo «~».", "group": "names", "role": "meta" },
     { "id": "declared-name", "name": "Nombre declarado", "description": "Nombre que introduce una declaración.", "group": "names", "role": "declaration" },
     { "id": "specialization-reference", "name": "Referencia de especialización", "description": "Thing citado después de «as» en una especialización.", "group": "names", "role": "type" },
     { "id": "family-member", "name": "Miembro de familia", "description": "Nombre de un miembro declarado dentro de una familia.", "group": "names", "role": "constant" },
@@ -55,5 +56,5 @@
     { "slot": "contextual", "grammar": "lexical", "production": "contextual-word", "category": "contextual-word" },
     { "slot": "declaration-name", "grammar": "syntax", "production": "nominal-name", "category": "declared-name" }
   ],
-  "previewSource": "abstract thing Place {\n    mut visits: Nat = 0\n}\n\nfamily Direction { North, South }\n\naction Clear for place: Place {\n    then for each item in all:\n        destroy item\n}"
+  "previewSource": "abstract thing Place {\n    ~name = \"Place\"\n    mut visits: Nat = 0\n}\n\nfamily Direction { North, South }\n\naction Clear for place: Place {\n    then for each item in all:\n        destroy item\n}"
 }

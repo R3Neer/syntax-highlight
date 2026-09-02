@@ -57,6 +57,10 @@ describe("settings, descriptors and themes", () => {
     expect(mud?.categoryColors.mud?.["top-level-declaration-modifier"]).toEqual(
       mud?.categoryColors.mud?.["declaration-keyword"],
     );
+    expect(mud?.categoryColors.mud?.["metadata-name"]).toEqual({
+      light: "#209fb5",
+      dark: "#74c7ec",
+    });
     expect(ebnf?.categoryColors.ebnf?.["production-definition"]?.dark).toBe(
       "#569cd6",
     );
@@ -182,6 +186,7 @@ describe("settings, descriptors and themes", () => {
       "quantifier-keyword",
       "effect-keyword",
       "clause-keyword",
+      "metadata-name",
     ]);
     legacy.categories = legacy.categories.filter(({ id }) => !semantic.has(id));
     const character = legacy.categories.find(({ id }) => id === "character");
@@ -210,6 +215,9 @@ describe("settings, descriptors and themes", () => {
     );
     expect(css).toContain(
       ".theme-dark .syntax-color-mud-quantifier-keyword{color:#94e2d5!important}",
+    );
+    expect(css).toContain(
+      ".theme-dark .syntax-color-mud-metadata-name{color:#74c7ec!important}",
     );
 
     const personal = structuredClone(storedProfile);

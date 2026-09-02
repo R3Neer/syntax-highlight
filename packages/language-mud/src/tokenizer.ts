@@ -688,6 +688,14 @@ function unitTokenIndices(
   return result;
 }
 
+function isMetadataToken(tokens: RawToken[], index: number): boolean {
+  const token = tokens[index];
+  return (
+    (token?.text === "~" && tokens[index + 1]?.categoryId === "word") ||
+    (token?.categoryId === "word" && tokens[index - 1]?.text === "~")
+  );
+}
+
 export function tokenizeMud(
   source: string,
   config: MudHighlightConfig = DEFAULT_HIGHLIGHT_CONFIG,
@@ -699,7 +707,9 @@ export function tokenizeMud(
 
   raw.forEach((token, index) => {
     const categoryId =
-      units.has(index)
+      isMetadataToken(raw, index)
+        ? "metadata-name"
+        : units.has(index)
         ? "unit"
         : token.categoryId === "word"
         ? classifyWord(source, raw, index, prepared)

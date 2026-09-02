@@ -198,7 +198,7 @@ const LEGACY_CATEGORY_KIND: Readonly<Record<string, Readonly<Record<string, stri
   mud: {
     comment: "comment", "reserved-word": "keyword", "word-operator": "operator",
     "builtin-type": "builtin", "literal-constant": "constant",
-    "contextual-word": "keyword", "declared-name": "declaration",
+    "contextual-word": "keyword", "metadata-name": "meta", "declared-name": "declaration",
     "specialization-reference": "declaration", "family-member": "constant",
     "type-reference": "type", "invocation-name": "function", unit: "unit",
     text: "string", character: "char", "exact-number": "number",
@@ -308,6 +308,7 @@ const MUD_SEMANTIC_CATEGORIES = [
   "quantifier-keyword",
   "effect-keyword",
   "clause-keyword",
+  "metadata-name",
 ] as const;
 
 function legacyBundledMudDescriptor(
@@ -360,6 +361,7 @@ const CATPPUCCIN_OVERRIDES = mudSemanticOverrides({
   "effect-keyword": ["#fe640b", "#fab387"],
   "clause-keyword": ["#ea76cb", "#f5c2e7"],
   "contextual-word": ["#7287fd", "#b4befe"],
+  "metadata-name": ["#209fb5", "#74c7ec"],
 });
 const VSCODE_OVERRIDES = mergeOverrides(
   mudSemanticOverrides({
@@ -372,6 +374,7 @@ const VSCODE_OVERRIDES = mergeOverrides(
     "effect-keyword": ["#a31515", "#ce9178"],
     "clause-keyword": ["#001080", "#9cdcfe"],
     "contextual-word": ["#795e26", "#d7ba7d"],
+    "metadata-name": ["#0070c1", "#4fc1ff"],
   }),
   categoryOverrides("ebnf", LEGACY_EBNF_LIGHT, LEGACY_EBNF_DARK),
   categoryOverrides("asdl", LEGACY_EBNF_LIGHT, LEGACY_EBNF_DARK),
@@ -386,6 +389,7 @@ const SOLARIZED_OVERRIDES = mudSemanticOverrides({
   "effect-keyword": ["#d33682", "#d33682"],
   "clause-keyword": ["#859900", "#859900"],
   "contextual-word": ["#6c71c4", "#6c71c4"],
+  "metadata-name": ["#b58900", "#b58900"],
 });
 const GITHUB_OVERRIDES = mudSemanticOverrides({
   "reserved-word": ["#cf222e", "#ff7b72"],
@@ -397,6 +401,7 @@ const GITHUB_OVERRIDES = mudSemanticOverrides({
   "effect-keyword": ["#953800", "#ffa657"],
   "clause-keyword": ["#8250df", "#d2a8ff"],
   "contextual-word": ["#0969da", "#58a6ff"],
+  "metadata-name": ["#116329", "#7ee787"],
 });
 const GRUVBOX_OVERRIDES = mudSemanticOverrides({
   "reserved-word": ["#9d0006", "#fb4934"],
@@ -408,6 +413,7 @@ const GRUVBOX_OVERRIDES = mudSemanticOverrides({
   "effect-keyword": ["#af3a03", "#fe8019"],
   "clause-keyword": ["#8f3f71", "#d3869b"],
   "contextual-word": ["#79740e", "#b8bb26"],
+  "metadata-name": ["#8f3f71", "#d3869b"],
 });
 
 export const THEME_PRESETS: readonly ThemePreset[] = [

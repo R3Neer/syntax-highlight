@@ -15,6 +15,8 @@
   colons in iteration, selection, and quantifier expressions from type annotations.
 - Format iteration, selection, and quantifier body colons with a leading space,
   as in `forall x in 1..10 : x is A`, without changing type annotations.
+- Give metadata its own semantic category and color, styling the `~` prefix and
+  metadata name as one unit in every host.
 
 ## 1.1.0
 
