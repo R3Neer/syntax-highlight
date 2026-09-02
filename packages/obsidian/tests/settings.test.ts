@@ -8,6 +8,7 @@ import { LanguageRegistry } from "../src/languages";
 import {
   DEFAULT_SETTINGS,
   THEME_PRESETS,
+  effectiveCategoryColor,
   loadSettings,
   paletteFromPreset,
   themeById,
@@ -129,6 +130,23 @@ describe("settings, descriptors and themes", () => {
     expect(
       loaded.languages[0].categoryColors.mud?.["declaration-modifier"]?.dark,
     ).toBe("#654321");
+  });
+
+  it("colors inherited specialization names like declared names without making them keywords", () => {
+    const descriptor = BUILTIN_DESCRIPTORS.mud;
+    for (const theme of THEME_PRESETS) {
+      const mud = loadSettings({
+        languages: [{ id: "mud", themePreset: theme.id }],
+      }).languages[0]!;
+      for (const mode of ["light", "dark"] as const) {
+        expect(
+          effectiveCategoryColor(mud, descriptor, "specialization-reference", mode),
+        ).toBe(effectiveCategoryColor(mud, descriptor, "declared-name", mode));
+      }
+    }
+    expect(
+      descriptor.categories.find(({ id }) => id === "specialization-reference")?.role,
+    ).toBe("declaration");
   });
 
   it("replaces untouched legacy Catppuccin defaults but preserves custom colors", () => {

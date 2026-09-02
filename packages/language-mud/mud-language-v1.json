@@ -27,7 +27,7 @@
     { "id": "contextual-word", "name": "Palabra contextual", "description": "Palabra especial únicamente en una posición gramatical concreta.", "group": "words", "role": "keyword" },
     { "id": "metadata-name", "name": "Metadato", "description": "Nombre de metadato junto con su prefijo «~».", "group": "names", "role": "meta" },
     { "id": "declared-name", "name": "Nombre declarado", "description": "Nombre que introduce una declaración.", "group": "names", "role": "declaration" },
-    { "id": "specialization-reference", "name": "Referencia de especialización", "description": "Thing citado después de «as» en una especialización.", "group": "names", "role": "type" },
+    { "id": "specialization-reference", "name": "Referencia de especialización", "description": "Nombre heredado citado después de «as» en una especialización.", "group": "names", "role": "declaration" },
     { "id": "family-member", "name": "Miembro de familia", "description": "Nombre de un miembro declarado dentro de una familia.", "group": "names", "role": "constant" },
     { "id": "type-reference", "name": "Referencia de tipo", "description": "Referencia localmente reconocible a un tipo del usuario.", "group": "names", "role": "type" },
     { "id": "invocation-name", "name": "Invocación", "description": "Nombre seguido de paréntesis de llamada.", "group": "names", "role": "callable" },

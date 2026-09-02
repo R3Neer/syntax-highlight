@@ -17,6 +17,8 @@
   as in `forall x in 1..10 : x is A`, without changing type annotations.
 - Give metadata its own semantic category and color, styling the `~` prefix and
   metadata name as one unit in every host.
+- Color inherited names after `as` like the declaration they accompany, while
+  keeping their normal font weight.
 
 ## 1.1.0
 
