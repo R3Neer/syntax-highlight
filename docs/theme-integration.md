@@ -32,6 +32,30 @@ legacy-mode package. The `powershell`, `pwsh`, and `ps1` fences and the `.ps1`,
 active-theme cascade, and automatic contrast policy as Bash, Nushell, and the
 other common languages.
 
+## Blockquotes and Obsidian callouts
+
+The Markdown editor scanner understands fenced blocks inside blockquotes. This
+also covers Obsidian callouts without any callout-name table because a callout's
+body is a Markdown blockquote. A quoted fence such as `> ```powershell` or
+`> ```text-center` therefore enters the same language/presentation pipeline as
+the equivalent top-level fence.
+
+Editing view separates the *logical* code body from its physical Markdown
+container. The blockquote markers belonging to the container are removed before
+a language parser/tokenizer sees the body, then every logical token range is
+mapped back to its real document offsets. As a result, `>` markers are not
+misclassified as PowerShell/Bash/MUD operators and are not painted with syntax
+classes. The same mapper supports nested quote depths and preserves real line
+endings so multiline language state remains intact. Line-number widgets, when a
+language uses them, are anchored at the first source character after the quote
+prefix.
+
+Presentation fence discovery and preservation rewrites use the same quote-aware
+scanner, so Text/Markdown defaults and explicit variants work inside ordinary
+blockquotes and callouts as well. A rewrite still changes only the language label
+of the opening fence; quote markers, callout markers, body content, closing fence,
+and additional info text stay untouched.
+
 ## Text and Markdown presentation families
 
 Text and Markdown fences share the theme/contrast infrastructure but deliberately
