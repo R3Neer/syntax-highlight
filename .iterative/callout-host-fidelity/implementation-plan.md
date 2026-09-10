@@ -14,10 +14,10 @@ Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real 
 
 La primera captura expuso un crash de PowerShell anterior al problema de callouts: el bridge común llama `support.language.parser.parse(...)` directamente sobre un `StreamLanguage` y el CodeMirror expuesto por Obsidian puede requerir `ParseContext` activo. Se corrige este bloqueador antes de repetir la matriz para no contaminar la evidencia de Fase 0.
 
-- [ ] Añadir regresión que demuestre que un common language basado en `StreamLanguage` no depende de `parser.parse(...)` directo.
-- [ ] Introducir un único helper de parse de common languages que use el lifecycle de `EditorState` para `StreamLanguage` y mantenga el camino directo para parsers Lezer ordinarios.
-- [ ] Reutilizar ese helper en Reading y en decorations de Markdown editor.
-- [ ] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
+- [x] Añadir regresión que demuestre que un common language basado en `StreamLanguage` no depende de `parser.parse(...)` directo.
+- [x] Introducir un único helper de parse de common languages que use el lifecycle de `EditorState` para `StreamLanguage` y mantenga el camino directo para parsers Lezer ordinarios.
+- [x] Reutilizar ese helper en Reading y en decorations de Markdown editor.
+- [x] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
 - [ ] Reinstalar el build y comprobar que PowerShell top-level/nested deja de provocar el `viewport` null antes de continuar capturas.
 
 ### Captura host
