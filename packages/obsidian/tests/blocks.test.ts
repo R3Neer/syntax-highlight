@@ -49,4 +49,38 @@ describe("findCodeBlocks", () => {
     expect(source.slice(block?.languageFrom, block?.languageTo)).toBe("csharp");
     expect(source.slice(block?.from, block?.to)).toBe("var value = 1;\n");
   });
+
+  it("does not surface target-looking fences nested in unrelated fenced blocks", () => {
+    const source = [
+      "````example",
+      "```text",
+      "documented, not a real top-level Text block",
+      "```",
+      "````",
+      "~~~~",
+      "```text",
+      "also only literal content",
+      "```",
+      "~~~~",
+      "```text",
+      "real target",
+      "```",
+    ].join("\n");
+
+    const blocks = findCodeBlocks(source, new Set(["text"]));
+    expect(blocks).toHaveLength(1);
+    expect(source.slice(blocks[0]!.from, blocks[0]!.to).trim()).toBe("real target");
+  });
+
+  it("treats an unclosed unrelated fence as containing the rest of the document", () => {
+    const source = [
+      "```example",
+      "literal documentation",
+      "```text",
+      "must not be rewritten",
+      "```",
+    ].join("\n");
+
+    expect(findCodeBlocks(source, new Set(["text"]))).toEqual([]);
+  });
 });
