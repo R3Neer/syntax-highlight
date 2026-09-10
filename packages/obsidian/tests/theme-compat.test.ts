@@ -108,4 +108,15 @@ describe("active theme compatibility", () => {
       ".syntax-common-plain { color: var(--syntax-common-text, var(--text-normal)); }",
     );
   });
+
+  it("protects Reading-view callables from illegible direct Prism function rules", () => {
+    const styles = readFileSync(
+      join(process.cwd(), "packages", "obsidian", "styles.css"),
+      "utf8",
+    );
+
+    expect(styles).toContain(
+      ".syntax-highlight-frame .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--code-function, var(--text-normal))) !important; }",
+    );
+  });
 });
