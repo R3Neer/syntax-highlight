@@ -1,0 +1,36 @@
+name: Final presentation review fixes
+
+on:
+  push:
+    branches:
+      - fix/presentation-interaction-review
+    paths:
+      - scripts/.tmp-presentation-review-fixes.py
+      - .github/workflows/.tmp-presentation-review-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/presentation-interaction-review
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: python3 scripts/.tmp-presentation-review-fixes.py
+      - run: npm ci
+      - run: npm run check
+      - run: npm run pack:all
+      - name: Commit fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(obsidian): preserve presentation interaction semantics'
+          git push origin HEAD:fix/presentation-interaction-review
