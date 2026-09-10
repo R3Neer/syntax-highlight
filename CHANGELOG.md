@@ -8,6 +8,10 @@
   classes in Editing view so existing theme syntax rules apply automatically.
 - Fall back to Obsidian's semantic `--code-*` variables and keep
   `--syntax-common-*` as vault-level override hooks.
+- Keep parser-unclassified common-language source visible in Reading view by
+  rendering the untouched gaps explicitly with the active theme's normal text
+  color. This covers commands, sigils, paths, and other source fragments that a
+  language grammar does not assign a highlight tag.
 - Scope configured syntax-preset colors to settings previews so they no longer
   leak into ordinary Bash, Nushell, or other common-language code blocks.
 - Remove MUD from the default configured language list. The built-in MUD profile
@@ -38,22 +42,8 @@
 
 ## 1.1.0
 
-- Split MUD reserved words into semantic declaration, modifier, control-flow,
-  quantifier/iterator, effect, and clause categories for every host.
-- Classified `mut` as a declaration modifier and both words of `for each` as
-  quantifiers/iterators.
-- Removed Obsidian's duplicated MUD descriptor and consume the language pack as
-  the single source of category metadata.
-- Added distinct semantic colors to every built-in theme and corrected
-  Catppuccin's light/dark MUD palettes.
-- Migrated untouched legacy Catppuccin settings while preserving customized
-  reserved-word colors as fallbacks for the new categories.
-
-## 1.0.0
-
-- Extracted the original Obsidian plugin history into an independent monorepo.
-- Added host-neutral core and MUD language-pack APIs.
-- Added HTML, CodeMirror 6, MCP App, CLI, and Obsidian adapters.
-- Derived MUD compound operators and indirect contextual keywords from the
-  current lexical and syntax grammars.
-- Added portable configuration schema v2 with v1 import migration.
+- Add host-neutral packages for core contracts, the MUD language pack, HTML,
+  CodeMirror, MCP, and CLI integration.
+- Move Obsidian integration into its own adapter package.
+- Add grammar-driven highlighting, semantic themes, portable profiles, source
+  editing, smart editing, and deterministic formatting.
