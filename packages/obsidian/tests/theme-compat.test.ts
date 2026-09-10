@@ -48,6 +48,30 @@ describe("active theme compatibility", () => {
     expect(classes.some((value) => value.includes("cm-keyword"))).toBe(true);
   });
 
+  it("maps declaration keywords to the active theme's keyword color", () => {
+    const reading = highlightedClasses(
+      "js",
+      "const value = 1;",
+      COMMON_READING_HIGHLIGHT_STYLE,
+    );
+    const editor = highlightedClasses(
+      "js",
+      "const value = 1;",
+      COMMON_EDITOR_HIGHLIGHT_STYLE,
+    );
+
+    expect(
+      reading.some((value) =>
+        value.includes("syntax-common-declaration") && value.includes("token keyword"),
+      ),
+    ).toBe(true);
+    expect(
+      editor.some((value) =>
+        value.includes("syntax-common-declaration") && value.includes("cm-keyword"),
+      ),
+    ).toBe(true);
+  });
+
   it("keeps syntax presets scoped to settings previews", () => {
     const css = buildThemeCss(structuredClone(DEFAULT_SETTINGS));
 
