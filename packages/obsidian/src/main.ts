@@ -152,7 +152,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
 
   private registerReadingFallback(): void {
     registerReadingFallbackPostProcessor(
-      (processor) => this.registerMarkdownPostProcessor(processor),
+      (processor, sortOrder) =>
+        this.registerMarkdownPostProcessor(processor, sortOrder),
       (source, element, context, fence) =>
         this.renderReadingFence(source, element, context, fence, false),
     );
