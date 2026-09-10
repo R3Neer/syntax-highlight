@@ -109,14 +109,17 @@ describe("active theme compatibility", () => {
     );
   });
 
-  it("protects Bash and Nushell command names without changing other callables", () => {
+  it("does not hardcode shell-specific contrast overrides", () => {
     const styles = readFileSync(
       join(process.cwd(), "packages", "obsidian", "styles.css"),
       "utf8",
     );
 
-    expect(styles).toContain(
-      ".language-bash .syntax-common-callable.token.function,\n.language-nu .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--text-normal)) !important; }",
+    expect(styles).not.toContain(
+      ".language-bash .syntax-common-callable.token.function",
+    );
+    expect(styles).not.toContain(
+      ".language-nu .syntax-common-callable.token.function",
     );
     expect(styles).not.toContain(
       ".syntax-highlight-frame .syntax-common-callable.token.function",
