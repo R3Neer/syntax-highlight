@@ -1,7 +1,7 @@
 import { highlightTree } from "@lezer/highlight";
 
 import {
-  COMMON_HIGHLIGHT_STYLE,
+  COMMON_READING_HIGHLIGHT_STYLE,
   type CommonLanguage,
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
@@ -177,7 +177,7 @@ export function renderCommonCode(
 ): void {
   const ranges: RenderedRange[] = [];
   const tree = language.support().language.parser.parse(source);
-  highlightTree(tree, COMMON_HIGHLIGHT_STYLE, (from, to, classes) => {
+  highlightTree(tree, COMMON_READING_HIGHLIGHT_STYLE, (from, to, classes) => {
     ranges.push({ from, to, classes });
   });
   renderRanges(

@@ -11,7 +11,7 @@ import {
 
 import { findCodeBlocks, findMudCodeBlocks } from "./blocks";
 import {
-  COMMON_HIGHLIGHT_STYLE,
+  COMMON_EDITOR_HIGHLIGHT_STYLE,
   commonLanguageByFence,
   commonLanguages,
 } from "./common-languages";
@@ -59,7 +59,7 @@ function addCommonLanguageRanges(
   const language = commonLanguageByFence(fence);
   if (language === undefined) return;
   const tree = language.support().language.parser.parse(source);
-  highlightTree(tree, COMMON_HIGHLIGHT_STYLE, (from, to, classes) => {
+  highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, classes) => {
     if (from >= to) return;
     ranges.push(
       Decoration.mark({ class: classes }).range(base + from, base + to),
