@@ -100,29 +100,40 @@ function commonTokens(root: ParentNode): HTMLElement[] {
   return result;
 }
 
+function parentNode(value: Node): ParentNode | undefined {
+  return value instanceof HTMLElement || value instanceof DocumentFragment
+    ? value
+    : undefined;
+}
+
 export class CommonContrastManager {
   private readonly observer: MutationObserver;
   private readonly rootObserver: MutationObserver;
   private readonly headObserver: MutationObserver;
   private readonly originalInlineColors = new WeakMap<HTMLElement, InlineColor>();
+  private readonly pendingRoots = new Set<ParentNode>();
+  private fullRefreshPending = false;
   private scheduled = false;
 
   constructor(private readonly minimumContrast = MINIMUM_TEXT_CONTRAST) {
     this.observer = new MutationObserver((records) => {
-      if (
-        records.some(
-          (record) =>
-            record.type === "childList" ||
-            (record.type === "attributes" && record.attributeName === "class"),
-        )
-      ) {
-        this.schedule();
+      for (const record of records) {
+        if (record.type === "attributes") {
+          const root = parentNode(record.target);
+          if (root !== undefined) this.pendingRoots.add(root);
+          continue;
+        }
+        for (const node of record.addedNodes) {
+          const root = parentNode(node);
+          if (root !== undefined) this.pendingRoots.add(root);
+        }
       }
+      if (this.pendingRoots.size > 0) this.schedule();
     });
-    this.rootObserver = new MutationObserver(() => this.schedule());
+    this.rootObserver = new MutationObserver(() => this.scheduleFullRefresh());
     this.headObserver = new MutationObserver(() => {
       resolvedColorCache.clear();
-      this.schedule();
+      this.scheduleFullRefresh();
     });
   }
 
@@ -159,6 +170,8 @@ export class CommonContrastManager {
   }
 
   refreshAll(): void {
+    this.pendingRoots.clear();
+    this.fullRefreshPending = false;
     this.normalize(document);
   }
 
@@ -166,6 +179,8 @@ export class CommonContrastManager {
     this.observer.disconnect();
     this.rootObserver.disconnect();
     this.headObserver.disconnect();
+    this.pendingRoots.clear();
+    this.fullRefreshPending = false;
     this.scheduled = false;
     for (const element of commonTokens(document)) this.restoreThemeColor(element);
   }
@@ -209,12 +224,25 @@ export class CommonContrastManager {
     element.removeAttribute(ADJUSTED_ATTRIBUTE);
   }
 
+  private scheduleFullRefresh(): void {
+    resolvedColorCache.clear();
+    this.fullRefreshPending = true;
+    this.pendingRoots.clear();
+    this.schedule();
+  }
+
   private schedule(): void {
     if (this.scheduled) return;
     this.scheduled = true;
     window.requestAnimationFrame(() => {
       this.scheduled = false;
-      this.refreshAll();
+      if (this.fullRefreshPending) {
+        this.refreshAll();
+        return;
+      }
+      const roots = [...this.pendingRoots];
+      this.pendingRoots.clear();
+      for (const root of roots) this.normalize(root);
     });
   }
 }
