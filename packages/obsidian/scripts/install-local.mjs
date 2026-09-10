@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 export const PLUGIN_ID = "syntax-highlight";
 export const LEGACY_PLUGIN_ID = "mud-syntax-highlighter";
 export const INSTALL_PROFILES = ["common", "mud"];
+const CURRENT_SETTINGS_SCHEMA_VERSION = 7;
 
 export async function activatePlugin(communityFile) {
   let active = [];
@@ -61,9 +62,9 @@ async function readSettings(dataFile) {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       throw new Error(`${dataFile} does not contain a settings object.`);
     }
-    return value;
+    return { value, existed: true };
   } catch (error) {
-    if (error?.code === "ENOENT") return {};
+    if (error?.code === "ENOENT") return { value: {}, existed: false };
     throw error;
   }
 }
@@ -111,8 +112,11 @@ function applyProfileToSettings(settings, profile) {
 
 export async function applyInstallProfile(dataFile, profile) {
   if (profile === undefined) return false;
-  const settings = await readSettings(dataFile);
+  const { value: settings, existed } = await readSettings(dataFile);
   const updated = applyProfileToSettings(settings, profile);
+  if (!existed && updated.schemaVersion === undefined) {
+    updated.schemaVersion = CURRENT_SETTINGS_SCHEMA_VERSION;
+  }
   const temporary = `${dataFile}.${process.pid}.tmp`;
   await writeFile(temporary, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
   await rename(temporary, dataFile);
