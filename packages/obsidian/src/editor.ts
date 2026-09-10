@@ -9,6 +9,7 @@ import {
   WidgetType,
 } from "@codemirror/view";
 
+import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
 import {
   findCodeBlocks,
   findMudCodeBlocks,
@@ -129,13 +130,36 @@ export function buildSyntaxDecorations(
   for (const block of findCodeBlocks(source, fences)) {
     const runtime = registry.byFence(block.language);
     const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
+    if (runtime === undefined && common === undefined) continue;
+
+    traceHostDiagnostic(
+      "live-preview-source",
+      block.language,
+      block.body,
+      view.dom,
+      {
+        openingLine: block.openingLine,
+        quoteDepth: block.quoteDepth,
+        from: block.from,
+        to: block.to,
+        bodyLines: block.bodyLines.map(
+          ({ lineFrom, lineTo, sourceFrom, sourceTo }) => ({
+            lineFrom,
+            lineTo,
+            sourceFrom,
+            sourceTo,
+          }),
+        ),
+      },
+    );
+
     if (runtime !== undefined) {
       for (const token of runtime.tokenize(block.body)) {
         addTokenRanges(ranges, token, block, runtime.settings.id);
       }
-    } else if (common !== undefined) {
-      addCommonLanguageRanges(ranges, block, common.language);
-      addPresentationLineRanges(ranges, block, common);
+    } else {
+      addCommonLanguageRanges(ranges, block, common!.language);
+      addPresentationLineRanges(ranges, block, common!);
     }
     if (
       lineNumbers &&
