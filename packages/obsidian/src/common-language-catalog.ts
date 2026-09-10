@@ -27,8 +27,8 @@ export function renderCommonLanguageCatalog(
   )} (${languages.length})`;
   const description = append(details, "p", "setting-item-description");
   description.textContent = tr(
-    "Available directly in Markdown code blocks and, except Markdown, in the source-file editor. They do not require configurable descriptors.",
-    "Disponibles directamente en bloques de código Markdown y, salvo Markdown, en el editor de archivos fuente. No necesitan descriptores configurables.",
+    "Available directly in Markdown code blocks. Parser-backed languages with file extensions also integrate with the source-file editor; Markdown keeps Obsidian's native editor.",
+    "Disponibles directamente en bloques de código Markdown. Los lenguajes con parser y extensiones de archivo también se integran con el editor de archivos fuente; Markdown conserva el editor nativo de Obsidian.",
   );
   const grid = append(details, "div", "syntax-common-language-grid");
   for (const language of languages) {
@@ -39,9 +39,11 @@ export function renderCommonLanguageCatalog(
     const metadata = append(item, "small");
     const extensionText = language.id === "markdown"
       ? tr("native Obsidian editor", "editor nativo de Obsidian")
-      : `${tr("extensions", "extensiones")}: ${language.extensions
-          .map((extension) => `.${extension}`)
-          .join(", ")}`;
+      : language.extensions.length === 0
+        ? tr("Markdown blocks only", "solo bloques Markdown")
+        : `${tr("extensions", "extensiones")}: ${language.extensions
+            .map((extension) => `.${extension}`)
+            .join(", ")}`;
     metadata.textContent = `${tr("blocks", "bloques")}: ${language.fences.join(", ")} · ${extensionText}`;
   }
 }

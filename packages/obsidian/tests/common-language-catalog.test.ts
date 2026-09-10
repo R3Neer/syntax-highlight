@@ -16,14 +16,18 @@ describe("common language settings catalog", () => {
     expect(items).toHaveLength(commonLanguages().length);
     expect(container.querySelector('[data-language-id="toml"]')).toBeNull();
     expect(container.querySelector('[data-language-id="yaml"]')).not.toBeNull();
+    expect(container.querySelector('[data-language-id="text"]')).not.toBeNull();
   });
 
-  it("explains that Markdown keeps the native Obsidian editor", () => {
+  it("explains editor coverage for Markdown and parserless Text blocks", () => {
     const container = document.createElement("div");
     renderCommonLanguageCatalog(container, (_english, spanish) => spanish);
 
     expect(
       container.querySelector('[data-language-id="markdown"]')?.textContent,
     ).toContain("editor nativo de Obsidian");
+    expect(
+      container.querySelector('[data-language-id="text"]')?.textContent,
+    ).toContain("solo bloques Markdown");
   });
 });

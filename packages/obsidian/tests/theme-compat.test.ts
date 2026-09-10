@@ -18,7 +18,9 @@ function highlightedClasses(
   style: typeof COMMON_READING_HIGHLIGHT_STYLE,
 ): string[] {
   const language = commonLanguageByFence(fence);
-  if (language === undefined) throw new Error(`Missing common language: ${fence}`);
+  if (language?.support === undefined) {
+    throw new Error(`Missing parser-backed common language: ${fence}`);
+  }
   const tree = language.support().language.parser.parse(source);
   const classes: string[] = [];
   highlightTree(tree, style, (_from, _to, value) => classes.push(value));

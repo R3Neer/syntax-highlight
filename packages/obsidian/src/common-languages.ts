@@ -22,7 +22,8 @@ export interface CommonLanguage {
   name: string;
   fences: readonly string[];
   extensions: readonly string[];
-  support(): LanguageSupport;
+  /** Parser-backed languages expose CodeMirror support. Parserless entries are plain text. */
+  support?: () => LanguageSupport;
 }
 
 const COMMON_LANGUAGES: readonly CommonLanguage[] = [
@@ -130,6 +131,12 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["md", "markdown"],
     extensions: ["md", "markdown"],
     support: markdown,
+  },
+  {
+    id: "text",
+    name: "Text",
+    fences: ["text", "plaintext", "txt"],
+    extensions: [],
   },
 ];
 

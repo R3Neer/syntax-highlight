@@ -202,10 +202,13 @@ export function renderCommonCode(
   showLineNumbers = true,
 ): void {
   const ranges: RenderedRange[] = [];
-  const tree = language.support().language.parser.parse(source);
-  highlightTree(tree, COMMON_READING_HIGHLIGHT_STYLE, (from, to, classes) => {
-    ranges.push({ from, to, classes });
-  });
+  const support = language.support?.();
+  if (support !== undefined) {
+    const tree = support.language.parser.parse(source);
+    highlightTree(tree, COMMON_READING_HIGHLIGHT_STYLE, (from, to, classes) => {
+      ranges.push({ from, to, classes });
+    });
+  }
   renderRanges(
     source,
     container,

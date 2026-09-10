@@ -41,6 +41,25 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
 
+  it("renders Text blocks as theme-aware plain source without inventing syntax", () => {
+    const language = commonLanguageByFence("text");
+    expect(language?.support).toBeUndefined();
+    const source = "Comando conceptual\n  salida literal: foo & bar";
+    const container = document.createElement("div");
+
+    renderCommonCode(source, container, language!);
+
+    expect(container.querySelector("code")?.className).toBe("language-text");
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("Text");
+    expect(container.querySelectorAll(".syntax-code-line")).toHaveLength(2);
+    const plain = Array.from(container.querySelectorAll(".syntax-common-plain"));
+    expect(plain.map((node) => node.textContent).join("\n")).toContain("Comando conceptual");
+    expect(container.querySelector("[class*='token ']")).toBeNull();
+    expect(container.querySelector("code")?.textContent).toBe(
+      "Comando conceptual  salida literal: foo & bar",
+    );
+  });
+
   it("keeps the exact Bash command source while exposing callable and operator semantics", () => {
     const language = commonLanguageByFence("bash");
     expect(language).toBeDefined();
