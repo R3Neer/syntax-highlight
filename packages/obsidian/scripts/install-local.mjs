@@ -68,6 +68,15 @@ async function readSettings(dataFile) {
   }
 }
 
+function isLanguageEntry(entry, id) {
+  return (
+    typeof entry === "object" &&
+    entry !== null &&
+    !Array.isArray(entry) &&
+    entry.id === id
+  );
+}
+
 function applyProfileToSettings(settings, profile) {
   if (!INSTALL_PROFILES.includes(profile)) {
     throw new Error(
@@ -82,24 +91,20 @@ function applyProfileToSettings(settings, profile) {
           : entry,
       )
     : [];
-  const index = languages.findIndex(
-    (entry) =>
-      typeof entry === "object" &&
-      entry !== null &&
-      !Array.isArray(entry) &&
-      entry.id === "mud",
-  );
-  const current =
-    index >= 0 &&
-    typeof languages[index] === "object" &&
-    languages[index] !== null &&
-    !Array.isArray(languages[index])
-      ? languages[index]
-      : { id: "mud" };
-  const mud = { ...current, id: "mud", enabled: profile === "mud" };
 
-  if (index >= 0) languages[index] = mud;
-  else languages.push(mud);
+  if (profile === "common") {
+    return {
+      ...settings,
+      languages: languages.filter((entry) => !isLanguageEntry(entry, "mud")),
+    };
+  }
+
+  const index = languages.findIndex((entry) => isLanguageEntry(entry, "mud"));
+  if (index >= 0) {
+    languages[index] = { ...languages[index], id: "mud", enabled: true };
+  } else {
+    languages.push({ id: "mud", enabled: true });
+  }
 
   return { ...settings, languages };
 }
