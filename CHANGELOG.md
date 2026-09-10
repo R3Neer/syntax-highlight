@@ -47,11 +47,16 @@
 
 ## 1.1.0
 
-- Add host-neutral packages for core contracts, the MUD language pack, HTML,
-  CodeMirror, MCP, and CLI integration.
-- Move Obsidian integration into its own adapter package.
-- Add grammar-driven highlighting, semantic themes, portable profiles, source
-  editing, smart editing, and deterministic formatting.
+- Split MUD reserved words into semantic declaration, modifier, control-flow,
+  quantifier/iterator, effect, and clause categories for every host.
+- Classified `mut` as a declaration modifier and both words of `for each` as
+  quantifiers/iterators.
+- Removed Obsidian's duplicated MUD descriptor and consume the language pack as
+  the single source of category metadata.
+- Added distinct semantic colors to every built-in theme and corrected
+  Catppuccin's light/dark MUD palettes.
+- Migrated untouched legacy Catppuccin settings while preserving customized
+  reserved-word colors as fallbacks for the new categories.
 
 ## 1.0.0
 
