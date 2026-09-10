@@ -14,6 +14,10 @@ export function buildThemeCss(
   descriptors: ReadonlyMap<string, LanguageDescriptor> = new Map(),
 ): string {
   const rules: string[] = [];
+
+  // Common-language blocks use the active Obsidian theme in normal views. Keep
+  // the selected syntax preset scoped to settings previews only, where showing
+  // that preset is intentional and must not leak into the vault.
   const commonPalette =
     settings.languages.find(({ id }) => id === "mud")?.palette ??
     settings.languages[0]?.palette;
@@ -21,7 +25,7 @@ export function buildThemeCss(
     for (const mode of ["light", "dark"] as const) {
       const palette = commonPalette[mode];
       rules.push(
-        `.theme-${mode}{` +
+        `.theme-${mode} .syntax-preview-output{` +
           `--syntax-common-comment:${palette.comment};` +
           `--syntax-common-keyword:${palette.keyword};` +
           `--syntax-common-type:${palette.type};` +
@@ -37,6 +41,7 @@ export function buildThemeCss(
       );
     }
   }
+
   for (const language of settings.languages) {
     const descriptor =
       descriptors.get(language.id) ??
