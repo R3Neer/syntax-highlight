@@ -12,6 +12,10 @@
   rendering the untouched gaps explicitly with the active theme's normal text
   color. This covers commands, sigils, paths, and other source fragments that a
   language grammar does not assign a highlight tag.
+- Treat `text`, `plaintext`, and `txt` Markdown fences as parserless common
+  blocks so they use the same active-vault theme, badge, line-number behavior,
+  and contrast policy without inventing syntax categories or claiming `.txt`
+  files from Obsidian's normal file handling.
 - Normalize low-contrast common-language foreground colors automatically to a
   `4.5:1` target against their effective CSS background. Passing theme colors
   remain untouched; failing colors move by the smallest viable OKLab-lightness
