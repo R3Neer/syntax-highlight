@@ -68,6 +68,19 @@ describe("CommonContrastManager", () => {
     expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
   });
 
+  it("restores the theme color when an editor reuses a span for non-syntax text", () => {
+    const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
+    const manager = new CommonContrastManager();
+    manager.normalize(token);
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(true);
+
+    token.className = "cm-content";
+    manager.normalize(token);
+
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
+  });
+
   it("restores a pre-existing inline theme color when disposed", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const manager = new CommonContrastManager();
