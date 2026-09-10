@@ -1,3 +1,4 @@
+import { EditorState } from "@codemirror/state";
 import { nushell } from "@codincod/codemirror-lang-nushell";
 import { shell } from "@codincod/codemirror-lang-shell";
 import { cpp } from "@codemirror/lang-cpp";
@@ -11,9 +12,11 @@ import { python } from "@codemirror/lang-python";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { yaml } from "@codemirror/lang-yaml";
 import {
+  ensureSyntaxTree,
   HighlightStyle,
   LanguageSupport,
   StreamLanguage,
+  syntaxTree,
 } from "@codemirror/language";
 import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { csharp } from "@replit/codemirror-lang-csharp";
@@ -196,6 +199,28 @@ export function commonLanguageByExtension(
   const target = normalized(extension);
   return COMMON_LANGUAGES.find(({ extensions }) =>
     extensions.some((candidate) => normalized(candidate) === target),
+  );
+}
+
+export function parseCommonLanguageTree(
+  language: CommonLanguage,
+  source: string,
+) {
+  const support = language.support?.();
+  if (support === undefined) return undefined;
+
+  if (!(support.language instanceof StreamLanguage)) {
+    return support.language.parser.parse(source);
+  }
+
+  // StreamLanguage parsers are viewport-aware in some CodeMirror versions.
+  // Running them through EditorState establishes the ParseContext they expect,
+  // whereas calling parser.parse() directly can dereference a null viewport in
+  // Obsidian's host-provided CodeMirror runtime.
+  const state = EditorState.create({ doc: source, extensions: [support] });
+  return (
+    ensureSyntaxTree(state, state.doc.length, Number.POSITIVE_INFINITY) ??
+    syntaxTree(state)
   );
 }
 
