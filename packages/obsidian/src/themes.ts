@@ -1,3 +1,4 @@
+import { CommonContrastManager } from "./contrast-manager";
 import { BUILTIN_DESCRIPTORS, type LanguageDescriptor } from "./descriptor";
 import type { LanguageRegistry } from "./languages";
 import {
@@ -63,10 +64,12 @@ export function buildThemeCss(
 
 export class ThemeManager {
   private readonly element = document.createElement("style");
+  private readonly contrastManager = new CommonContrastManager();
 
   constructor() {
     this.element.dataset.syntaxHighlightThemes = "true";
     document.head.append(this.element);
+    this.contrastManager.start();
   }
 
   apply(settings: SyntaxPluginSettings, registry?: LanguageRegistry): void {
@@ -77,9 +80,11 @@ export class ThemeManager {
       ]) ?? [],
     );
     this.element.textContent = buildThemeCss(settings, descriptors);
+    this.contrastManager.refreshAll();
   }
 
   dispose(): void {
+    this.contrastManager.dispose();
     this.element.remove();
   }
 }

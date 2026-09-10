@@ -12,9 +12,11 @@
   rendering the untouched gaps explicitly with the active theme's normal text
   color. This covers commands, sigils, paths, and other source fragments that a
   language grammar does not assign a highlight tag.
-- Keep Bash and Nushell command names legible when a community theme's direct
-  Prism `token function` rule depends on native renderer context, without
-  changing function styling for other common languages.
+- Normalize low-contrast common-language foreground colors automatically to a
+  `4.5:1` target against their effective CSS background. Passing theme colors
+  remain untouched; failing colors move by the smallest viable OKLab-lightness
+  adjustment, searching both lighter and darker directions and gamut-mapping by
+  reducing chroma when necessary. Background colors are never changed.
 - Scope configured syntax-preset colors to settings previews so they no longer
   leak into ordinary Bash, Nushell, or other common-language code blocks.
 - Remove MUD from the default configured language list. The built-in MUD profile
