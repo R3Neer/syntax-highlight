@@ -41,20 +41,41 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
 
-  it("keeps parser-unclassified Bash and Nushell source visible as plain theme text", () => {
-    const rendered: Array<{ fence: string; html: string }> = [];
-    for (const [fence, source] of [
-      ["bash", "./programa &"],
-      ["nu", "job spawn { ^./programa }"],
-    ] as const) {
-      const language = commonLanguageByFence(fence);
-      expect(language).toBeDefined();
-      const container = document.createElement("div");
-      renderCommonCode(source, container, language!);
-      const line = container.querySelector(".syntax-code-line-content");
-      rendered.push({ fence, html: line?.innerHTML ?? "" });
-    }
-    expect(rendered).toEqual([]);
+  it("keeps the exact Bash command source while exposing callable and operator semantics", () => {
+    const language = commonLanguageByFence("bash");
+    expect(language).toBeDefined();
+    const source = "./programa &";
+    const container = document.createElement("div");
+
+    renderCommonCode(source, container, language!);
+
+    const line = container.querySelector(".syntax-code-line-content");
+    expect(line?.textContent).toBe(source);
+    expect(line?.querySelector(".syntax-common-callable.token.function")?.textContent)
+      .toBe("./programa");
+    expect(line?.querySelector(".syntax-common-operator.token.operator")?.textContent)
+      .toBe("&");
+    expect(line?.querySelector(".syntax-common-plain")?.textContent).toBe(" ");
+  });
+
+  it("keeps Nushell callable and unclassified external-command source visible", () => {
+    const language = commonLanguageByFence("nu");
+    expect(language).toBeDefined();
+    const source = "job spawn { ^./programa }";
+    const container = document.createElement("div");
+
+    renderCommonCode(source, container, language!);
+
+    const line = container.querySelector(".syntax-code-line-content");
+    expect(line?.textContent).toBe(source);
+    expect(line?.querySelector(".syntax-common-callable.token.function")?.textContent)
+      .toBe("job");
+    expect(line?.querySelector(".syntax-common-string.token.string")?.textContent)
+      .toBe("spawn");
+    const plainText = Array.from(
+      line?.querySelectorAll(".syntax-common-plain") ?? [],
+    ).map((node) => node.textContent ?? "").join("");
+    expect(plainText).toContain("^./programa");
   });
 
   it("renders Nushell from the nu fence and labels it as Nushell", () => {
