@@ -112,6 +112,43 @@ function addPresentationLineRanges(
   }
 }
 
+const QUOTED_CODE_SOURCE_CLASS = "syntax-quoted-code-source HyperMD-codeblock";
+
+function addQuotedCodeSurfaceRanges(
+  ranges: Range<Decoration>[],
+  block: MudCodeBlock,
+): void {
+  if (block.quoteDepth === 0) return;
+
+  ranges.push(
+    Decoration.line({
+      attributes: {
+        class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-begin-bg`,
+      },
+    }).range(block.openingLineFrom),
+  );
+
+  for (const line of block.bodyLines) {
+    ranges.push(
+      Decoration.line({
+        attributes: {
+          class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-bg`,
+        },
+      }).range(line.lineFrom),
+    );
+  }
+
+  if (block.closingLineFrom !== undefined) {
+    ranges.push(
+      Decoration.line({
+        attributes: {
+          class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-end-bg`,
+        },
+      }).range(block.closingLineFrom),
+    );
+  }
+}
+
 export function buildSyntaxDecorations(
   view: EditorView,
   registry: LanguageRegistry,
@@ -152,6 +189,8 @@ export function buildSyntaxDecorations(
         ),
       },
     );
+
+    addQuotedCodeSurfaceRanges(ranges, block);
 
     if (runtime !== undefined) {
       for (const token of runtime.tokenize(block.body)) {
