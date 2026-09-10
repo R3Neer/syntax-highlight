@@ -92,15 +92,21 @@ describe("Reading View fallback candidate detection", () => {
     expect(candidates[0]?.fence).toBe("text");
   });
 
-  it("rejects deceptive classes and pre elements with extra UI children", () => {
+  it("rejects deceptive language classes without rejecting host UI siblings", () => {
     const root = document.createElement("div");
     const deceptive = document.createElement("pre");
     deceptive.innerHTML = '<code class="languageish-text foo-language-text">x</code>';
     const decorated = codeBlock("text", "must survive");
-    decorated.append(document.createElement("button"));
+    const copy = document.createElement("button");
+    copy.className = "copy-code-button";
+    copy.textContent = "Copy";
+    decorated.append(copy);
     root.append(deceptive, decorated);
 
-    expect(collectUnprocessedRenderedCodeBlocks(root)).toEqual([]);
+    const candidates = collectUnprocessedRenderedCodeBlocks(root);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.pre).toBe(decorated);
+    expect(candidates[0]?.source).toBe("must survive");
   });
 
   it("skips Syntax Highlight output whether marked explicitly or nested in its frame", () => {

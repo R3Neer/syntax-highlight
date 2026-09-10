@@ -86,11 +86,11 @@ function exactFenceClass(code: HTMLElement): string | undefined {
 }
 
 function directCodeChild(pre: HTMLPreElement): HTMLElement | undefined {
-  if (pre.children.length !== 1) return undefined;
-  const child = pre.firstElementChild;
-  return child instanceof HTMLElement && child.tagName === "CODE"
-    ? child
-    : undefined;
+  const codeChildren = [...pre.children].filter(
+    (child): child is HTMLElement =>
+      child instanceof HTMLElement && child.tagName === "CODE",
+  );
+  return codeChildren.length === 1 ? codeChildren[0] : undefined;
 }
 
 function alreadyProcessed(pre: HTMLPreElement): boolean {
