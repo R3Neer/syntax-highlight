@@ -40,6 +40,32 @@ function renderPlainReadingBlock(source: string, element: HTMLElement): void {
   element.replaceChildren(pre);
 }
 
+export function renderResolvedFence(
+  registry: LanguageRegistry,
+  settings: SyntaxPluginSettings,
+  source: string,
+  element: HTMLElement,
+  fence: string,
+): boolean {
+  const normalizedFence = fence.toLocaleLowerCase();
+  const runtime = registry.byFence(normalizedFence);
+  const common = runtime === undefined ? commonFenceMatch(normalizedFence) : undefined;
+  if (runtime === undefined && common === undefined) return false;
+
+  if (runtime !== undefined) {
+    renderSyntaxCode(source, element, runtime, settings.lineNumbers);
+  } else {
+    renderCommonCode(
+      source,
+      element,
+      common!.language,
+      settings.lineNumbers,
+      normalizedFence,
+    );
+  }
+  return true;
+}
+
 export function renderReadingFence(
   registry: LanguageRegistry,
   settings: SyntaxPluginSettings,
@@ -51,24 +77,16 @@ export function renderReadingFence(
   claimUnknown = false,
 ): boolean {
   const normalizedFence = fence.toLocaleLowerCase();
-  const runtime = registry.byFence(normalizedFence);
-  const common = runtime === undefined ? commonFenceMatch(normalizedFence) : undefined;
-  const recognized = runtime !== undefined || common !== undefined;
+  const recognized =
+    registry.byFence(normalizedFence) !== undefined ||
+    commonFenceMatch(normalizedFence) !== undefined;
   if (!recognized && !claimUnknown) return false;
 
   element.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
   if (!settings.markdownReading || !recognized) {
     renderPlainReadingBlock(source, element);
-  } else if (runtime !== undefined) {
-    renderSyntaxCode(source, element, runtime, settings.lineNumbers);
   } else {
-    renderCommonCode(
-      source,
-      element,
-      common!.language,
-      settings.lineNumbers,
-      normalizedFence,
-    );
+    renderResolvedFence(registry, settings, source, element, normalizedFence);
   }
   enableEditing(element, context, normalizedFence, source);
   return true;
@@ -86,11 +104,11 @@ function exactFenceClass(code: HTMLElement): string | undefined {
 }
 
 function directCodeChild(pre: HTMLPreElement): HTMLElement | undefined {
-  if (pre.children.length !== 1) return undefined;
-  const child = pre.firstElementChild;
-  return child instanceof HTMLElement && child.tagName === "CODE"
-    ? child
-    : undefined;
+  const codeChildren = [...pre.children].filter(
+    (child): child is HTMLElement =>
+      child instanceof HTMLElement && child.tagName === "CODE",
+  );
+  return codeChildren.length === 1 ? codeChildren[0] : undefined;
 }
 
 function alreadyProcessed(pre: HTMLPreElement): boolean {
@@ -125,6 +143,18 @@ export function collectUnprocessedRenderedCodeBlocks(
   return candidates;
 }
 
+export function replaceRenderedCodeBlockCandidate(
+  candidate: RenderedCodeBlockCandidate,
+  host: HTMLElement,
+): void {
+  const auxiliaryChildren = [...candidate.pre.children].filter(
+    (child) => child !== candidate.code,
+  );
+  const renderedPre = host.querySelector("pre");
+  if (renderedPre !== null) renderedPre.append(...auxiliaryChildren);
+  candidate.pre.replaceWith(host);
+}
+
 export function createReadingFallbackPostProcessor(
   handleFence: ReadingFenceHandler,
 ): MarkdownPostProcessor {
@@ -144,8 +174,6 @@ export function createReadingFallbackPostProcessor(
           candidate.fence,
         );
       } catch (error) {
-        // Keep the original code and continue with later blocks. One broken
-        // language runtime must not take down the entire preview section.
         console.error(
           `[Syntax Highlight] Reading fallback failed for ${candidate.fence}.`,
           error,
@@ -154,7 +182,7 @@ export function createReadingFallbackPostProcessor(
       }
       if (!handled) continue;
       host.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
-      candidate.pre.replaceWith(host);
+      replaceRenderedCodeBlockCandidate(candidate, host);
     }
   };
 }
@@ -169,9 +197,6 @@ export function registerReadingFallbackPostProcessor(
   handleFence: ReadingFenceHandler,
 ): MarkdownPostProcessor {
   const processor = createReadingFallbackPostProcessor(handleFence);
-  // Keep the metadata and, critically, pass the documented sort-order argument
-  // to Obsidian. Setting the property only after registration is too late to be
-  // a reliable host-ordering contract.
   processor.sortOrder = READING_FALLBACK_SORT_ORDER;
   return register(processor, READING_FALLBACK_SORT_ORDER);
 }

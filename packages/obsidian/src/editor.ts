@@ -28,6 +28,7 @@ import {
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
 import type { LanguageRegistry } from "./languages";
+import { createLivePreviewEmbeddedBlockExtension } from "./live-preview-host";
 import type { SyntaxPluginSettings } from "./settings";
 import { createSmartEditingExtensions } from "./smart-edit";
 import {
@@ -276,6 +277,7 @@ export function createMarkdownEditorExtensions(
     );
   return [
     createEditorHighlighter(registry, getSettings),
+    createLivePreviewEmbeddedBlockExtension(registry, getSettings),
     ...createSmartEditingExtensions(
       (state, position) => {
         const block = findCodeBlocks(state.doc.toString(), accepted()).find(
@@ -291,8 +293,6 @@ export function createMarkdownEditorExtensions(
               from: block.bodyLines[0]?.sourceFrom ?? block.from,
               to: block.bodyLines.at(-1)?.sourceTo ?? block.to,
               languageId,
-              // Let Obsidian/CodeMirror preserve the Markdown quote container
-              // when Enter is pressed inside a blockquote or callout.
               nativeIndentation: block.quoteDepth > 0,
             };
       },

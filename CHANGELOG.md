@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Harden nested Obsidian block integration against real host DOM: Reading View
+  now accepts and preserves copy/auxiliary controls beside fenced code, while Live
+  Preview also processes recognized code inside CodeMirror `.cm-embed-block`
+  widgets through an EditorView-scoped, mutation-driven bridge.
 - Make common-language syntax colors follow the active Obsidian theme instead
   of knowing about any specific community theme.
 - Emit Prism-compatible token classes in Reading view and CodeMirror-compatible
