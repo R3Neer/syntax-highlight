@@ -1,10 +1,22 @@
-import { EditorState } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
-import { describe, expect, it } from "vitest";
+// @vitest-environment happy-dom
 
-import { buildSyntaxDecorations } from "../src/editor";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { afterEach, describe, expect, it } from "vitest";
+
+import {
+  buildSyntaxDecorations,
+  createMarkdownEditorExtensions,
+} from "../src/editor";
 import { LanguageRegistry } from "../src/languages";
 import { DEFAULT_SETTINGS } from "../src/settings";
+
+const views: EditorView[] = [];
+
+afterEach(() => {
+  for (const view of views.splice(0)) view.destroy();
+  document.body.replaceChildren();
+});
 
 function registry(): LanguageRegistry {
   return new LanguageRegistry(
@@ -30,6 +42,26 @@ function lineClasses(source: string): Map<number, string[]> {
 
 function joinedAt(classes: Map<number, string[]>, position: number): string {
   return (classes.get(position) ?? []).join(" ");
+}
+
+function mountedEditor(source: string): EditorView {
+  const settings = structuredClone(DEFAULT_SETTINGS);
+  const languages = new LanguageRegistry(settings, () => Promise.resolve(""));
+  const parent = document.body.appendChild(document.createElement("div"));
+  const state = EditorState.create({
+    doc: source,
+    extensions: createMarkdownEditorExtensions(languages, () => settings),
+  });
+  const view = new EditorView({ state, parent });
+  views.push(view);
+  return view;
+}
+
+function sourceLine(view: EditorView, text: string): HTMLElement {
+  const line = [...view.dom.querySelectorAll<HTMLElement>(".cm-line")]
+    .find((candidate) => candidate.textContent?.includes(text));
+  if (line === undefined) throw new Error(`Missing editor line: ${text}`);
+  return line;
 }
 
 describe("Live Preview quoted source surface", () => {
@@ -75,5 +107,41 @@ describe("Live Preview quoted source surface", () => {
 
     expect(classes).not.toContain("syntax-quoted-code-source");
     expect(classes).not.toContain("HyperMD-codeblock-bg");
+  });
+
+  it("materializes quoted PowerShell surface classes on actual EditorView lines", () => {
+    const view = mountedEditor([
+      "> [!task] PowerShell",
+      "> ```powershell",
+      "> $foo = 42",
+      "> Write-Host $foo",
+      "> ```",
+    ].join("\n"));
+
+    const opening = sourceLine(view, "```powershell");
+    const body = sourceLine(view, "$foo = 42");
+    const closing = sourceLine(view, "> ```");
+
+    expect(opening.classList.contains("syntax-quoted-code-source")).toBe(true);
+    expect(opening.classList.contains("HyperMD-codeblock-begin-bg")).toBe(true);
+    expect(body.classList.contains("HyperMD-codeblock")).toBe(true);
+    expect(body.classList.contains("HyperMD-codeblock-bg")).toBe(true);
+    expect(closing.classList.contains("HyperMD-codeblock-end-bg")).toBe(true);
+  });
+
+  it("merges Text presentation and quoted host surface classes on the same DOM lines", () => {
+    const view = mountedEditor([
+      "> [!task] Text",
+      "> ```text-center-justified",
+      "> alpha beta gamma",
+      "> ```",
+    ].join("\n"));
+
+    const body = sourceLine(view, "alpha beta gamma");
+    expect(body.classList.contains("syntax-quoted-code-source")).toBe(true);
+    expect(body.classList.contains("HyperMD-codeblock-bg")).toBe(true);
+    expect(body.classList.contains("syntax-presentational")).toBe(true);
+    expect(body.classList.contains("syntax-presentation-align-center")).toBe(true);
+    expect(body.classList.contains("syntax-presentation-flow-justified")).toBe(true);
   });
 });
