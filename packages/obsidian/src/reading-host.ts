@@ -86,9 +86,10 @@ export function renderReadingFence(
     commonFenceMatch(normalizedFence) !== undefined;
   if (!recognized && !claimUnknown) return false;
 
+  const diagnosticPath = claimUnknown ? "reading-specialized" : "reading-fallback";
   if (claimUnknown) {
     traceHostDiagnostic(
-      "reading-specialized",
+      diagnosticPath,
       normalizedFence,
       source,
       element,
@@ -102,6 +103,14 @@ export function renderReadingFence(
     renderResolvedFence(registry, settings, source, element, normalizedFence);
   }
   enableEditing(element, context, normalizedFence, source);
+  traceHostDiagnostic(
+    diagnosticPath,
+    normalizedFence,
+    source,
+    element,
+    undefined,
+    "rendered",
+  );
   return true;
 }
 
