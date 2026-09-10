@@ -11,9 +11,14 @@ import {
 
 import { findCodeBlocks, findMudCodeBlocks } from "./blocks";
 import {
+  commonFenceMatch,
+  commonFenceNames,
+  presentationClassNames,
+  type CommonFenceMatch,
+} from "./block-presentation";
+import {
   COMMON_EDITOR_HIGHLIGHT_STYLE,
-  commonLanguageByFence,
-  commonLanguages,
+  type CommonLanguage,
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
 import type { LanguageRegistry } from "./languages";
@@ -76,10 +81,8 @@ function addCommonLanguageRanges(
   ranges: Range<Decoration>[],
   source: string,
   base: number,
-  fence: string,
+  language: CommonLanguage,
 ): void {
-  const language = commonLanguageByFence(fence);
-  if (language === undefined) return;
   const support = language.support?.();
   if (support === undefined) {
     addPlainCommonRanges(ranges, source, base);
@@ -94,6 +97,25 @@ function addCommonLanguageRanges(
   });
 }
 
+function addPresentationLineRanges(
+  ranges: Range<Decoration>[],
+  view: EditorView,
+  from: number,
+  to: number,
+  match: CommonFenceMatch,
+): void {
+  const classes = presentationClassNames(match).join(" ");
+  if (!classes || from >= to) return;
+  let line = view.state.doc.lineAt(from);
+  while (line.from < to) {
+    ranges.push(
+      Decoration.line({ attributes: { class: classes } }).range(line.from),
+    );
+    if (line.number >= view.state.doc.lines) break;
+    line = view.state.doc.line(line.number + 1);
+  }
+}
+
 export function buildSyntaxDecorations(
   view: EditorView,
   registry: LanguageRegistry,
@@ -106,25 +128,25 @@ export function buildSyntaxDecorations(
       ...registry
         .enabled()
         .flatMap(({ descriptor }) => descriptor.fences),
-      ...commonLanguages().flatMap(({ fences: aliases }) => aliases),
+      ...commonFenceNames(),
     ].map((fence) => fence.toLocaleLowerCase()),
   );
   for (const block of findCodeBlocks(source, fences)) {
     const body = source.slice(block.from, block.to);
     const runtime = registry.byFence(block.language);
-    const common = runtime === undefined
-      ? commonLanguageByFence(block.language)
-      : undefined;
+    const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
     if (runtime !== undefined) {
       for (const token of runtime.tokenize(body)) {
         addTokenRanges(ranges, token, block.from, runtime.settings.id);
       }
-    } else {
-      addCommonLanguageRanges(ranges, body, block.from, block.language);
+    } else if (common !== undefined) {
+      addCommonLanguageRanges(ranges, body, block.from, common.language);
+      addPresentationLineRanges(ranges, view, block.from, block.to, common);
     }
-    const showLineNumbers =
-      lineNumbers && (common?.presentation?.lineNumbers ?? true);
-    if (showLineNumbers) {
+    if (
+      lineNumbers &&
+      (runtime !== undefined || common?.language.presentation?.lineNumbers !== false)
+    ) {
       let line = view.state.doc.lineAt(block.from);
       let number = 1;
       while (line.from < block.to || (number === 1 && line.from === block.to)) {
@@ -262,7 +284,7 @@ export function createMarkdownEditorExtensions(
     new Set(
       [
         ...registry.enabled().flatMap(({ descriptor }) => descriptor.fences),
-        ...commonLanguages().flatMap(({ fences }) => fences),
+        ...commonFenceNames(),
       ].map((fence) => fence.toLocaleLowerCase()),
     );
   return [
@@ -275,7 +297,7 @@ export function createMarkdownEditorExtensions(
         if (block === undefined) return undefined;
         const languageId =
           registry.byFence(block.language)?.settings.id ??
-          commonLanguageByFence(block.language)?.id;
+          commonFenceMatch(block.language)?.language.id;
         return languageId === undefined
           ? undefined
           : { from: block.from, to: block.to, languageId };

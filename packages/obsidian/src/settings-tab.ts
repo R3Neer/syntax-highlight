@@ -9,6 +9,13 @@ import {
   normalizePath,
 } from "obsidian";
 
+import {
+  rewritePresentationFences,
+  type BlockAlignment,
+  type BlockFlow,
+  type BlockPresentationDefaults,
+} from "./block-presentation";
+import type { CommonPresentationFamily } from "./common-languages";
 import type SyntaxHighlightPlugin from "./main";
 import { renderCommonLanguageCatalog } from "./common-language-catalog";
 import { LanguageRegistry } from "./languages";
@@ -131,6 +138,23 @@ export class SyntaxSettingTab extends PluginSettingTab {
       tr("Continue line comments", "Continuar comentarios de línea"),
     );
 
+    const presentation = this.section(
+      containerEl,
+      tr("Text and Markdown blocks", "Bloques Text y Markdown"),
+      true,
+    );
+    this.renderPresentationGroup(
+      presentation,
+      "text",
+      tr("Text blocks", "Bloques Text"),
+    );
+    this.renderPresentationGroup(
+      presentation,
+      "markdown",
+      tr("Markdown blocks", "Bloques Markdown"),
+    );
+    this.renderPresentationInfo(presentation);
+
     const languages = this.section(containerEl, tr("Languages", "Lenguajes"), true);
     for (const language of this.plugin.pluginSettings.languages) {
       const collisions = this.collisionMessages(language.id);
@@ -216,6 +240,239 @@ export class SyntaxSettingTab extends PluginSettingTab {
     this.renderAdvanced(
       this.section(containerEl, tr("Advanced", "Avanzado"), false),
     );
+  }
+
+  private renderPresentationGroup(
+    parent: HTMLElement,
+    family: CommonPresentationFamily,
+    title: string,
+  ): void {
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
+    const current = this.plugin.pluginSettings.blockPresentation[family];
+    parent.createEl("h3", {
+      text: title,
+      cls: "syntax-presentation-group-title",
+    });
+
+    const alignment = new Setting(parent).setName(tr("Alignment", "Alineación"));
+    this.segmentedControl<BlockAlignment>(
+      alignment.controlEl,
+      current.alignment,
+      [
+        ["left", tr("Left", "Izquierda")],
+        ["center", tr("Center", "Centro")],
+        ["right", tr("Right", "Derecha")],
+      ],
+      async (value) => {
+        await this.changePresentationDefault(family, {
+          ...current,
+          alignment: value,
+        });
+      },
+    );
+
+    const flow = new Setting(parent).setName(tr("Flow", "Flujo"));
+    this.segmentedControl<BlockFlow>(
+      flow.controlEl,
+      current.flow,
+      [
+        ["ragged", "Ragged"],
+        ["justified", tr("Justified", "Justificado")],
+      ],
+      async (value) => {
+        await this.changePresentationDefault(family, {
+          ...current,
+          flow: value,
+        });
+      },
+    );
+  }
+
+  private segmentedControl<T extends string>(
+    parent: HTMLElement,
+    current: T,
+    options: readonly (readonly [T, string])[],
+    onChange: (value: T) => Promise<void>,
+  ): void {
+    const group = parent.createDiv("syntax-segmented-control");
+    group.setAttribute("role", "group");
+    for (const [value, label] of options) {
+      const button = group.createEl("button", {
+        text: label,
+        cls: "syntax-segmented-button",
+      });
+      button.type = "button";
+      const active = value === current;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+      button.addEventListener("click", () => {
+        if (!active) void onChange(value);
+      });
+    }
+  }
+
+  private renderPresentationInfo(parent: HTMLElement): void {
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
+    const info = parent.createDiv("syntax-presentation-info");
+    info.createEl("strong", {
+      text: tr("Per-block overrides", "Overrides por bloque"),
+    });
+    info.createEl("p", {
+      text: tr(
+        "A fence without modifiers inherits these defaults. Add hyphen modifiers to override alignment and/or flow for one block. Canonical order is base-alignment-flow.",
+        "Un fence sin modificadores hereda estos valores. Añade modificadores con guiones para sobrescribir la alineación y/o el flujo de un bloque. El orden canónico es base-alineación-flujo.",
+      ),
+    });
+    const examples = info.createEl("p");
+    examples.append(
+      document.createTextNode(`${tr("Examples", "Ejemplos")}: `),
+      info.ownerDocument.createElement("code"),
+      document.createTextNode(", "),
+      info.ownerDocument.createElement("code"),
+      document.createTextNode(". "),
+      document.createTextNode(
+        tr(
+          "Justified stretches wrapped lines; Alignment controls the last line. Ragged uses Alignment directly.",
+          "Justified expande las líneas envueltas; Alineación controla la última línea. Ragged usa Alineación directamente.",
+        ),
+      ),
+    );
+    const codes = examples.querySelectorAll("code");
+    if (codes[0] !== undefined) codes[0].textContent = "text-right-justified";
+    if (codes[1] !== undefined) codes[1].textContent = "markdown-center-ragged";
+  }
+
+  private async changePresentationDefault(
+    family: CommonPresentationFamily,
+    next: BlockPresentationDefaults,
+  ): Promise<void> {
+    const previous = structuredClone(
+      this.plugin.pluginSettings.blockPresentation[family],
+    );
+    if (
+      previous.alignment === next.alignment &&
+      previous.flow === next.flow
+    ) {
+      return;
+    }
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
+
+    let impact: { blocks: number; files: number };
+    try {
+      impact = await this.presentationImpact(family, previous, next);
+    } catch (error) {
+      new Notice(
+        error instanceof Error
+          ? error.message
+          : tr(
+              "Could not inspect existing blocks.",
+              "No se pudieron revisar los bloques existentes.",
+            ),
+      );
+      this.display();
+      return;
+    }
+
+    let action = "apply";
+    if (impact.blocks > 0) {
+      const familyName = family === "text" ? "Text" : "Markdown";
+      action = await this.choose(
+        tr(
+          `Change ${familyName} defaults?`,
+          `¿Cambiar los valores de ${familyName}?`,
+        ),
+        [
+          [
+            "preserve",
+            tr("Keep current appearance", "Mantener apariencia actual"),
+          ],
+          [
+            "apply",
+            tr("Apply new default", "Aplicar nuevo valor predeterminado"),
+          ],
+          ["cancel", tr("Cancel", "Cancelar")],
+        ],
+        tr(
+          `${impact.blocks} blocks in ${impact.files} Markdown files depend on the value being changed. Keeping their appearance rewrites only those opening fences with explicit alignment and flow modifiers.`,
+          `${impact.blocks} bloques en ${impact.files} archivos Markdown dependen del valor que cambia. Mantener su apariencia reescribirá solo esos fences de apertura con alineación y flujo explícitos.`,
+        ),
+      );
+    }
+    if (action === "cancel") {
+      this.display();
+      return;
+    }
+
+    try {
+      let rewritten = { blocks: 0, files: 0 };
+      if (action === "preserve") {
+        rewritten = await this.rewritePresentationVault(family, previous, next);
+      }
+      this.plugin.pluginSettings.blockPresentation[family] = next;
+      try {
+        await this.plugin.commitSettings(false);
+      } catch (error) {
+        this.plugin.pluginSettings.blockPresentation[family] = previous;
+        throw error;
+      }
+      if (action === "preserve") {
+        new Notice(
+          tr(
+            `Preserved ${rewritten.blocks} blocks in ${rewritten.files} files.`,
+            `Se ha conservado la apariencia de ${rewritten.blocks} bloques en ${rewritten.files} archivos.`,
+          ),
+        );
+      }
+      this.display();
+    } catch (error) {
+      new Notice(
+        error instanceof Error
+          ? error.message
+          : tr(
+              "Could not update block presentation.",
+              "No se pudo actualizar la presentación de los bloques.",
+            ),
+      );
+      this.display();
+    }
+  }
+
+  private async presentationImpact(
+    family: CommonPresentationFamily,
+    previous: BlockPresentationDefaults,
+    next: BlockPresentationDefaults,
+  ): Promise<{ blocks: number; files: number }> {
+    let blocks = 0;
+    let files = 0;
+    for (const file of this.plugin.app.vault.getMarkdownFiles()) {
+      const source = await this.plugin.app.vault.cachedRead(file);
+      const result = rewritePresentationFences(source, family, previous, next);
+      if (result.changedBlocks === 0) continue;
+      blocks += result.changedBlocks;
+      files += 1;
+    }
+    return { blocks, files };
+  }
+
+  private async rewritePresentationVault(
+    family: CommonPresentationFamily,
+    previous: BlockPresentationDefaults,
+    next: BlockPresentationDefaults,
+  ): Promise<{ blocks: number; files: number }> {
+    let blocks = 0;
+    let files = 0;
+    for (const file of this.plugin.app.vault.getMarkdownFiles()) {
+      const source = await this.plugin.app.vault.read(file);
+      const result = rewritePresentationFences(source, family, previous, next);
+      if (result.changedBlocks === 0) continue;
+      await this.plugin.app.vault.modify(file, result.source);
+      blocks += result.changedBlocks;
+      files += 1;
+    }
+    return { blocks, files };
   }
 
   private renderLanguage(
@@ -1147,10 +1404,17 @@ export class SyntaxSettingTab extends PluginSettingTab {
   private choose(
     title: string,
     choices: readonly [string, string][],
+    description?: string,
   ): Promise<string> {
     return new Promise((resolve) => {
       const modal = new Modal(this.plugin.app);
       modal.titleEl.setText(title);
+      if (description !== undefined) {
+        modal.contentEl.createEl("p", {
+          text: description,
+          cls: "setting-item-description",
+        });
+      }
       for (const [value, label] of choices) {
         const button = modal.contentEl.createEl("button", { text: label });
         button.addEventListener("click", () => {

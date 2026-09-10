@@ -6,6 +6,7 @@ import {
   type MarkdownPostProcessorContext,
 } from "obsidian";
 
+import { commonFenceMatch, commonFenceNames } from "./block-presentation";
 import { commonLanguages } from "./common-languages";
 import { isSafeMarkdownProcessorLanguage } from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
@@ -154,34 +155,34 @@ export default class SyntaxHighlightPlugin extends Plugin {
   }
 
   private registerCommonFences(): void {
-    for (const language of commonLanguages()) {
-      for (const rawFence of language.fences) {
-        const fence = rawFence.toLocaleLowerCase();
-        if (!isSafeMarkdownProcessorLanguage(fence)) continue;
-        if (this.registeredFences.has(fence)) continue;
-        this.registeredFences.add(fence);
-        this.registerMarkdownCodeBlockProcessor(
-          fence,
-          (source, element, context) => {
-            if (!this.pluginSettings.markdownReading) {
-              const pre = document.createElement("pre");
-              const code = document.createElement("code");
-              code.textContent = source;
-              pre.append(code);
-              element.replaceChildren(pre);
-              this.enableReadingBlockEditing(element, context);
-              return;
-            }
-            renderCommonCode(
-              source,
-              element,
-              language,
-              this.pluginSettings.lineNumbers,
-            );
+    for (const fence of commonFenceNames()) {
+      const match = commonFenceMatch(fence);
+      if (match === undefined) continue;
+      if (!isSafeMarkdownProcessorLanguage(fence)) continue;
+      if (this.registeredFences.has(fence)) continue;
+      this.registeredFences.add(fence);
+      this.registerMarkdownCodeBlockProcessor(
+        fence,
+        (source, element, context) => {
+          if (!this.pluginSettings.markdownReading) {
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = source;
+            pre.append(code);
+            element.replaceChildren(pre);
             this.enableReadingBlockEditing(element, context);
-          },
-        );
-      }
+            return;
+          }
+          renderCommonCode(
+            source,
+            element,
+            match.language,
+            this.pluginSettings.lineNumbers,
+            fence,
+          );
+          this.enableReadingBlockEditing(element, context);
+        },
+      );
     }
   }
 

@@ -85,6 +85,20 @@ describe("active theme compatibility", () => {
     ).toBe(true);
   });
 
+  it("emits live Text and Markdown presentation defaults", () => {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    settings.blockPresentation.text = { alignment: "center", flow: "ragged" };
+    settings.blockPresentation.markdown = { alignment: "right", flow: "justified" };
+    const css = buildThemeCss(settings);
+
+    expect(css).toContain(
+      ".syntax-presentation-family-text{--syntax-presentation-alignment:center;",
+    );
+    expect(css).toContain(
+      ".syntax-presentation-family-markdown{--syntax-presentation-alignment:right;--syntax-presentation-text-align:justify;",
+    );
+  });
+
   it("keeps syntax presets scoped to settings previews", () => {
     const css = buildThemeCss(structuredClone(DEFAULT_SETTINGS));
 

@@ -16,6 +16,12 @@
   blocks that follow the active-vault theme and contrast policy without
   code-specific badge or line-number furniture; they still do not claim `.txt`
   files from Obsidian's normal file handling.
+- Treat Text and Markdown fences as configurable presentation families: both
+  omit code-only badge and line-number furniture, while Markdown retains syntax
+  highlighting. Per-vault defaults choose left/center/right alignment and
+  Ragged/Justified flow; canonical hyphen modifiers override individual blocks,
+  and changing a default can preserve affected blocks by making their opening
+  fences explicit.
 - Add PowerShell as a parser-backed common language with `powershell`, `pwsh`,
   and `ps1` fences plus `.ps1`, `.psm1`, and `.psd1` source extensions through
   CodeMirror's PowerShell stream mode.

@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 export const PLUGIN_ID = "syntax-highlight";
 export const LEGACY_PLUGIN_ID = "mud-syntax-highlighter";
 export const INSTALL_PROFILES = ["common", "mud"];
-const CURRENT_SETTINGS_SCHEMA_VERSION = 7;
+const CURRENT_SETTINGS_SCHEMA_VERSION = 8;
 
 export async function activatePlugin(communityFile) {
   let active = [];

@@ -1,5 +1,6 @@
 import { highlightTree } from "@lezer/highlight";
 
+import { commonFenceMatch, presentationClassNames } from "./block-presentation";
 import {
   COMMON_READING_HIGHLIGHT_STYLE,
   type CommonLanguage,
@@ -135,10 +136,12 @@ function renderRanges(
   showLineNumbers: boolean,
   badge?: LanguageBadge,
   plainClass?: string,
+  frameClasses: readonly string[] = [],
 ): void {
   container.replaceChildren();
   const frame = document.createElement("div");
   frame.className = "syntax-highlight-frame";
+  if (frameClasses.length > 0) frame.classList.add(...frameClasses);
   if (badge !== undefined) appendLanguageBadge(frame, badge);
   const pre = document.createElement("pre");
   const code = document.createElement("code");
@@ -200,6 +203,7 @@ export function renderCommonCode(
   container: HTMLElement,
   language: CommonLanguage,
   showLineNumbers = true,
+  fence = language.fences[0] ?? language.id,
 ): void {
   const ranges: RenderedRange[] = [];
   const support = language.support?.();
@@ -214,6 +218,8 @@ export function renderCommonCode(
   const badge = language.presentation?.badge === false
     ? undefined
     : { label: language.name };
+  const match = commonFenceMatch(fence);
+  const frameClasses = match === undefined ? [] : presentationClassNames(match);
   renderRanges(
     source,
     container,
@@ -222,6 +228,7 @@ export function renderCommonCode(
     effectiveLineNumbers,
     badge,
     "syntax-common-plain",
+    frameClasses,
   );
 }
 

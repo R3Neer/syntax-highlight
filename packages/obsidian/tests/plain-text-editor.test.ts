@@ -70,6 +70,33 @@ describe("plain Text blocks in Markdown editing", () => {
     }
   });
 
+  it("adds presentational line classes only to Text body lines", () => {
+    const source = "before\n```text-right-justified\none two three\nfour five six\n```\nafter";
+    const state = EditorState.create({ doc: source });
+    const view = { state } as EditorView;
+    const decorations = buildSyntaxDecorations(view, registry(), true);
+    const lineClasses: Array<{ position: number; className: string }> = [];
+    decorations.between(0, state.doc.length, (from, to, decoration) => {
+      const attributes = (decoration.spec as { attributes?: { class?: string } }).attributes;
+      if (from === to && attributes?.class?.includes("syntax-presentational")) {
+        lineClasses.push({ position: from, className: attributes.class });
+      }
+    });
+
+    expect(lineClasses).toHaveLength(2);
+    expect(lineClasses.every(({ className }) =>
+      className.includes("syntax-presentation-family-text") &&
+      className.includes("syntax-presentation-align-right") &&
+      className.includes("syntax-presentation-flow-justified")
+    )).toBe(true);
+  });
+
+  it("suppresses line-number widgets for Markdown while keeping code languages unchanged", () => {
+    expect(widgetCount("```markdown\n# one\n## two\n```", true)).toBe(0);
+    expect(widgetCount("```md-right-ragged\n# one\n## two\n```", true)).toBe(0);
+    expect(widgetCount("```powershell\nGet-ChildItem\nWrite-Host hi\n```", true)).toBe(2);
+  });
+
   it("keeps line-number widgets for actual code blocks", () => {
     const source = "```bash\necho uno\necho dos\n```";
     expect(widgetCount(source, true)).toBe(2);
