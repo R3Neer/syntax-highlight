@@ -149,4 +149,28 @@ describe("Live Preview adversarial host matrix", () => {
     menu.click();
     expect(clicks).toBe(1);
   });
+
+  it("reacts when Obsidian classifies an already-mounted widget after insertion", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const embed = document.createElement("div");
+    embed.className = "cm-embed-block cm-callout";
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = "classified later";
+    pre.append(code);
+    embed.append(pre);
+    root.append(embed);
+    const bridge = bridgeFor(root);
+    bridge.start();
+
+    code.className = "language-text-center is-loaded";
+    await settle();
+
+    expect(root.querySelector(".syntax-highlight-frame")?.textContent)
+      .toContain("classified later");
+    expect(root.querySelector(".syntax-presentation-align-center")).not.toBeNull();
+    bridge.dispose();
+    root.remove();
+  });
 });
