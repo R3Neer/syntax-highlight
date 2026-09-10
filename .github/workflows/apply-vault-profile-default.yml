@@ -34,6 +34,7 @@ jobs:
 
           tests = Path("packages/obsidian/tests/settings.test.ts")
           text = tests.read_text(encoding="utf-8")
+
           needle = '    expect(settings.languages.find(({ id }) => id === "toml")?.enabled).toBe(true);'
           replacement = (
               '    expect(settings.languages.find(({ id }) => id === "mud")?.enabled).toBe(false);\n'
@@ -41,7 +42,38 @@ jobs:
           )
           if text.count(needle) != 1:
               raise SystemExit(f"expected one settings assertion marker, found {text.count(needle)}")
-          tests.write_text(text.replace(needle, replacement), encoding="utf-8")
+          text = text.replace(needle, replacement)
+
+          needle = '''  it("resolves source file extensions through loaded descriptors", () => {
+            const registry = new LanguageRegistry(
+              structuredClone(DEFAULT_SETTINGS),
+              () => Promise.resolve(""),
+            );'''
+          replacement = '''  it("resolves source file extensions through loaded descriptors", () => {
+            const settings = structuredClone(DEFAULT_SETTINGS);
+            const mud = settings.languages.find(({ id }) => id === "mud");
+            if (mud !== undefined) mud.enabled = true;
+            const registry = new LanguageRegistry(
+              settings,
+              () => Promise.resolve(""),
+            );'''
+          if text.count(needle) != 1:
+              raise SystemExit(f"expected one extension registry marker, found {text.count(needle)}")
+          text = text.replace(needle, replacement)
+
+          needle = '''  it("reports active collisions as configuration errors", async () => {
+            const settings = structuredClone(DEFAULT_SETTINGS);
+            settings.languages[1].embeddedDescriptor = structuredClone('''
+          replacement = '''  it("reports active collisions as configuration errors", async () => {
+            const settings = structuredClone(DEFAULT_SETTINGS);
+            const mud = settings.languages.find(({ id }) => id === "mud");
+            if (mud !== undefined) mud.enabled = true;
+            settings.languages[1].embeddedDescriptor = structuredClone('''
+          if text.count(needle) != 1:
+              raise SystemExit(f"expected one collision registry marker, found {text.count(needle)}")
+          text = text.replace(needle, replacement)
+
+          tests.write_text(text, encoding="utf-8")
           PY
       - run: npm run check
       - name: Commit generated patch
