@@ -14,30 +14,55 @@ carry the classes that Obsidian themes already target:
 - Editing view uses CodeMirror-compatible classes such as `cm-keyword`,
   `cm-string`, and `cm-def`.
 
-That means switching the active Obsidian theme automatically changes syntax
-colors through the normal CSS cascade. The plugin does not inspect the theme
-name, ship theme-specific palettes, or need a theme-change watcher.
-
-If a theme does not style those token classes, `styles.css` falls back to
-Obsidian's semantic code variables (`--code-keyword`, `--code-string`,
-`--code-function`, `--code-operator`, and the rest).
+That means the active Obsidian theme remains the source of syntax colors. The
+plugin never branches on a theme name or ships a compatibility table for
+community themes. If a theme does not style those token classes, `styles.css`
+falls back to Obsidian's semantic code variables (`--code-keyword`,
+`--code-string`, `--code-function`, `--code-operator`, and the rest).
 
 Some parsers intentionally leave parts of the source unclassified. Command
 sigils, paths, whitespace, or other grammar-specific fragments may therefore
 sit between highlighted ranges. Reading view keeps those fragments verbatim and
 wraps them with `syntax-common-plain`, whose default color is the active theme's
-`--text-normal`. This prevents a broken or missing code-normal color in a
-community theme from making otherwise valid source visually vanish.
+`--text-normal`.
 
-Bash and Nushell command names have one additional Reading-view safeguard. Their
-Lezer grammars expose command positions as callables, which become Prism
-`token function` spans. Some community themes style that selector with a color
-that assumes Obsidian's exact native Prism context and can become illegible in a
-custom renderer. Syntax Highlight therefore keeps the Prism class for semantics
-but lets the shell-command rule resolve through `--syntax-common-callable` and
-then the active theme's `--text-normal`. The safeguard is deliberately limited
-to Bash and Nushell so functions in JavaScript, Python, and other common
-languages continue to use the theme's normal function styling.
+## Automatic contrast normalization
+
+After the theme has resolved the actual color of a common-language token,
+Syntax Highlight checks that foreground against the effective CSS background
+behind the token. The runtime target is WCAG AA normal-text contrast, `4.5:1`.
+A token that already reaches the target is left exactly as the theme produced
+it. The background is never modified.
+
+When a foreground fails the target, the correction is deliberately perceptual
+rather than a fixed darkening step:
+
+1. Convert the resolved sRGB foreground to OKLab.
+2. Search independently toward lower and higher perceptual lightness.
+3. Preserve the original chromatic axes while possible. If a candidate leaves
+   the sRGB gamut, reduce chroma only as much as necessary to bring it back.
+4. Find the nearest passing candidate in each viable direction by binary search.
+5. Choose the candidate with the smallest OKLab distance from the theme color.
+
+This lets a pale token on a light background become darker while a dark token on
+a dark background becomes lighter. Only a foreground that actually fails the
+contrast constraint changes, and the selected correction is the smallest of the
+two viable perceptual-lightness moves. Very translucent text keeps its alpha
+when possible; opacity is allowed to rise only if no `4.5:1` solution exists at
+the original alpha.
+
+The effective background is built by alpha-compositing declared CSS
+`background-color` values from the token through its ancestors. Background
+images are not raster-sampled, so a theme that exposes a strongly varying image
+through transparent code surfaces is an approximation: the declared color
+layers are used, with the document canvas as the final fallback.
+
+The normalizer watches newly rendered/reclassified syntax spans and the root
+classes/styles used for theme or light/dark changes, then batches recalculation
+to the next animation frame. Settings previews are excluded because they are
+supposed to display the selected semantic preset exactly. Configured language
+profiles such as MUD also remain outside this common-language normalizer and
+keep their explicit semantic palettes.
 
 ## Vault-level overrides
 
@@ -47,18 +72,13 @@ modifying the plugin. For example:
 ```css
 .theme-dark {
   --syntax-common-text: var(--text-normal);
-  --syntax-common-callable: var(--text-normal);
   --syntax-common-keyword: var(--text-accent);
   --syntax-common-string: var(--color-green);
   --syntax-common-operator: var(--color-cyan);
 }
 ```
 
-The `--syntax-common-*` variables have priority over the built-in fallback
-mapping. Apart from the Bash/Nushell command-name legibility safeguard described
-above, theme token selectors can still take precedence through normal CSS
-specificity or `!important`, exactly as they do for Obsidian's own code blocks.
-
-Configured language profiles such as MUD keep their explicit semantic theme
-presets. Those presets no longer leak into ordinary common-language blocks;
-their common palette is scoped to the settings preview only.
+The `--syntax-common-*` variables participate in exactly the same pipeline as a
+community theme's own token selectors. Their resolved foreground is accepted
+unchanged when it reaches `4.5:1`; otherwise it is contrast-normalized like any
+other common-language color.
