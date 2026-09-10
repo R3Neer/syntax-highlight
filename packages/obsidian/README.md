@@ -17,6 +17,14 @@ to Obsidian's semantic `--code-*` variables. PowerShell accepts `powershell`,
 `pwsh`, and `ps1` fences and `.ps1`, `.psm1`, and `.psd1` source files through
 CodeMirror's PowerShell stream mode.
 
+Fenced blocks inside Markdown blockquotes are handled by the same pipeline as
+top-level blocks. This includes Obsidian callouts because callouts are blockquote
+containers: `> ```bash`, `> ```text`, presentational Text/Markdown variants, MUD,
+and other configured/common languages keep their normal highlighting and
+presentation without treating the container's `>` markers as source code.
+Nested quote depth is preserved, and editor line-number widgets are anchored at
+the actual code content rather than before the blockquote prefix.
+
 Text and Markdown fences are presentational families rather than ordinary code
 furniture. `text`, `plaintext`, and `txt` remain parserless and use the active
 theme and contrast bridge without inventing syntax categories; `md` and
@@ -70,15 +78,15 @@ plugin build but maintain independent language configuration in their own
 ## Manual check
 
 After reloading Obsidian, verify Bash, Nushell, PowerShell, Text, and Markdown
-fences under the active vault theme. Text/Markdown should show neither a language
-badge nor plugin line numbers; check the configured alignment and flow plus
-explicit forms such as `text-right-justified` and `markdown-center-ragged` in
-both Reading view and Markdown editing. Markdown must retain syntax highlighting,
-and Justified should affect visually wrapped lines while using the selected
-alignment for the last line. PowerShell should highlight commands, variables,
-strings, operators, and comments and should also open `.ps1`, `.psm1`, and
-`.psd1` source files with the common source editor. In a vault installed with
-`--profile mud`, also verify a MUD fence in reading and editing views, a `.mud`
-source file, `~format`, `cycle`, compact ranges such as `0..10`, and the current
-compound operators. See the repository migration guide before removing the
-legacy installation.
+fences under the active vault theme, both top-level and inside a normal
+blockquote/callout. Text/Markdown should show neither a language badge nor plugin
+line numbers; check the configured alignment and flow plus explicit forms such as
+`text-right-justified` and `markdown-center-ragged` in both Reading view and
+Markdown editing. Markdown must retain syntax highlighting, and Justified should
+affect visually wrapped lines while using the selected alignment for the last
+line. PowerShell should highlight commands, variables, strings, operators, and
+comments and should also open `.ps1`, `.psm1`, and `.psd1` source files with the
+common source editor. In a vault installed with `--profile mud`, also verify a MUD
+fence in reading and editing views, a `.mud` source file, `~format`, `cycle`,
+compact ranges such as `0..10`, and the current compound operators. See the
+repository migration guide before removing the legacy installation.
