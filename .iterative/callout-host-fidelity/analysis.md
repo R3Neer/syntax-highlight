@@ -7,7 +7,7 @@ Estado: TEMPORAL. Eliminar al terminar implementación + tests de este ciclo.
 - Top-level `text` funciona en Reading y edición.
 - Dentro de `[!task]`, añadir `>` a la línea de contenido solo recupera la alineación en edición. Reading sigue mostrando el PRE nativo negro de Nier y edición no recupera la superficie de code block top-level.
 - Por tanto, el prefijo `>` ausente era un defecto de fuente, pero no la causa principal del fallo de integración.
-- Nier explica el síntoma negro: estiliza `pre[class*=language-]` con fondo negro y `color: var(--text-normal)`. Si nuestro renderer hubiera reclamado el bloque, el PRE generado sería `syntax-highlight-block`, no `language-*`.
+- Nier explica el síntoma negro cuando un `PRE` recibe una clase `language-*`: estiliza `pre[class*=language-]` con fondo negro y `color: var(--text-normal)`.
 
 ## Hipótesis y estado
 
@@ -18,48 +18,55 @@ DESCARTADA. El mismo plugin procesa Text top-level y, tras añadir `>`, sus deco
 DESCARTADA como causa raíz. Es un problema de compatibilidad de entrada y Smart Editing, pero el caso canónico con `>` sigue fallando en Reading y parcialmente en edición.
 
 ### H3: Nier es la causa raíz
-DESCARTADA. Nier amplifica el fallo y permite reconocer que el bloque sigue nativo. Top-level funciona con el mismo tema. No se debe parchear Nier.
+DESCARTADA. Nier amplifica el fallo y permite reconocer la clase tardía en PRE. Top-level funciona con el mismo tema. No se debe parchear Nier.
 
-### H4: Reading View no entra en nuestro renderer para el bloque anidado
-CONFIRMADA por salida visual y estructura de nuestro renderer. Un Text procesado tendría frame presentacional, no badge/números y PRE sin clase `language-*`; la captura conserva el aspecto nativo que activa las reglas negras de Nier.
+### H4: Reading/LP rendered no entra en nuestro renderer para el bloque anidado
+DESCARTADA por captura real instrumentada. El processor especializado reclama y termina de renderizar PowerShell dentro de `.cm-embed-block.cm-callout`.
 
-Subhipótesis H4a: el detector fallback es demasiado estrecho. CONFIRMADA como defecto real. Solo extrae `language-*` desde `CODE`. Experimento temporal en CI: control con clase en CODE pasó; PRE-only falló en Reading y Live Preview. Resultado: 227 tests pasaron y las 2 aserciones diseñadas para exponer este blind spot fallaron. El test temporal ya fue eliminado.
+La captura real demuestra la secuencia exacta:
 
-Subhipótesis H4b: el fallback de Reading puede perder clasificación tardía. ABIERTA pero plausible. Es un postprocessor one-shot, a diferencia del bridge de Live Preview que observa mutaciones. El plan no debe depender de que la clase exista en un único instante.
+1. `reading-specialized / claimed` sobre `DIV.block-language-powershell` dentro de `callout-content`.
+2. `reading-specialized / rendered` con `PRE.syntax-highlight-block.has-line-numbers` y `CODE.language-powershell`.
+3. Inmediatamente después, `reading-fallback / observed` ve el mismo subtree mutado a `PRE.syntax-highlight-block.has-line-numbers.language-powershell` y `CODE.language-powershell.is-loaded`.
 
-### H5: el bridge de widget de Live Preview arregla el estado de edición mostrado
-DESCARTADA. Cuando el cursor activa el callout/code block, Obsidian muestra líneas fuente, no necesariamente un `.cm-embed-block` procesable. El bridge solo observa widgets renderizados.
+Por tanto, la divergencia negra nested ocurre **después** de nuestro render. Obsidian vuelve a ejecutar su highlighter nativo sobre el `CODE.language-*` generado por Syntax Highlight, marca `CODE.is-loaded` y propaga `language-*` al PRE. En Nier esa clase tardía activa la superficie negra. La pérdida visual de separación de líneas aparece en el mismo estado postmutación.
+
+Subhipótesis H4a: el detector fallback es demasiado estrecho. CONFIRMADA como defecto real independiente. Solo extrae `language-*` desde `CODE`. Experimento temporal en CI: control con clase en CODE pasó; PRE-only falló en Reading y Live Preview. El detector compartido sigue siendo necesario para hosts nativos no procesados.
+
+Subhipótesis H4b: el fallback de Reading puede perder clasificación tardía. ABIERTA pero ya no explica el caso canónico capturado: el processor especializado sí reclama ese bloque antes de la mutación tardía.
+
+### H5: el bridge de widget de Live Preview arregla por sí solo el estado de edición mostrado
+DESCARTADA. Live Preview alterna entre fuente y widgets renderizados según cursor. Las tres capturas reales muestran top-level y callout alternando de forma independiente: cursor dentro de top-level revela sus líneas fuente mientras el callout queda renderizado; cursor dentro del callout hace lo contrario; cursor fuera deja ambos renderizados.
 
 ### H6: las decorations de fuente anidadas son incompletas
-CONFIRMADA. `addPresentationLineRanges()` añade únicamente clases `syntax-presentational/...`; los spans reciben syntax classes, pero no hay una capa que restituya la superficie visual de code block que el tema aplica a líneas top-level. La captura con `>` es el experimento real: centrado sí, superficie de bloque no.
+CONFIRMADA. Cuando el callout está en estado fuente, conserva quote/fence lines y no obtiene la misma surface de bloque top-level. Este problema es distinto de la mutación post-render.
 
 ### H7: nuestros tests llamados “realistic/real DOM” representan el host real
 DESCARTADA. Construyen manualmente `.cm-embed-block.cm-callout` y asignan `language-*` tanto a PRE como a CODE. Verifican nuestro modelo supuesto, no un DOM capturado de Obsidian.
 
 ## Hipótesis de trabajo consolidada
 
-No hay un único bug. Hay tres fronteras desacopladas que deben corregirse:
+Hay cuatro fronteras desacopladas:
 
 1. **Semántica de fuente del adaptador**: aceptar el dialecto efectivo de Obsidian para fenced blocks dentro de blockquotes/callouts, conservando mapeo físico/lógico, mientras Smart Editing escribe la forma canónica con `>`.
-2. **Host renderizado**: el detector/lifecycle de Reading y widgets LP está basado en una forma DOM adivinada. Debe resolver metadata desde PRE y/o CODE, fallar ante conflictos y tolerar clasificación/recreación tardía sin duplicar procesamiento.
-3. **Host fuente visible**: cuando Obsidian enseña las líneas Markdown del block quoted, necesitamos una decoration de superficie de code block además de tokens/presentación, de modo que el tema activo trate esas líneas como trata un code block top-level.
-
-## Experimentos pendientes antes de fijar selectores de producción
-
-La conexión al PC no está disponible ahora, así que no se puede capturar DOM vivo desde DevTools en esta fase. El primer paso de implementación deberá capturar una matriz real A/B/C/D: Text top-level y Text en callout, en Reading y Live Preview con cursor dentro/fuera. Hasta esa captura, ningún selector nuevo se considerará definitivo.
-
-La evidencia pública sí respalda que `registerMarkdownCodeBlockProcessor` puede ejecutarse dentro de callouts y que Live Preview alterna entre fuente y contenido procesado. Por ello no se elimina el processor oficial ni se sustituye por un parser DOM global.
+2. **Host renderizado nativo no reclamado**: el detector/lifecycle de Reading y widgets LP debe resolver metadata desde PRE y/o CODE, fallar ante conflictos y tolerar clasificación/recreación tardía sin duplicar procesamiento.
+3. **Host ya reclamado por Syntax Highlight**: el DOM producido por nuestro renderer debe declararse ya procesado al highlighter nativo de Obsidian para impedir el segundo pase que añade `language-*` al PRE.
+4. **Host fuente visible**: cuando Obsidian enseña las líneas Markdown quoted, necesitamos una decoration de superficie de code block además de tokens/presentación.
 
 ## Captura real inicial: bloqueo PowerShell
 
-La primera captura instrumentada realizada por el usuario dentro de Obsidian real reveló un fallo adicional que bloquea la matriz de Fase 0:
+La primera captura instrumentada reveló `TypeError: Cannot read properties of null (reading 'viewport')` al procesar PowerShell porque `StreamLanguage` se ejecutaba mediante `parser.parse(...)` directo fuera de un `ParseContext`. Se corrigió con `parseCommonLanguageTree()`, que usa `EditorState`/`ensureSyntaxTree()` para `StreamLanguage` y mantiene el camino directo para parsers Lezer. Reading y editor comparten ahora esa frontera y CI la cubre.
 
-- `live-preview-source` alcanza Text top-level, Text nested y PowerShell top-level, pero se interrumpe al intentar resaltar ese PowerShell antes de llegar al PowerShell nested siguiente.
-- `reading-specialized` llega a reclamar tanto PowerShell top-level como nested, y el host muestra `TypeError: Cannot read properties of null (reading 'viewport')` desde las rutas de Reading y de decorations de CodeMirror.
-- PowerShell es el único lenguaje común de esta matriz construido mediante `StreamLanguage.define(powerShell)`.
-- `reading.ts` y `editor.ts` llaman actualmente a `support.language.parser.parse(...)` fuera del lifecycle normal del parser de CodeMirror. Esa invocación es segura para los parsers Lezer usados por otros lenguajes, pero no es un contrato portátil para `StreamLanguage`: algunas versiones de CodeMirror esperan un `ParseContext` activo y acceden a su viewport.
+## Captura real posterior: lifecycle de Live Preview nested
 
-Conclusión de trabajo: el crash es un bug de compatibilidad real y preexistente del bridge de lenguajes comunes, no una consecuencia de la instrumentación. Antes de continuar la captura debe eliminarse la dependencia de `parser.parse(...)` directo para lenguajes `StreamLanguage`, ejecutando el parse a través de un `EditorState`/`ParseContext` real y reutilizando el árbol resultante en Reading y decorations. Este arreglo es un prerrequisito de captura, no una reinterpretación del comportamiento de callouts.
+La segunda captura, ya sin crash, confirma:
+
+- El processor especializado de Obsidian se ejecuta también dentro del callout renderizado de Live Preview.
+- Nuestro renderer termina y produce badge, líneas y tokens.
+- El highlighter nativo vuelve a tocar después el subtree nested y añade `is-loaded` al CODE y `language-powershell` al PRE.
+- El top-level y el callout cambian entre source/rendered según la posición del cursor, por lo que cualquier solución debe ser idempotente durante recreaciones de widgets.
+
+La siguiente hipótesis mínima a probar es emitir `is-loaded` desde nuestro renderer junto a `language-*`, sin tocar PRE. Si el host usa esa marca para reconocer contenido ya resaltado, evitará el segundo pase sin renunciar a las clases compatibles con temas. Debe validarse con test adversarial y luego en Obsidian real; si el host sigue mutando PRE, se descarta y se vuelve a análisis.
 
 ## Candidatos a eliminación detectados
 
