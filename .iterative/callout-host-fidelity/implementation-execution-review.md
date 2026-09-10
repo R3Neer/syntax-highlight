@@ -54,6 +54,26 @@ Se revisó la cobertura funcional existente. `reading.test.ts` renderiza PowerSh
 
 La corrección de Fase 0A queda ESTABLE por criterio TM: dos revisiones consecutivas sin cambios y CI verde.
 
+## Fase 0B · Diagnóstico post-render por divergencia visual Reading/LP
+
+La verificación manual posterior eliminó el crash `viewport`, pero mostró una nueva divergencia visual: PowerShell aparece con badge y color en una representación de edición, mientras Reading View puede quedar como bloque plano sin badge. La captura visual por sí sola no permite saber si el processor especializado termina de renderizar y el host sustituye después su DOM, o si no termina de producir el frame esperado.
+
+Se amplió exclusivamente la instrumentación temporal con `phase: rendered`. `renderReadingFence()` registra ahora el DOM después de resolver el fence y aplicar click-to-edit. Si el render falla antes, el evento no existe; si termina, la captura contiene el `syntax-highlight-block`, `language-powershell`, badge y tokens que realmente produjo el plugin. Se añadió una prueba temporal que exige la secuencia `claimed -> rendered` para PowerShell especializado y comprueba el frame/badge resultante.
+
+### Revisión 1
+
+Resultado: SIN CAMBIOS.
+
+Se revisó que el nuevo evento no cambie el criterio de claim, no altere DOM, se ejecute después de `enableEditing`, y permita distinguir fallo durante render de sustitución posterior del host. Para el fallback el host renderizado puede estar aún detached, pero esta limitación no afecta al caso especializado que motiva la captura.
+
+### Revisión 2
+
+Resultado: SIN CAMBIOS.
+
+Revisión contra el caso real y las rutas existentes: el diagnóstico permanece inerte hasta habilitarse, el evento `rendered` usa el mismo elemento entregado por Obsidian, PowerShell queda cubierto por una regresión específica y CI completa (`npm run check`, `pack:all`, artifact) está verde. No se encontró cambio adicional justificable antes de la nueva captura real.
+
+La ampliación diagnóstica queda ESTABLE por criterio TM: dos revisiones consecutivas sin cambios.
+
 ## Gate actual
 
-Debe reinstalarse este build en Obsidian real y comprobar primero que PowerShell top-level/nested ya no produce el error `viewport` al cambiar de vista o archivo. Solo después se repite la matriz de captura de Fase 0. La captura inicial se conserva como evidencia del bloqueo, pero no se usará como fixture final porque quedó interrumpida por el crash.
+Debe reinstalarse el build actual en Obsidian real y hacer una captura mínima de PowerShell top-level/nested en Reading. La nota de prueba no debe estar envuelta en un fence exterior: los cuatro backticks usados anteriormente eran solo el delimitador del ejemplo en el chat; un fence exterior convierte los fences interiores en texto literal y contamina el experimento. Tras esa captura se decidirá si Reading no completa nuestro renderer o si el DOM producido es sustituido/alterado posteriormente. Solo entonces se retoma la matriz completa de Fase 0.
