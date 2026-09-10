@@ -4,113 +4,119 @@ Estado: TEMPORAL. NO implementar todavía. Eliminar al terminar implementación 
 
 ## Regla de ejecución
 
-Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real contradice la hipótesis arquitectónica, NO adaptar el test para hacerla cierta: volver a análisis/plan. Los helpers de diagnóstico y los fixtures sin sanitizar son temporales.
+Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real contradice la hipótesis arquitectónica, NO adaptar el test para hacerla cierta: volver a análisis/plan. Los helpers de diagnóstico y las capturas sin sanitizar son temporales. Cada fase termina con regresión explícita top-level + nested antes de avanzar.
 
 ## Fase 0: contrato real con Obsidian
 
 - [ ] Añadir instrumentación temporal activable solo en desarrollo para registrar qué path reclama cada fence: specialized processor, Reading fallback, LP rendered bridge o source decorations.
-- [ ] Capturar DOM/clases/atributos para `text` top-level Reading.
-- [ ] Capturar `text` dentro de `[!task]` Reading.
-- [ ] Capturar top-level LP con cursor fuera/dentro.
-- [ ] Capturar callout LP con cursor fuera/dentro.
+- [ ] Capturar DOM/clases/atributos para `text` top-level Reading y callout Reading.
+- [ ] Capturar top-level LP y callout LP con cursor fuera/dentro.
 - [ ] Repetir al menos con PowerShell para no deducir la arquitectura solo del parserless Text.
-- [ ] Registrar el comportamiento de source con body quoted completo y body con líneas sin `>`.
-- [ ] Eliminar logs/datos específicos del vault y convertir solo la estructura mínima en fixtures sanitizados.
+- [ ] Registrar source/resultado con body quoted completo, una línea sin `>`, varias sin `>`, blank lines, nested quoteDepth y cierre variado.
+- [ ] Registrar clases de opening/body/closing lines top-level y nested cuando están visibles en source.
+- [ ] Eliminar datos específicos del vault y convertir solo estructura mínima en fixtures sanitizados.
 - [ ] Crear tests RED que reproduzcan exactamente las divergencias observadas antes de tocar producción.
+- [ ] Si la captura contradice H4/H6, detener esta ejecución y volver a análisis arquitectónico.
 
-Archivos temporales posibles: `packages/obsidian/src/_tmp-host-diagnostics.ts`, `packages/obsidian/tests/fixtures/obsidian-host/*`. El helper `_tmp-*` se elimina antes de merge; los fixtures sanitizados pasan a permanentes si no contienen datos del usuario.
+Helper temporal posible: `packages/obsidian/src/_tmp-host-diagnostics.ts`. Los fixtures sanitizados pueden ser permanentes; el helper y capturas crudas se eliminan antes de merge.
 
 ## Fase 1: semántica de fuente Obsidian
 
-- [ ] Extender tests de `blocks.test.ts` con la matriz capturada: quoteDepth 1/2+, missing/partial/full quote prefixes, blank lines, CRLF/LF, backticks/tildes, fences largos y contenido exterior.
+- [ ] Extender `blocks.test.ts` con la matriz capturada: quoteDepth 1/2+, missing/partial/full quote prefixes, blank lines, CRLF/LF, backticks/tildes, fences largos y contenido exterior.
 - [ ] Modificar `blocks.ts` para implementar exactamente la continuidad/cierre observados en Obsidian.
-- [ ] Extender `MudCodeBlock`/modelo común con rangos físicos de opening/closing y la información de container necesaria para surface + Smart Editing.
-- [ ] Verificar que `mapCodeBlockRange`, `isCodeBlockContentPosition`, `findCodeBlockBodyStartLine` y rewrite de presentation fences siguen mapeando correctamente.
-- [ ] Añadir adversariales que garanticen que unrelated fences y unknown containers no se absorben accidentalmente.
+- [ ] Extender el modelo de code block con rangos físicos de opening/body/closing y la información de container necesaria para surface + Smart Editing.
+- [ ] Verificar `mapCodeBlockRange`, `isCodeBlockContentPosition`, `findCodeBlockBodyStartLine` y rewrite de presentation fences.
+- [ ] Añadir adversariales contra absorción accidental de unrelated/unknown fences.
+- [ ] Ejecutar regresión top-level de todos los tipos de fence ya soportados.
 
 ## Fase 2: Smart Editing canónico
 
-- [ ] Extender `EditingContext` con información estructural de quote sin acoplar `smart-edit.ts` a `MudCodeBlock` completo.
-- [ ] Añadir RED tests de Enter dentro de quoted fence depth 1 y 2.
-- [ ] Añadir RED tests de paste multilinea: sin prefijos, parcialmente prefijado, ya prefijado, CRLF, selección múltiple y pegado que contiene blank lines.
-- [ ] Implementar Enter canónico conservando indentación y selección.
-- [ ] Implementar normalización de paste solo dentro del body del fenced block; nunca fuera ni en opening/closing fence.
-- [ ] Verificar que Smart Editing MUD existente no cambia en top-level y que `nativeIndentation` no entra en conflicto con quote prefixing.
+- [ ] Extender `EditingContext` con información estructural de quote sin acoplar `smart-edit.ts` al modelo completo.
+- [ ] Añadir RED tests de Enter en quoted fence depth 1/2 y cursor en inicio/mitad/final de línea.
+- [ ] Añadir RED tests de paste multilinea: sin prefijos, parcialmente prefijado, ya prefijado, blank lines, CRLF, selección simple/múltiple.
+- [ ] Implementar Enter canónico preservando indentación, selección y line ending.
+- [ ] Implementar normalización de paste solo dentro del body; nunca opening/closing ni contenido exterior.
+- [ ] No duplicar prefijos que ya satisfacen la profundidad requerida.
+- [ ] Verificar que Smart Editing MUD/top-level existente no cambia y que `nativeIndentation` no entra en conflicto.
 
 Archivos principales: `smart-edit.ts`, `editor.ts`, `smart-edit.test.ts`, `smart-edit-integration.test.ts`.
 
 ## Fase 3: probe compartido de host renderizado
 
-- [ ] Crear `rendered-code-host.ts` con tipos de candidate/probe independientes de Reading/LP.
-- [ ] Migrar la extracción actual de candidate desde `reading-host.ts` sin cambiar todavía lifecycle.
-- [ ] Implementar resolución de fence desde PRE/CODE conforme a fixtures: PRE-only, CODE-only, ambos equivalentes y conflicto.
-- [ ] Mantener fail-closed para múltiples code nodes/metadata ambigua según estructura real.
-- [ ] Definir operación de claim/render que preserve auxiliary nodes y listeners; comprobar identidad con tests.
-- [ ] Probar idempotencia y source byte-for-byte.
+- [ ] Crear `rendered-code-host.ts` con candidate/probe independiente de Reading/LP.
+- [ ] Migrar la extracción actual desde `reading-host.ts` sin alterar todavía lifecycle.
+- [ ] Resolver fence desde PRE/CODE según fixtures: PRE-only, CODE-only, ambos equivalentes y conflicto.
+- [ ] No exigir nesting/direct-child adicional que los fixtures no justifiquen.
+- [ ] Mantener fail-closed para múltiples candidates/metadata ambigua.
+- [ ] Definir claim/render preservando auxiliary nodes, node identity necesaria y listeners.
+- [ ] Probar idempotencia, source exacto y DOM ajeno intacto.
 
 ## Fase 4: Reading View
 
-- [ ] Instrumentar test que demuestre si `registerMarkdownCodeBlockProcessor` reclama nested Text/PowerShell en el host capturado.
+- [ ] Usar el trace de fase 0 para demostrar qué ocurre con `registerMarkdownCodeBlockProcessor` en nested Text y PowerShell.
 - [ ] Conservar processor especializado donde funcione.
 - [ ] Reescribir `reading-host.ts` para delegar probe/claim al módulo compartido.
-- [ ] Si fixture demuestra metadata completa al ejecutar postprocessor: mantener fallback one-shot y añadir cobertura.
-- [ ] Si fixture demuestra clasificación tardía: añadir lifecycle child/observer scoped y test de dispose + late class.
-- [ ] Verificar que un bloque reclamado por processor primario no vuelve a ser reclamado por fallback.
-- [ ] Verificar Text/Markdown sin furniture, PowerShell/configured con furniture correspondiente y click-to-edit con sectionInfo defectuoso de callouts.
+- [ ] Si metadata está completa al postprocesar: mantener fallback one-shot.
+- [ ] Si existe clasificación tardía: añadir lifecycle child/observer scoped y tests de late class/dispose; no observer global.
+- [ ] Garantizar que primary processor y fallback no reclaman dos veces el mismo bloque.
+- [ ] Verificar Text/Markdown sin furniture, PowerShell/configured con furniture, presentation modifiers y click-to-edit pese a `sectionInfo` de callouts.
+- [ ] Comparar DOM visual/estructural top-level vs nested después del claim.
 
-Archivos probables: `reading-host.ts`, `main.ts`, `reading-fallback.test.ts`; nuevo test de fixture Reading.
+Archivos probables: `reading-host.ts`, `main.ts`, `reading-fallback.test.ts` y nueva suite de fixture Reading.
 
 ## Fase 5: Live Preview renderizado
 
-- [ ] Reducir `live-preview-host.ts` a lifecycle/scope/batching, delegando detección y claim al módulo compartido.
-- [ ] Derivar el scope de widget de fixture real; conservar `.cm-embed-block` solo si se confirma.
+- [ ] Reducir `live-preview-host.ts` a lifecycle/scope/batching, delegando detección/claim al módulo compartido.
+- [ ] Derivar scope de widget del fixture real; conservar `.cm-embed-block` solo si se confirma.
 - [ ] Tests de inserción tardía, class tardía, removal/recreation, dispose, unknown y conflictos.
-- [ ] Test de transición cursor fuera → dentro → fuera sin dejar DOM procesado huérfano ni duplicado.
+- [ ] Test de transición cursor fuera → dentro → fuera sin DOM procesado huérfano/duplicado.
+- [ ] Confirmar que cada `EditorView` queda aislado y que cerrar una vista desconecta su observer.
 
 ## Fase 6: Live Preview fuente visible y surface parity
 
-- [ ] Capturar las clases de opening/body/closing de un code block top-level real y compararlas con nested activo.
-- [ ] Añadir RED test que exija surface parity sin exigir un color específico.
-- [ ] Extender `blocks.ts`/modelo solo si faltan rangos de opening/closing.
-- [ ] Añadir en `editor.ts` decorations de surface separadas de syntax/presentation.
-- [ ] Si se reutilizan clases host, añadir test adversarial que verifique ausencia de efectos sobre selección, edición, indentación y parsing.
-- [ ] Si clases host tienen efectos laterales, usar clase propia con variables semánticas de Obsidian y comparar visualmente con top-level en tema Default + Nier.
-- [ ] Confirmar que Text/Markdown siguen sin badge/números y que sus modifiers de alignment/flow siguen funcionando.
+- [ ] Comparar clases efectivas opening/body/closing top-level vs nested capturadas en fase 0.
+- [ ] Añadir RED test de surface parity que no codifique colores concretos.
+- [ ] Extender modelo/rangos solo si la captura demuestra que falta información.
+- [ ] Añadir decorations de surface en `editor.ts` separadas de syntax/presentation.
+- [ ] Si se reutilizan clases host, probar adversarialmente selección, cursor, indentación, parsing, copy behavior y transición source/rendered.
+- [ ] Si esas clases tienen efectos laterales, usar clase propia con variables semánticas de Obsidian y comparar Default + Nier.
+- [ ] Confirmar Text/Markdown sin badge/números y modifiers alignment/flow intactos.
+- [ ] Ejecutar regresión top-level para asegurar que no se duplica superficie donde Obsidian ya la pone.
 
 ## Fase 7: contraste y tema
 
-- [ ] Ejecutar contraste sobre nested Reading y LP source con fixture/superficie final.
-- [ ] Confirmar que no existe branch por nombre de tema.
-- [ ] Si el background final es ancestral: no tocar `contrast-manager.ts`.
-- [ ] Solo si un test real falla por fondo no ancestral, introducir API explícita de `effective host surface`; testear alpha/composition y CodeMirror node reuse.
+- [ ] Ejecutar contraste sobre nested Reading y LP source con superficie final.
+- [ ] Confirmar ausencia de branch por nombre de tema.
+- [ ] Si background final es ancestral: NO tocar `contrast-manager.ts`.
+- [ ] Solo ante test real fallando por fondo no ancestral: introducir API explícita `effective host surface`; probar alpha/composition y CodeMirror node reuse.
 
 ## Fase 8: consolidación de tests
 
-- [ ] Migrar aserciones útiles de `reading-real-dom.test.ts` a la suite basada en fixture capturado.
-- [ ] Reemplazar la falsa “integración Obsidian” de `live-preview-extension-integration.test.ts` por una prueba que combine extensión real + fixture real, manteniendo la garantía de registro.
-- [ ] Reescribir helpers de `live-preview-host.test.ts` y `live-preview-adversarial.test.ts` para usar fixtures compartidos.
-- [ ] Ejecutar mutation/adversarial matrix: quitar clases, duplicarlas, conflictarlas, mover copy button, insertar wrappers, repetir scans, destruir view a mitad de schedule.
-- [ ] No eliminar una prueba por resultar incómoda; solo consolidar después de demostrar cobertura equivalente o superior.
+- [ ] Migrar aserciones útiles de `reading-real-dom.test.ts` a suite basada en fixture capturado.
+- [ ] Sustituir `live-preview-extension-integration.test.ts` por prueba extensión real + fixture capturado, manteniendo wiring de `createMarkdownEditorExtensions`.
+- [ ] Reescribir helpers de `live-preview-host.test.ts` y `live-preview-adversarial.test.ts` para shared fixtures.
+- [ ] Matriz mutation/adversarial: quitar/duplicar/conflictar classes, mover copy button, wrappers, scans repetidos, destroy durante schedule, múltiples bloques hermanos.
+- [ ] Solo después de demostrar cobertura equivalente/superior, eliminar tests obsoletos candidatos.
 
 ## Fase 9: documentación permanente y limpieza temporal
 
-- [ ] Corregir `docs/theme-integration.md`, `packages/obsidian/README.md` y `CHANGELOG.md` con la arquitectura realmente implementada.
-- [ ] Eliminar instrumentación `_tmp-*`, capturas sin sanitizar y todos los documentos de `.iterative/callout-host-fidelity/`.
-- [ ] Verificar árbol completo: ningún requirements/analysis/plan/review temporal restante.
+- [ ] Corregir `docs/theme-integration.md`, `packages/obsidian/README.md` y `CHANGELOG.md` con lo realmente implementado.
+- [ ] Eliminar helper `_tmp-*`, capturas crudas y todos los docs de `.iterative/callout-host-fidelity/`.
+- [ ] Verificar árbol completo sin requirements/analysis/plan/review temporales.
 
-## Fase 10: validación final
+## Fase 10: validación final y gate de merge
 
-- [ ] `npm ci` desde limpio.
-- [ ] lint + typecheck + todos los tests.
-- [ ] build + `pack:all` + artifact.
-- [ ] instalar perfil `common` en `D:\Universidad\Clases` y probar matriz A/B/C/D con Nier.
-- [ ] instalar perfil `mud` en `D:\Mud` y comprobar aislamiento/perfil.
-- [ ] probar también tema Default para demostrar que la solución no es un parche Nier.
-- [ ] PR CI verde, revisión adversarial final, squash merge y CI verde sobre `main`.
+- [ ] `npm ci` desde limpio; lint; typecheck; tests; build; `pack:all`; artifact.
+- [ ] Instalar perfil `common` en `D:\Universidad\Clases` y ejecutar matriz A/B/C/D con Nier.
+- [ ] Instalar perfil `mud` en `D:\Mud` y comprobar aislamiento/perfil.
+- [ ] Repetir casos mínimos en tema Default para demostrar independencia del tema.
+- [ ] Verificar específicamente el fragmento real de `inbox.md` en forma canónica y en la forma permisiva aceptada por Obsidian.
+- [ ] **Gate duro:** no abrir/mergear como solución terminada sin una validación en Obsidian real que demuestre Reading + LP source/rendered. Si no hay acceso remoto, la validación manual del usuario precede al merge.
+- [ ] Después del gate: PR CI verde, revisión adversarial final, squash merge y CI verde sobre `main`.
 
 ## Candidatos a eliminar durante la implementación
 
-- `packages/obsidian/tests/reading-real-dom.test.ts`, después de migrar sus aserciones.
-- `packages/obsidian/tests/live-preview-extension-integration.test.ts`, después de sustituir su garantía de wiring.
+- `packages/obsidian/tests/reading-real-dom.test.ts`, solo después de migrar sus aserciones.
+- `packages/obsidian/tests/live-preview-extension-integration.test.ts`, solo después de sustituir su garantía de wiring.
 
 No se planea eliminar por completo `reading-host.ts`, `live-preview-host.ts` ni `contrast-manager.ts`.
