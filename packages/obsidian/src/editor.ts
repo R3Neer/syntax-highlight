@@ -1,4 +1,5 @@
 import type { Extension, Range } from "@codemirror/state";
+import { highlightTree } from "@lezer/highlight";
 import {
   Decoration,
   type DecorationSet,
@@ -10,6 +11,7 @@ import {
 
 import { findCodeBlocks, findMudCodeBlocks } from "./blocks";
 import {
+  COMMON_HIGHLIGHT_STYLE,
   commonLanguageByFence,
   commonLanguages,
 } from "./common-languages";
@@ -48,6 +50,23 @@ function addTokenRanges(
   }
 }
 
+function addCommonLanguageRanges(
+  ranges: Range<Decoration>[],
+  source: string,
+  base: number,
+  fence: string,
+): void {
+  const language = commonLanguageByFence(fence);
+  if (language === undefined) return;
+  const tree = language.support().language.parser.parse(source);
+  highlightTree(tree, COMMON_HIGHLIGHT_STYLE, (from, to, classes) => {
+    if (from >= to) return;
+    ranges.push(
+      Decoration.mark({ class: classes }).range(base + from, base + to),
+    );
+  });
+}
+
 export function buildSyntaxDecorations(
   view: EditorView,
   registry: LanguageRegistry,
@@ -64,12 +83,14 @@ export function buildSyntaxDecorations(
     ].map((fence) => fence.toLocaleLowerCase()),
   );
   for (const block of findCodeBlocks(source, fences)) {
+    const body = source.slice(block.from, block.to);
     const runtime = registry.byFence(block.language);
     if (runtime !== undefined) {
-      const body = source.slice(block.from, block.to);
       for (const token of runtime.tokenize(body)) {
         addTokenRanges(ranges, token, block.from, runtime.settings.id);
       }
+    } else {
+      addCommonLanguageRanges(ranges, body, block.from, block.language);
     }
     if (lineNumbers) {
       let line = view.state.doc.lineAt(block.from);

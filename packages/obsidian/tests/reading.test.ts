@@ -28,7 +28,7 @@ describe("reading view rendering", () => {
     expect(code?.textContent).not.toContain("2");
   });
 
-  it("uses CodeMirror parsing for common reading blocks", () => {
+  it("uses CodeMirror parsing and a language badge for common reading blocks", () => {
     const language = commonLanguageByFence("csharp");
     expect(language).toBeDefined();
     const container = document.createElement("div");
@@ -37,7 +37,40 @@ describe("reading view rendering", () => {
     expect(container.querySelector("code")?.className).toBe("language-cs");
     expect(container.querySelector(".syntax-common-keyword")).not.toBeNull();
     expect(container.querySelectorAll(".syntax-code-line")).toHaveLength(1);
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("C#");
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
+  });
+
+  it("renders Nushell from the nu fence and labels it as Nushell", () => {
+    const language = commonLanguageByFence("nu");
+    expect(language?.id).toBe("nu");
+    const container = document.createElement("div");
+    renderCommonCode(
+      "job spawn { ^./programa }\nlet files = (ls | where size > 1mb)",
+      container,
+      language!,
+    );
+
+    expect(container.querySelector("code")?.className).toBe("language-nu");
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent)
+      .toBe("Nushell");
+    expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
+  });
+
+  it("renders Bash with the Bash badge", () => {
+    const language = commonLanguageByFence("bash");
+    expect(language?.id).toBe("bash");
+    const container = document.createElement("div");
+    renderCommonCode(
+      "for file in *.txt; do\n  echo \"$file\"\ndone",
+      container,
+      language!,
+    );
+
+    expect(container.querySelector("code")?.className).toBe("language-bash");
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent)
+      .toBe("Bash");
+    expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
   });
 
   it("colors TOML through its configurable primary profile", () => {
@@ -55,6 +88,7 @@ describe("reading view rendering", () => {
     );
 
     expect(container.querySelector("code")?.className).toBe("language-toml");
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("TOML");
     expect(container.querySelector(".syntax-color-toml-bare-key")).not.toBeNull();
     expect(container.querySelector(".syntax-color-toml-table-header")).not.toBeNull();
     expect(container.querySelector(".syntax-color-toml-string")).not.toBeNull();

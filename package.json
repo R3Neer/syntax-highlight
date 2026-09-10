@@ -16,6 +16,8 @@
     "install:obsidian": "npm run build && node packages/obsidian/scripts/install-local.mjs"
   },
   "devDependencies": {
+    "@codincod/codemirror-lang-nushell": "0.7.0",
+    "@codincod/codemirror-lang-shell": "0.3.0",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "6.10.1",
     "@codemirror/lang-cpp": "^6.0.3",

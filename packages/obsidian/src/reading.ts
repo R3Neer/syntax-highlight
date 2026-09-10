@@ -24,6 +24,11 @@ interface SourceLine {
   to: number;
 }
 
+interface LanguageBadge {
+  label: string;
+  mud?: boolean;
+}
+
 function sourceLines(source: string): SourceLine[] {
   const result: SourceLine[] = [];
   let from = 0;
@@ -77,23 +82,16 @@ function appendLine(
   code.append(element);
 }
 
-function renderRanges(
-  source: string,
-  container: HTMLElement,
-  languageClass: string,
-  ranges: readonly RenderedRange[],
-  showLineNumbers: boolean,
-  mudBadge: boolean,
-): void {
-  container.replaceChildren();
-  const frame = document.createElement("div");
-  frame.className = "syntax-highlight-frame";
-  if (mudBadge) {
+function appendLanguageBadge(frame: HTMLElement, badge: LanguageBadge): void {
+  frame.classList.add("has-language-badge");
+  const element = document.createElement("span");
+  element.className = "syntax-language-badge";
+  element.title = badge.mud ? "MUD" : badge.label;
+  element.setAttribute("aria-label", `Lenguaje ${badge.label}`);
+
+  if (badge.mud) {
     frame.classList.add("has-mud-badge");
-    const badge = document.createElement("span");
-    badge.className = "syntax-language-badge syntax-language-badge-mud";
-    badge.title = "MUD";
-    badge.setAttribute("aria-label", "Lenguaje Mud");
+    element.classList.add("syntax-language-badge-mud");
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 34 14");
     svg.setAttribute("aria-hidden", "true");
@@ -103,9 +101,27 @@ function renderRanges(
     label.setAttribute("text-anchor", "middle");
     label.textContent = "Mud";
     svg.append(label);
-    badge.append(svg);
-    frame.append(badge);
+    element.append(svg);
+  } else {
+    element.classList.add("syntax-language-badge-text");
+    element.textContent = badge.label;
   }
+
+  frame.append(element);
+}
+
+function renderRanges(
+  source: string,
+  container: HTMLElement,
+  languageClass: string,
+  ranges: readonly RenderedRange[],
+  showLineNumbers: boolean,
+  badge: LanguageBadge,
+): void {
+  container.replaceChildren();
+  const frame = document.createElement("div");
+  frame.className = "syntax-highlight-frame";
+  appendLanguageBadge(frame, badge);
   const pre = document.createElement("pre");
   const code = document.createElement("code");
   pre.className = "syntax-highlight-block";
@@ -146,7 +162,10 @@ export function renderSyntaxCode(
     `language-${runtime.descriptor.fences[0] ?? runtime.settings.id}`,
     syntaxRanges(runtime.settings.id, runtime.tokenize(source)),
     showLineNumbers,
-    runtime.settings.id === "mud",
+    {
+      label: runtime.descriptor.name,
+      mud: runtime.settings.id === "mud",
+    },
   );
 }
 
@@ -167,7 +186,7 @@ export function renderCommonCode(
     `language-${language.fences[0] ?? language.id}`,
     ranges,
     showLineNumbers,
-    false,
+    { label: language.name },
   );
 }
 
@@ -182,6 +201,6 @@ export function renderMudCode(
     "language-mud",
     syntaxRanges("mud", tokenizeMud(source, config)),
     true,
-    true,
+    { label: "Mud", mud: true },
   );
 }
