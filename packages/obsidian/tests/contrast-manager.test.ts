@@ -43,6 +43,26 @@ describe("CommonContrastManager", () => {
       .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
   });
 
+  it("applies the same contrast floor to parserless Text spans", () => {
+    const token = mountedToken(
+      "rgb(229, 192, 123)",
+      "rgb(221, 216, 199)",
+      "syntax-common-plain",
+    );
+    const host = token.parentElement!;
+    const originalBackground = host.style.backgroundColor;
+    const manager = new CommonContrastManager();
+
+    manager.normalize(document.body);
+
+    expect(token.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(contrastRatioCss(
+      token.style.getPropertyValue("color"),
+      host.style.backgroundColor,
+    )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+    expect(host.style.backgroundColor).toBe(originalBackground);
+  });
+
   it("leaves a theme color alone when it already passes", () => {
     const token = mountedToken("rgb(35, 35, 35)", "rgb(245, 245, 245)");
     const manager = new CommonContrastManager();
