@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   hostDiagnosticsController,
   traceHostDiagnostic,
+  traceRenderedHostObservations,
 } from "../src/_tmp-host-diagnostics";
 
 function controller() {
@@ -55,6 +56,7 @@ describe("temporary Obsidian host diagnostics", () => {
     expect(root.innerHTML).toBe(before);
     expect(controller().events).toHaveLength(1);
     const event = controller().events[0]!;
+    expect(event.phase).toBe("claimed");
     expect(event.path).toBe("reading-fallback");
     expect(event.fence).toBe("text");
     expect(event.pre?.classes).toContain("host-pre");
@@ -63,6 +65,38 @@ describe("temporary Obsidian host diagnostics", () => {
     expect(event.ancestors[0]?.classes).toContain("callout-content");
     expect(event.block?.quoteDepth).toBe(1);
     expect(controller().dump()).toContain('"reading-fallback"');
+  });
+
+  it("observes PRE-only metadata before production candidate filtering", () => {
+    const root = document.body.appendChild(document.createElement("div"));
+    const pre = root.appendChild(document.createElement("pre"));
+    pre.className = "language-text";
+    const code = pre.appendChild(document.createElement("code"));
+    code.textContent = "nested";
+
+    controller().enable();
+    traceRenderedHostObservations("reading-fallback", root);
+
+    expect(controller().events).toHaveLength(1);
+    expect(controller().events[0]).toMatchObject({
+      phase: "observed",
+      path: "reading-fallback",
+      fence: "text",
+      source: "nested",
+    });
+  });
+
+  it("records conflicting PRE/CODE language metadata as ambiguous", () => {
+    const root = document.body.appendChild(document.createElement("div"));
+    const pre = root.appendChild(document.createElement("pre"));
+    pre.className = "language-text";
+    const code = pre.appendChild(document.createElement("code"));
+    code.className = "language-powershell";
+
+    controller().enable();
+    traceRenderedHostObservations("live-preview-rendered", root);
+
+    expect(controller().events[0]?.fence).toBe("<ambiguous:powershell,text>");
   });
 
   it("captures CodeMirror line classes from a Live Preview root", () => {

@@ -1,7 +1,10 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 
-import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
+import {
+  traceHostDiagnostic,
+  traceRenderedHostObservations,
+} from "./_tmp-host-diagnostics";
 import type { LanguageRegistry } from "./languages";
 import {
   READING_PROCESSED_ATTRIBUTE,
@@ -66,6 +69,7 @@ export class LivePreviewRenderedBlockBridge {
   }
 
   scan(): void {
+    traceRenderedHostObservations("live-preview-rendered", this.root);
     const candidates = collectLivePreviewRenderedCodeBlocks(this.root);
     for (const candidate of candidates) this.process(candidate);
   }

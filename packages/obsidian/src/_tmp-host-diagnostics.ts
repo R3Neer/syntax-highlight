@@ -4,6 +4,8 @@ export type HostDiagnosticPath =
   | "live-preview-rendered"
   | "live-preview-source";
 
+export type HostDiagnosticPhase = "observed" | "claimed";
+
 export interface HostDiagnosticElementSnapshot {
   tag: string;
   classes: string[];
@@ -25,6 +27,7 @@ export interface HostDiagnosticSourceBlock {
 
 export interface HostDiagnosticEvent {
   timestamp: number;
+  phase: HostDiagnosticPhase;
   path: HostDiagnosticPath;
   fence: string;
   source: string;
@@ -85,7 +88,37 @@ function directCode(pre: HTMLPreElement | undefined): HTMLElement | undefined {
   return codes.length === 1 ? codes[0] : undefined;
 }
 
-function snapshotCmLines(root: Element): Array<HostDiagnosticElementSnapshot & { text: string }> {
+function languageClasses(element: Element): string[] {
+  return [...element.classList]
+    .filter((className) => className.startsWith("language-"))
+    .map((className) => className.slice("language-".length).toLocaleLowerCase())
+    .filter(Boolean);
+}
+
+function observedFence(pre: HTMLPreElement): string {
+  const fences = new Set(languageClasses(pre));
+  for (const child of pre.children) {
+    if (child.tagName !== "CODE") continue;
+    languageClasses(child).forEach((fence) => fences.add(fence));
+  }
+  if (fences.size === 0) return "<none>";
+  return fences.size === 1
+    ? [...fences][0]!
+    : `<ambiguous:${[...fences].sort().join(",")}>`;
+}
+
+function observedSource(pre: HTMLPreElement): string {
+  const codes = [...pre.children].filter(
+    (child): child is HTMLElement =>
+      child instanceof HTMLElement && child.tagName === "CODE",
+  );
+  if (codes.length !== 1) return pre.textContent ?? "";
+  return codes[0]!.textContent ?? "";
+}
+
+function snapshotCmLines(
+  root: Element,
+): Array<HostDiagnosticElementSnapshot & { text: string }> {
   return [...root.querySelectorAll<HTMLElement>(".cm-line")]
     .slice(0, MAX_CM_LINES)
     .map((line) => ({
@@ -130,6 +163,7 @@ export function traceHostDiagnostic(
   source: string,
   element: HTMLElement,
   block?: HostDiagnosticSourceBlock,
+  phase: HostDiagnosticPhase = "claimed",
 ): void {
   const controller = hostDiagnosticsController();
   if (controller === undefined || !controller.enabled) return;
@@ -145,6 +179,7 @@ export function traceHostDiagnostic(
 
   controller.events.push({
     timestamp: Date.now(),
+    phase,
     path,
     fence: fence.toLocaleLowerCase(),
     source,
@@ -158,6 +193,31 @@ export function traceHostDiagnostic(
   });
   if (controller.events.length > MAX_EVENTS) {
     controller.events.splice(0, controller.events.length - MAX_EVENTS);
+  }
+}
+
+export function traceRenderedHostObservations(
+  path: "reading-fallback" | "live-preview-rendered",
+  root: HTMLElement,
+): void {
+  const controller = hostDiagnosticsController();
+  if (controller === undefined || !controller.enabled) return;
+
+  const pres = new Set<HTMLPreElement>();
+  if (root instanceof HTMLPreElement) pres.add(root);
+  root.querySelectorAll("pre").forEach((pre) => {
+    if (pre instanceof HTMLPreElement) pres.add(pre);
+  });
+
+  for (const pre of pres) {
+    traceHostDiagnostic(
+      path,
+      observedFence(pre),
+      observedSource(pre),
+      pre,
+      undefined,
+      "observed",
+    );
   }
 }
 

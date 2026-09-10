@@ -3,7 +3,10 @@ import type {
   MarkdownPostProcessorContext,
 } from "obsidian";
 
-import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
+import {
+  traceHostDiagnostic,
+  traceRenderedHostObservations,
+} from "./_tmp-host-diagnostics";
 import { commonFenceMatch } from "./block-presentation";
 import type { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
@@ -169,6 +172,7 @@ export function createReadingFallbackPostProcessor(
   handleFence: ReadingFenceHandler,
 ): MarkdownPostProcessor {
   return (root, context) => {
+    traceRenderedHostObservations("reading-fallback", root);
     // Snapshot before any replacement. Mutating a live DOM collection here can
     // otherwise make later sibling blocks disappear from the iteration.
     const candidates = collectUnprocessedRenderedCodeBlocks(root);
