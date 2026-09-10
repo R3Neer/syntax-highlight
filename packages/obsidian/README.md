@@ -13,9 +13,12 @@ TOML, and configurable generic profiles remain available by default.
 Common languages such as JavaScript, Python, Bash, and Nushell follow the active
 Obsidian theme automatically. Reading tokens expose Prism-compatible classes,
 editing tokens expose CodeMirror-compatible classes, and both fall back to
-Obsidian's semantic `--code-*` variables. No community theme is hardcoded. See
-[`docs/theme-integration.md`](../../docs/theme-integration.md) for the bridge and
-vault-level override variables.
+Obsidian's semantic `--code-*` variables. Parserless `text`, `plaintext`, and
+`txt` Markdown fences use the same block renderer and active-theme bridge without
+inventing syntax categories: their body is ordinary `syntax-common-plain` text
+and participates in the same automatic contrast normalization. No community
+theme is hardcoded. See [`docs/theme-integration.md`](../../docs/theme-integration.md)
+for the bridge and vault-level override variables.
 
 ## Local installation
 
@@ -54,8 +57,10 @@ plugin build but maintain independent language configuration in their own
 
 ## Manual check
 
-After reloading Obsidian, verify Bash and Nushell fences under the active vault
-theme. In a vault installed with `--profile mud`, also verify a MUD fence in
-reading and editing views, a `.mud` source file, `~format`, `cycle`, compact
-ranges such as `0..10`, and the current compound operators. See the repository
-migration guide before removing the legacy installation.
+After reloading Obsidian, verify Bash, Nushell, and `text` fences under the active
+vault theme. Text blocks should keep literal content unclassified while matching
+the surrounding code-block theme and meeting the same contrast policy. In a
+vault installed with `--profile mud`, also verify a MUD fence in reading and
+editing views, a `.mud` source file, `~format`, `cycle`, compact ranges such as
+`0..10`, and the current compound operators. See the repository migration guide
+before removing the legacy installation.
