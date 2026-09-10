@@ -57,10 +57,14 @@ function mountedEditor(source: string): EditorView {
   return view;
 }
 
-function sourceLine(view: EditorView, text: string): HTMLElement {
-  const line = [...view.dom.querySelectorAll<HTMLElement>(".cm-line")]
-    .find((candidate) => candidate.textContent === text);
-  if (line === undefined) throw new Error(`Missing editor line: ${text}`);
+function sourceLineAt(view: EditorView, lineNumber: number): HTMLElement {
+  const position = view.state.doc.line(lineNumber).from;
+  const { node } = view.domAtPos(position);
+  const origin = node instanceof Element ? node : node.parentElement;
+  const line = origin?.closest<HTMLElement>(".cm-line");
+  if (line === null || line === undefined) {
+    throw new Error(`Missing editor DOM line at document line ${lineNumber}`);
+  }
   return line;
 }
 
@@ -118,9 +122,9 @@ describe("Live Preview quoted source surface", () => {
       "> ```",
     ].join("\n"));
 
-    const opening = sourceLine(view, "> ```powershell");
-    const body = sourceLine(view, "> $foo = 42");
-    const closing = sourceLine(view, "> ```");
+    const opening = sourceLineAt(view, 2);
+    const body = sourceLineAt(view, 3);
+    const closing = sourceLineAt(view, 5);
 
     expect(opening.classList.contains("syntax-quoted-code-source")).toBe(true);
     expect(opening.classList.contains("HyperMD-codeblock-begin-bg")).toBe(true);
@@ -137,7 +141,7 @@ describe("Live Preview quoted source surface", () => {
       "> ```",
     ].join("\n"));
 
-    const body = sourceLine(view, "> alpha beta gamma");
+    const body = sourceLineAt(view, 3);
     expect(body.classList.contains("syntax-quoted-code-source")).toBe(true);
     expect(body.classList.contains("HyperMD-codeblock-bg")).toBe(true);
     expect(body.classList.contains("syntax-presentational")).toBe(true);
