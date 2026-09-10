@@ -50,6 +50,17 @@ La conexión al PC no está disponible ahora, así que no se puede capturar DOM 
 
 La evidencia pública sí respalda que `registerMarkdownCodeBlockProcessor` puede ejecutarse dentro de callouts y que Live Preview alterna entre fuente y contenido procesado. Por ello no se elimina el processor oficial ni se sustituye por un parser DOM global.
 
+## Captura real inicial: bloqueo PowerShell
+
+La primera captura instrumentada realizada por el usuario dentro de Obsidian real reveló un fallo adicional que bloquea la matriz de Fase 0:
+
+- `live-preview-source` alcanza Text top-level, Text nested y PowerShell top-level, pero se interrumpe al intentar resaltar ese PowerShell antes de llegar al PowerShell nested siguiente.
+- `reading-specialized` llega a reclamar tanto PowerShell top-level como nested, y el host muestra `TypeError: Cannot read properties of null (reading 'viewport')` desde las rutas de Reading y de decorations de CodeMirror.
+- PowerShell es el único lenguaje común de esta matriz construido mediante `StreamLanguage.define(powerShell)`.
+- `reading.ts` y `editor.ts` llaman actualmente a `support.language.parser.parse(...)` fuera del lifecycle normal del parser de CodeMirror. Esa invocación es segura para los parsers Lezer usados por otros lenguajes, pero no es un contrato portátil para `StreamLanguage`: algunas versiones de CodeMirror esperan un `ParseContext` activo y acceden a su viewport.
+
+Conclusión de trabajo: el crash es un bug de compatibilidad real y preexistente del bridge de lenguajes comunes, no una consecuencia de la instrumentación. Antes de continuar la captura debe eliminarse la dependencia de `parser.parse(...)` directo para lenguajes `StreamLanguage`, ejecutando el parse a través de un `EditorState`/`ParseContext` real y reutilizando el árbol resultante en Reading y decorations. Este arreglo es un prerrequisito de captura, no una reinterpretación del comportamiento de callouts.
+
 ## Candidatos a eliminación detectados
 
 - `reading-real-dom.test.ts`: nombre engañoso y fixture inventado; candidato a consolidación/eliminación solo si sus aserciones de copy-node/presentación se migran primero a una suite basada en fixture capturado.
