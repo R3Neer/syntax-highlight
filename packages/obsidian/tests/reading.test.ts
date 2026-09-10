@@ -41,6 +41,23 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
 
+  it("keeps parser-unclassified Bash and Nushell source visible as plain theme text", () => {
+    for (const [fence, source] of [
+      ["bash", "./programa &"],
+      ["nu", "job spawn { ^./programa }"],
+    ] as const) {
+      const language = commonLanguageByFence(fence);
+      expect(language).toBeDefined();
+      const container = document.createElement("div");
+
+      renderCommonCode(source, container, language!);
+
+      const line = container.querySelector(".syntax-code-line-content");
+      expect(line?.textContent).toBe(source);
+      expect(line?.querySelector(".syntax-common-plain")).not.toBeNull();
+    }
+  });
+
   it("renders Nushell from the nu fence and labels it as Nushell", () => {
     const language = commonLanguageByFence("nu");
     expect(language?.id).toBe("nu");
