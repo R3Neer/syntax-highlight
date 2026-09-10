@@ -256,6 +256,10 @@ function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
       class: classes("syntax-common-type", "token class-name", "cm-variable-2"),
     },
     {
+      tag: tags.standard(tags.variableName),
+      class: classes("syntax-common-callable", "token builtin", "cm-builtin"),
+    },
+    {
       tag: tags.variableName,
       class: classes("syntax-common-variable", "token variable", "cm-variable"),
     },
