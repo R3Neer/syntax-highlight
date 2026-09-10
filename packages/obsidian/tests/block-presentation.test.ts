@@ -134,6 +134,29 @@ describe("presentation-preserving fence rewrite", () => {
     );
     expect(result).toEqual({ source, changedBlocks: 0 });
   });
+
+  it("does not rewrite presentational fence examples nested in unrelated fences", () => {
+    const source = [
+      "````example",
+      "```text",
+      "literal example",
+      "```",
+      "````",
+      "```text",
+      "real block",
+      "```",
+    ].join("\n");
+    const result = rewritePresentationFences(
+      source,
+      "text",
+      { alignment: "left", flow: "ragged" },
+      { alignment: "center", flow: "ragged" },
+    );
+
+    expect(result.changedBlocks).toBe(1);
+    expect(result.source).toContain("````example\n```text\nliteral example\n```\n````");
+    expect(result.source).toContain("```text-left-ragged\nreal block\n```");
+  });
 });
 
 describe("presentation CSS", () => {
