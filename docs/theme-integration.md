@@ -29,6 +29,15 @@ verbatim and wraps them with `syntax-common-plain`, whose default color is the
 active theme's `--text-normal`. This prevents a broken or missing code-normal
 color in a community theme from making otherwise valid source visually vanish.
 
+Reading-view callables have one additional safeguard. A community theme can
+style `.token.function` with a color that only makes sense inside the exact DOM
+and variable context of Obsidian's native Prism renderer. Syntax Highlight's
+callable span therefore keeps the Prism class for semantics but gives the
+plugin's semantic callable rule precedence and resolves its color through
+`--syntax-common-callable`, then Obsidian's standard `--code-function`, then
+`--text-normal`. This remains theme-agnostic while preventing command names from
+becoming indistinguishable from the code-block background.
+
 ## Vault-level overrides
 
 A vault or theme snippet can override the plugin's semantic bridge without
@@ -44,8 +53,9 @@ modifying the plugin. For example:
 ```
 
 The `--syntax-common-*` variables have priority over the built-in fallback
-mapping. Theme token selectors can still take precedence through normal CSS
-specificity or `!important`, exactly as they do for Obsidian's own code blocks.
+mapping. Apart from the callable legibility safeguard described above, theme
+token selectors can still take precedence through normal CSS specificity or
+`!important`, exactly as they do for Obsidian's own code blocks.
 
 Configured language profiles such as MUD keep their explicit semantic theme
 presets. Those presets no longer leak into ordinary common-language blocks;
