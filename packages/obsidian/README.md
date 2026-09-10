@@ -8,6 +8,13 @@ The built-in MUD profile uses `@r3nner/syntax-highlight-language-mud`; compound
 operators and indirect contextual words are therefore shared with every other
 host. EBNF, ASDL, TOML, and configurable generic profiles remain available.
 
+Common languages such as JavaScript, Python, Bash, and Nushell follow the active
+Obsidian theme automatically. Reading tokens expose Prism-compatible classes,
+editing tokens expose CodeMirror-compatible classes, and both fall back to
+Obsidian's semantic `--code-*` variables. No community theme is hardcoded. See
+[`docs/theme-integration.md`](../../docs/theme-integration.md) for the bridge and
+vault-level override variables.
+
 ## Local installation
 
 From the repository root:
@@ -22,7 +29,8 @@ legacy `mud-syntax-highlighter` id and leaves the old directory untouched.
 
 ## Manual check
 
-After reloading Obsidian, verify a MUD fence in reading and editing views, a
-`.mud` source file, `~format`, `cycle`, compact ranges such as `0..10`, and the
-current compound operators. See the repository migration guide before removing
-the legacy installation.
+After reloading Obsidian, verify a MUD fence in reading and editing views, Bash
+and Nushell fences under the active vault theme, a `.mud` source file,
+`~format`, `cycle`, compact ranges such as `0..10`, and the current compound
+operators. See the repository migration guide before removing the legacy
+installation.
