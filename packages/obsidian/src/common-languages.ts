@@ -1,3 +1,5 @@
+import { nushell } from "@codincod/codemirror-lang-nushell";
+import { shell } from "@codincod/codemirror-lang-shell";
 import { cpp } from "@codemirror/lang-cpp";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
@@ -58,6 +60,20 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["css"],
     extensions: ["css"],
     support: css,
+  },
+  {
+    id: "bash",
+    name: "Bash",
+    fences: ["bash", "sh", "shell"],
+    extensions: ["sh", "bash"],
+    support: () => shell(),
+  },
+  {
+    id: "nu",
+    name: "Nushell",
+    fences: ["nu", "nushell"],
+    extensions: ["nu"],
+    support: nushell,
   },
   {
     id: "python",
@@ -158,25 +174,32 @@ export const COMMON_HIGHLIGHT_STYLE = HighlightStyle.define([
     tag: [tags.typeName, tags.className, tags.namespace],
     class: "syntax-common-type",
   },
+  { tag: tags.variableName, class: "syntax-common-variable" },
   {
     tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
     class: "syntax-common-callable",
   },
   {
-    tag: [
-      tags.definition(tags.variableName),
-      tags.definitionKeyword,
-      tags.propertyName,
-    ],
+    tag: [tags.definition(tags.variableName), tags.definitionKeyword],
     class: "syntax-common-declaration",
   },
+  { tag: tags.propertyName, class: "syntax-common-property" },
   {
-    tag: [tags.string, tags.special(tags.string), tags.regexp],
+    tag: [tags.string, tags.special(tags.string)],
     class: "syntax-common-string",
   },
-  { tag: [tags.number, tags.integer, tags.float, tags.bool, tags.null], class: "syntax-common-number" },
+  { tag: tags.regexp, class: "syntax-common-regex" },
   {
-    tag: [tags.operator, tags.compareOperator, tags.logicOperator, tags.arithmeticOperator],
+    tag: [tags.number, tags.integer, tags.float, tags.bool, tags.null],
+    class: "syntax-common-number",
+  },
+  {
+    tag: [
+      tags.operator,
+      tags.compareOperator,
+      tags.logicOperator,
+      tags.arithmeticOperator,
+    ],
     class: "syntax-common-operator",
   },
   {
@@ -191,5 +214,5 @@ export const COMMON_HIGHLIGHT_STYLE = HighlightStyle.define([
     tag: [tags.meta, tags.processingInstruction, tags.annotation],
     class: "syntax-common-meta",
   },
-  { tag: tags.atom, class: "syntax-common-meta" },
+  { tag: tags.atom, class: "syntax-common-number" },
 ]);

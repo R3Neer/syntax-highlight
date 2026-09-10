@@ -50,6 +50,14 @@
   user-select: none;
 }
 
+.syntax-language-badge-text {
+  padding: 0.08rem 0.3rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--code-background);
+  letter-spacing: 0.01em;
+}
+
 .syntax-language-badge-mud {
   width: 2.25rem;
   height: 1rem;
@@ -69,6 +77,10 @@
   letter-spacing: -0.25px;
 }
 
+.has-language-badge .syntax-code-line:first-child {
+  padding-right: 7rem;
+}
+
 .has-mud-badge .syntax-code-line:first-child {
   padding-right: 3.5rem;
 }
@@ -86,17 +98,21 @@
   user-select: none;
 }
 
-.syntax-common-comment { color: var(--syntax-common-comment, var(--text-muted)); font-style: italic; }
-.syntax-common-keyword { color: var(--syntax-common-keyword, var(--color-purple)); font-weight: 600; }
-.syntax-common-type { color: var(--syntax-common-type, var(--color-cyan)); }
-.syntax-common-callable { color: var(--syntax-common-callable, var(--color-yellow)); }
-.syntax-common-declaration { color: var(--syntax-common-declaration, var(--color-orange)); }
-.syntax-common-string { color: var(--syntax-common-string, var(--color-green)); }
-.syntax-common-number { color: var(--syntax-common-number, var(--color-orange)); }
-.syntax-common-operator { color: var(--syntax-common-operator, var(--color-pink)); }
-.syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--color-blue)); }
-.syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--text-normal)); }
-.syntax-common-meta { color: var(--syntax-common-meta, var(--color-yellow)); }
+/* Prefer the active theme's Nier syntax palette when it exposes those variables. */
+.syntax-common-comment { color: var(--syntax-common-comment, var(--gray-2, var(--text-muted))); font-style: italic; }
+.syntax-common-keyword { color: var(--syntax-common-keyword, var(--purple, var(--color-purple))); font-weight: 600; }
+.syntax-common-type { color: var(--syntax-common-type, var(--yellow, var(--color-yellow))); }
+.syntax-common-variable { color: var(--syntax-common-variable, var(--blue, var(--color-blue))); }
+.syntax-common-callable { color: var(--syntax-common-callable, var(--blue, var(--color-blue))); }
+.syntax-common-declaration { color: var(--syntax-common-declaration, var(--blue, var(--color-blue))); }
+.syntax-common-property { color: var(--syntax-common-property, var(--red, var(--color-red))); }
+.syntax-common-string { color: var(--syntax-common-string, var(--green, var(--color-green))); }
+.syntax-common-regex { color: var(--syntax-common-regex, var(--purple, var(--color-purple))); }
+.syntax-common-number { color: var(--syntax-common-number, var(--orange, var(--color-orange))); }
+.syntax-common-operator { color: var(--syntax-common-operator, var(--aqua, var(--color-cyan))); }
+.syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--gray-2, var(--text-muted))); }
+.syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--gray-2, var(--text-muted))); }
+.syntax-common-meta { color: var(--syntax-common-meta, var(--red, var(--color-red))); }
 
 .syntax-token-comment {
   font-style: italic;
