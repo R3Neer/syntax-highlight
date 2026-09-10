@@ -1,6 +1,6 @@
 # Plan de implementación temporal
 
-Estado: TEMPORAL. NO implementar todavía. Eliminar al terminar implementación + tests.
+Estado: TEMPORAL. EJECUCIÓN EN CURSO. Eliminar al terminar implementación + tests.
 
 ## Regla de ejecución
 
@@ -8,7 +8,7 @@ Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real 
 
 ## Fase 0: contrato real con Obsidian
 
-- [ ] Añadir instrumentación temporal activable solo en desarrollo para registrar qué path reclama cada fence: specialized processor, Reading fallback, LP rendered bridge o source decorations.
+- [x] Añadir instrumentación temporal activable solo en desarrollo para registrar qué path reclama cada fence: specialized processor, Reading fallback, LP rendered bridge o source decorations.
 - [ ] Capturar DOM/clases/atributos para `text` top-level Reading y callout Reading.
 - [ ] Capturar top-level LP y callout LP con cursor fuera/dentro.
 - [ ] Repetir al menos con PowerShell para no deducir la arquitectura solo del parserless Text.
@@ -18,7 +18,7 @@ Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real 
 - [ ] Crear tests RED que reproduzcan exactamente las divergencias observadas antes de tocar producción.
 - [ ] Si la captura contradice H4/H6, detener esta ejecución y volver a análisis arquitectónico.
 
-Helper temporal posible: `packages/obsidian/src/_tmp-host-diagnostics.ts`. Los fixtures sanitizados pueden ser permanentes; el helper y capturas crudas se eliminan antes de merge.
+Helper temporal implementado: `packages/obsidian/src/_tmp-host-diagnostics.ts`. Está inerte por defecto y expone `window.SyntaxHighlightHostDiagnostics` para habilitar, limpiar y exportar la captura desde DevTools. Los fixtures sanitizados pueden ser permanentes; el helper, su test temporal y las capturas crudas se eliminan antes de merge.
 
 ## Fase 1: semántica de fuente Obsidian
 
