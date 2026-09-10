@@ -183,6 +183,10 @@ function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
       class: classes("syntax-common-keyword", "token keyword", "cm-keyword"),
     },
     {
+      tag: tags.definitionKeyword,
+      class: classes("syntax-common-declaration", "token keyword", "cm-keyword"),
+    },
+    {
       tag: [tags.typeName, tags.className, tags.namespace],
       class: classes("syntax-common-type", "token class-name", "cm-variable-2"),
     },
@@ -195,8 +199,8 @@ function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
       class: classes("syntax-common-callable", "token function", "cm-def"),
     },
     {
-      tag: [tags.definition(tags.variableName), tags.definitionKeyword],
-      class: classes("syntax-common-declaration", "token function", "cm-def"),
+      tag: tags.definition(tags.variableName),
+      class: classes("syntax-common-declaration", "token variable", "cm-def"),
     },
     {
       tag: tags.propertyName,
