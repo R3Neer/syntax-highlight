@@ -173,7 +173,7 @@ export class SyntaxSourceView extends TextFileView {
               from: 0,
               to: state.doc.length,
               languageId,
-              nativeIndentation: common !== undefined,
+              nativeIndentation: common?.support !== undefined,
             }
           : undefined,
       this.getSettings,
@@ -191,7 +191,7 @@ export class SyntaxSourceView extends TextFileView {
         ...(runtime === undefined
           ? []
           : [createSourceHighlighter(this.registry, extension)]),
-        ...(common === undefined
+        ...(common?.support === undefined
           ? []
           : [
               common.support(),
