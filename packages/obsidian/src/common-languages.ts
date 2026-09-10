@@ -159,60 +159,88 @@ export function commonLanguageByExtension(
   );
 }
 
-export const COMMON_HIGHLIGHT_STYLE = HighlightStyle.define([
-  { tag: tags.comment, class: "syntax-common-comment" },
-  {
-    tag: [
-      tags.keyword,
-      tags.controlKeyword,
-      tags.moduleKeyword,
-      tags.operatorKeyword,
-    ],
-    class: "syntax-common-keyword",
-  },
-  {
-    tag: [tags.typeName, tags.className, tags.namespace],
-    class: "syntax-common-type",
-  },
-  { tag: tags.variableName, class: "syntax-common-variable" },
-  {
-    tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-    class: "syntax-common-callable",
-  },
-  {
-    tag: [tags.definition(tags.variableName), tags.definitionKeyword],
-    class: "syntax-common-declaration",
-  },
-  { tag: tags.propertyName, class: "syntax-common-property" },
-  {
-    tag: [tags.string, tags.special(tags.string)],
-    class: "syntax-common-string",
-  },
-  { tag: tags.regexp, class: "syntax-common-regex" },
-  {
-    tag: [tags.number, tags.integer, tags.float, tags.bool, tags.null],
-    class: "syntax-common-number",
-  },
-  {
-    tag: [
-      tags.operator,
-      tags.compareOperator,
-      tags.logicOperator,
-      tags.arithmeticOperator,
-    ],
-    class: "syntax-common-operator",
-  },
-  {
-    tag: [tags.bracket, tags.paren, tags.squareBracket, tags.brace],
-    class: "syntax-common-delimiter",
-  },
-  {
-    tag: [tags.punctuation, tags.separator],
-    class: "syntax-common-punctuation",
-  },
-  {
-    tag: [tags.meta, tags.processingInstruction, tags.annotation],
-    class: "syntax-common-meta",
-  },
-  { tag: tags.atom, class: "syntax-common-number" },
-]);
+type CommonHighlightHost = "reading" | "editor";
+
+function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
+  const classes = (
+    semantic: string,
+    reading: string,
+    editor: string,
+  ): string => `${semantic} ${host === "reading" ? reading : editor}`;
+
+  return HighlightStyle.define([
+    {
+      tag: tags.comment,
+      class: classes("syntax-common-comment", "token comment", "cm-comment"),
+    },
+    {
+      tag: [
+        tags.keyword,
+        tags.controlKeyword,
+        tags.moduleKeyword,
+        tags.operatorKeyword,
+      ],
+      class: classes("syntax-common-keyword", "token keyword", "cm-keyword"),
+    },
+    {
+      tag: [tags.typeName, tags.className, tags.namespace],
+      class: classes("syntax-common-type", "token class-name", "cm-variable-2"),
+    },
+    {
+      tag: tags.variableName,
+      class: classes("syntax-common-variable", "token variable", "cm-variable"),
+    },
+    {
+      tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
+      class: classes("syntax-common-callable", "token function", "cm-def"),
+    },
+    {
+      tag: [tags.definition(tags.variableName), tags.definitionKeyword],
+      class: classes("syntax-common-declaration", "token function", "cm-def"),
+    },
+    {
+      tag: tags.propertyName,
+      class: classes("syntax-common-property", "token property", "cm-property"),
+    },
+    {
+      tag: [tags.string, tags.special(tags.string)],
+      class: classes("syntax-common-string", "token string", "cm-string"),
+    },
+    {
+      tag: tags.regexp,
+      class: classes("syntax-common-regex", "token regex", "cm-string-2"),
+    },
+    {
+      tag: [tags.number, tags.integer, tags.float],
+      class: classes("syntax-common-number", "token number", "cm-number"),
+    },
+    {
+      tag: [tags.bool, tags.null, tags.atom],
+      class: classes("syntax-common-number", "token boolean", "cm-atom"),
+    },
+    {
+      tag: [
+        tags.operator,
+        tags.compareOperator,
+        tags.logicOperator,
+        tags.arithmeticOperator,
+      ],
+      class: classes("syntax-common-operator", "token operator", "cm-operator"),
+    },
+    {
+      tag: [tags.bracket, tags.paren, tags.squareBracket, tags.brace],
+      class: classes("syntax-common-delimiter", "token punctuation", "cm-bracket"),
+    },
+    {
+      tag: [tags.punctuation, tags.separator],
+      class: classes("syntax-common-punctuation", "token punctuation", "cm-bracket"),
+    },
+    {
+      tag: [tags.meta, tags.processingInstruction, tags.annotation],
+      class: classes("syntax-common-meta", "token tag", "cm-meta"),
+    },
+  ]);
+}
+
+export const COMMON_READING_HIGHLIGHT_STYLE = createCommonHighlightStyle("reading");
+export const COMMON_EDITOR_HIGHLIGHT_STYLE = createCommonHighlightStyle("editor");
