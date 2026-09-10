@@ -1,17 +1,31 @@
 // @vitest-environment happy-dom
 
-import { beforeEach, describe, expect, it } from "vitest";
+import type { MarkdownPostProcessorContext } from "obsidian";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   hostDiagnosticsController,
   traceHostDiagnostic,
   traceRenderedHostObservations,
 } from "../src/_tmp-host-diagnostics";
+import { LanguageRegistry } from "../src/languages";
+import { renderReadingFence } from "../src/reading-host";
+import { DEFAULT_SETTINGS } from "../src/settings";
 
 function controller() {
   const value = hostDiagnosticsController();
   if (value === undefined) throw new Error("Missing diagnostics controller.");
   return value;
+}
+
+function context(): MarkdownPostProcessorContext {
+  return {
+    docId: "test",
+    sourcePath: "note.md",
+    frontmatter: null,
+    addChild: vi.fn(),
+    getSectionInfo: vi.fn(() => null),
+  } as unknown as MarkdownPostProcessorContext;
 }
 
 beforeEach(() => {
@@ -114,5 +128,33 @@ describe("temporary Obsidian host diagnostics", () => {
         classes: ["cm-line", "HyperMD-codeblock-begin"],
       }),
     ]);
+  });
+
+  it("captures the specialized Reading DOM after PowerShell rendering", () => {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    const registry = new LanguageRegistry(settings, () => Promise.resolve(""));
+    const element = document.body.appendChild(document.createElement("div"));
+
+    controller().enable();
+    const handled = renderReadingFence(
+      registry,
+      settings,
+      "$foo = 42\nWrite-Host $foo",
+      element,
+      context(),
+      "powershell",
+      vi.fn(),
+      true,
+    );
+
+    expect(handled).toBe(true);
+    const events = controller().events.filter(
+      ({ path }) => path === "reading-specialized",
+    );
+    expect(events.map(({ phase }) => phase)).toEqual(["claimed", "rendered"]);
+    expect(events[1]?.pre?.classes).toContain("syntax-highlight-block");
+    expect(events[1]?.code?.classes).toContain("language-powershell");
+    expect(element.querySelector(".syntax-language-badge-text")?.textContent)
+      .toBe("PowerShell");
   });
 });
