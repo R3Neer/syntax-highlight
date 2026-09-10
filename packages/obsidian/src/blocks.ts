@@ -12,12 +12,18 @@ export interface MappedCodeRange {
   to: number;
 }
 
+export interface CodeBlockSourceSection {
+  lineStart: number;
+  lineEnd: number;
+}
+
 export interface MudCodeBlock {
   from: number;
   to: number;
   language: string;
   languageFrom: number;
   languageTo: number;
+  openingLine: number;
   quoteDepth: number;
   body: string;
   bodyLines: readonly CodeBlockBodyLine[];
@@ -207,6 +213,36 @@ export function isCodeBlockContentPosition(
   );
 }
 
+function comparableRenderedBody(value: string): string {
+  const normalized = value.replace(/\r\n?/g, "\n");
+  return normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+}
+
+export function findCodeBlockBodyStartLine(
+  markdownSource: string,
+  fence: string,
+  renderedSource: string,
+  section?: CodeBlockSourceSection | null,
+): number | undefined {
+  const language = fence.toLocaleLowerCase();
+  const targetBody = comparableRenderedBody(renderedSource);
+  const matches = findCodeBlocks(markdownSource, new Set([language])).filter(
+    (block) => comparableRenderedBody(block.body) === targetBody,
+  );
+  if (matches.length === 0) return undefined;
+
+  if (section !== undefined && section !== null) {
+    const scoped = matches.filter(
+      ({ openingLine }) =>
+        openingLine >= section.lineStart && openingLine <= section.lineEnd,
+    );
+    if (scoped.length === 1) return scoped[0]!.openingLine + 1;
+    if (scoped.length > 1) return scoped[0]!.openingLine + 1;
+  }
+
+  return matches.length === 1 ? matches[0]!.openingLine + 1 : undefined;
+}
+
 export function findCodeBlocks(
   source: string,
   acceptedLanguages: ReadonlySet<string>,
@@ -269,6 +305,7 @@ export function findCodeBlocks(
       language,
       languageFrom: opening.languageFrom,
       languageTo: opening.languageTo,
+      openingLine: openingIndex,
       quoteDepth: opening.quoteDepth,
       body,
       bodyLines,
