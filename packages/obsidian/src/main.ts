@@ -8,7 +8,10 @@ import {
 
 import { commonFenceMatch, commonFenceNames } from "./block-presentation";
 import { commonLanguages } from "./common-languages";
-import { isSafeMarkdownProcessorLanguage } from "./blocks";
+import {
+  findCodeBlockBodyStartLine,
+  isSafeMarkdownProcessorLanguage,
+} from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
@@ -128,7 +131,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
               code.textContent = source;
               pre.append(code);
               element.replaceChildren(pre);
-              this.enableReadingBlockEditing(element, context);
+              this.enableReadingBlockEditing(element, context, fence, source);
               return;
             }
             const runtime = this.registry.byFence(fence);
@@ -139,7 +142,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
                 runtime,
                 this.pluginSettings.lineNumbers,
               );
-              this.enableReadingBlockEditing(element, context);
+              this.enableReadingBlockEditing(element, context, fence, source);
               return;
             }
             const pre = document.createElement("pre");
@@ -147,7 +150,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
             code.textContent = source;
             pre.append(code);
             element.replaceChildren(pre);
-            this.enableReadingBlockEditing(element, context);
+            this.enableReadingBlockEditing(element, context, fence, source);
           },
         );
       }
@@ -170,7 +173,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
             code.textContent = source;
             pre.append(code);
             element.replaceChildren(pre);
-            this.enableReadingBlockEditing(element, context);
+            this.enableReadingBlockEditing(element, context, fence, source);
             return;
           }
           renderCommonCode(
@@ -180,7 +183,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
             this.pluginSettings.lineNumbers,
             fence,
           );
-          this.enableReadingBlockEditing(element, context);
+          this.enableReadingBlockEditing(element, context, fence, source);
         },
       );
     }
@@ -189,6 +192,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
   private enableReadingBlockEditing(
     element: HTMLElement,
     context: MarkdownPostProcessorContext,
+    fence: string,
+    renderedSource: string,
   ): void {
     const block =
       element.querySelector<HTMLElement>(".syntax-highlight-frame") ??
@@ -211,6 +216,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
         element,
         context,
         Number.isFinite(lineNumber) ? lineNumber : 1,
+        fence,
+        renderedSource,
       );
     });
   }
@@ -219,6 +226,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
     element: HTMLElement,
     context: MarkdownPostProcessorContext,
     renderedLine: number,
+    fence: string,
+    renderedSource: string,
   ): Promise<void> {
     const section = context.getSectionInfo(element);
     const leaf = this.app.workspace
@@ -241,7 +250,13 @@ export default class SyntaxHighlightPlugin extends Plugin {
       },
     });
     if (!(leaf.view instanceof MarkdownView)) return;
-    const firstCodeLine = (section?.lineStart ?? 0) + 1;
+    const firstCodeLine =
+      findCodeBlockBodyStartLine(
+        leaf.view.editor.getValue(),
+        fence,
+        renderedSource,
+        section,
+      ) ?? (section?.lineStart ?? 0) + 1;
     const requestedLine = firstCodeLine + Math.max(0, renderedLine - 1);
     const line = Math.min(
       Math.max(0, requestedLine),
