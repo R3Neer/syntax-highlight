@@ -81,34 +81,41 @@ export function parseCssColor(value: string): RgbaColor | undefined {
 
   const functional = color.match(/^rgba?\((.*)\)$/i)?.[1];
   if (functional === undefined) return undefined;
-  const normalized = functional.replace(/,/g, " ");
-  const [channelsPart, alphaPart] = normalized.split("/").map((part) => part.trim());
-  const channels = channelsPart?.split(/\s+/).filter(Boolean) ?? [];
-  if (channels.length !== 3) return undefined;
+
+  let channels: string[];
+  let alphaValue: string | undefined;
+  if (functional.includes(",")) {
+    const legacy = functional.split(",").map((part) => part.trim());
+    if (legacy.length !== 3 && legacy.length !== 4) return undefined;
+    channels = legacy.slice(0, 3);
+    alphaValue = legacy[3];
+  } else {
+    const [channelsPart, alphaPart] = functional.split("/").map((part) => part.trim());
+    channels = channelsPart?.split(/\s+/).filter(Boolean) ?? [];
+    alphaValue = alphaPart;
+    if (channels.length !== 3) return undefined;
+  }
+
   const r = parseRgbChannel(channels[0]!);
   const g = parseRgbChannel(channels[1]!);
   const b = parseRgbChannel(channels[2]!);
-  let alpha = parseAlpha(alphaPart);
-
-  // Legacy rgba(r,g,b,a) becomes four whitespace-separated values after commas
-  // are normalized, so support that serialization as well.
-  if (alphaPart === undefined && channels.length === 3) {
-    const legacy = functional.split(",").map((part) => part.trim());
-    if (legacy.length === 4) alpha = parseAlpha(legacy[3]);
-  }
-
-  if (r === undefined || g === undefined || b === undefined || alpha === undefined) {
+  const a = parseAlpha(alphaValue);
+  if (r === undefined || g === undefined || b === undefined || a === undefined) {
     return undefined;
   }
-  return { r, g, b, a: alpha };
+  return { r, g, b, a };
+}
+
+function cssChannel(channel: number): string {
+  return String(Math.round(clamp01(channel) * 255000) / 1000);
 }
 
 export function toCssColor(color: RgbaColor): string {
-  const r = Math.round(clamp01(color.r) * 255);
-  const g = Math.round(clamp01(color.g) * 255);
-  const b = Math.round(clamp01(color.b) * 255);
+  const r = cssChannel(color.r);
+  const g = cssChannel(color.g);
+  const b = cssChannel(color.b);
   if (color.a >= 1 - EPSILON) return `rgb(${r}, ${g}, ${b})`;
-  const alpha = Math.round(clamp01(color.a) * 1000) / 1000;
+  const alpha = Math.round(clamp01(color.a) * 10000) / 10000;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -151,7 +158,7 @@ export function relativeLuminance(color: RgbaColor): number {
 
 export function contrastRatio(foreground: RgbaColor, background: RgbaColor): number {
   const bg = opaque(background);
-  const fg = opaque(compositeOver(foreground, bg));
+  const fg = compositeOver(foreground, bg);
   const left = relativeLuminance(fg);
   const right = relativeLuminance(bg);
   return (Math.max(left, right) + 0.05) / (Math.min(left, right) + 0.05);
@@ -167,14 +174,12 @@ function srgbToOklab(color: RgbaColor): OklabColor {
   const r = linearChannel(color.r);
   const g = linearChannel(color.g);
   const b = linearChannel(color.b);
-
   const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
   const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
   const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
   const lRoot = Math.cbrt(l);
   const mRoot = Math.cbrt(m);
   const sRoot = Math.cbrt(s);
-
   return {
     l: 0.2104542553 * lRoot + 0.793617785 * mRoot - 0.0040720468 * sRoot,
     a: 1.9779984951 * lRoot - 2.428592205 * mRoot + 0.4505937099 * sRoot,
@@ -227,8 +232,8 @@ function oklabToSrgb(color: OklabColor, alpha: number): RgbaColor {
 function perceptualDistance(left: RgbaColor, right: RgbaColor): number {
   const a = srgbToOklab(left);
   const b = srgbToOklab(right);
-  const delta = Math.hypot(a.l - b.l, a.a - b.a, a.b - b.b);
-  return delta + Math.abs(left.a - right.a) * 0.25;
+  return Math.hypot(a.l - b.l, a.a - b.a, a.b - b.b) +
+    Math.abs(left.a - right.a) * 0.25;
 }
 
 function candidateAt(
@@ -237,11 +242,7 @@ function candidateAt(
   alpha: number,
 ): RgbaColor {
   return oklabToSrgb(
-    {
-      l: clamp01(targetLightness),
-      a: original.a,
-      b: original.b,
-    },
+    { l: clamp01(targetLightness), a: original.a, b: original.b },
     alpha,
   );
 }
@@ -292,9 +293,9 @@ export function ensureContrast(
     if (candidate !== undefined) candidates.push(candidate);
   }
 
-  // Very transparent text may be unable to reach the target while preserving
-  // alpha. In that case allow opacity to rise, but still minimize perceptual
-  // movement in the resulting visible color.
+  // Extremely translucent text may have no solution while alpha is preserved.
+  // Only then permit opacity to rise to one and repeat the same two-direction
+  // perceptual-lightness search.
   if (candidates.length === 0 && foreground.a < 1 - EPSILON) {
     for (const target of [0, 1] as const) {
       const candidate = nearestPassingCandidate(
