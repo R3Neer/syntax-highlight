@@ -48,5 +48,11 @@ replace_once(
 """
 text = text[:common_start] + common_patch + text[common_end:]
 
+# Persistent docs are intentionally handled after the implementation stabilizes;
+# they should not make the mechanical implementation patch brittle.
+docs_start = text.index("# ---------------------------------------------------------------------------\n# Persistent documentation")
+docs_end = text.index("# Remove the temporary patch machinery from the final implementation commit.", docs_start)
+text = text[:docs_start] + text[docs_end:]
+
 path.write_text(text, encoding="utf-8")
 Path(__file__).unlink()
