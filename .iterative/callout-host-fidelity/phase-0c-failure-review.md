@@ -33,6 +33,12 @@ El `theme.css` actual de Nier define explícitamente fondo negro para `div.Hyper
 
 Si esas clases estuvieran materializadas sobre el DOM real con el ancestry esperado, debería existir una diferencia visual. Que el resultado sea idéntico demuestra que nuestra prueba de integración no modela correctamente al menos una frontera del host real.
 
+## Qué ocurrió realmente con el TM anterior
+
+La Fase 0C no se declaró terminada para merge: quedó **estable en código** y con un gate manual de Obsidian real todavía abierto. Por tanto, el fallo visual actual no invalida el criterio TM aplicado a la revisión estática; invalida la hipótesis de host que esa revisión no podía demostrar.
+
+El error fue permitir que 1+2+3 de la sección siguiente generasen demasiada confianza sobre 4. El gate manual ha hecho exactamente su trabajo al falsar esa extrapolación. El nuevo proceso debe conservar el gate, pero mover la observación del host real antes de elegir la próxima arquitectura de solución.
+
 ## Error metodológico de la Fase 0C
 
 Los tests añadidos verifican tres niveles, pero falta el cuarto y decisivo:
@@ -40,7 +46,7 @@ Los tests añadidos verifican tres niveles, pero falta el cuarto y decisivo:
 1. **generación lógica**: `findCodeBlocks()` y `buildSyntaxDecorations()` producen rangos y clases esperadas;
 2. **materialización CodeMirror genérica**: un `EditorView` creado por Vitest/happy-dom materializa esas decorations;
 3. **semántica temática estática**: Nier contiene reglas compatibles con los nombres de clase elegidos;
-4. **materialización Obsidian real**: NO fue observada antes de considerar estable la implementación.
+4. **materialización Obsidian real**: NO fue observada antes de escoger la técnica de corrección.
 
 La validación manual demuestra que inferimos 4 a partir de 1+2+3. Ese salto no estaba justificado.
 
@@ -48,7 +54,7 @@ La validación manual demuestra que inferimos 4 a partir de 1+2+3. Ese salto no 
 
 ### H-A · las line decorations no sobreviven a la composición real de extensiones de Obsidian
 
-Posible. El `EditorView` de test no incluye la pila de extensiones/precendencias de Obsidian. Las classes pueden ser sustituidas, no materializarse sobre el nodo esperado o terminar en una estructura distinta a la simulada.
+Posible. El `EditorView` de test no incluye la pila de extensiones/precedencias de Obsidian. Las clases pueden ser sustituidas, no materializarse sobre el nodo esperado o terminar en una estructura distinta a la simulada.
 
 ### H-B · el source visible del callout usa una representación DOM/lifecycle distinta a la que inspecciona el test
 
@@ -62,6 +68,10 @@ Posible. Los tests solo prueban que la clase forma parte de una `Decoration.mark
 
 Posible para color, pero no explica por sí sola la ausencia del fondo negro quoted. Debe investigarse como frontera separada, no usarse como explicación global.
 
+### H-E · la materialización cambia al alternar rendered ↔ source sin que nuestro diagnóstico observe el estado posterior
+
+Posible. `traceHostDiagnostic("live-preview-source", ...)` se ejecuta dentro de `buildSyntaxDecorations()`, antes de que CodeMirror haya terminado de construir/reconciliar el DOM visible. Sirve para demostrar que el scanner produce un bloque lógico, pero no para afirmar qué clases o spans terminan realmente en pantalla.
+
 ## Consecuencia
 
 No debe añadirse otro parche CSS ni otra clase host por intuición.
@@ -73,7 +83,8 @@ Antes de rediseñar la solución hay que observar el DOM post-materialización d
 - clases efectivas de `$foo`, `42`, `=`, `Write-Host`;
 - `background-color` y `color` computados de línea y tokens;
 - ancestry hasta `.cm-s-obsidian`;
-- presencia/ausencia de `syntax-quoted-code-source`, `HyperMD-codeblock*`, `syntax-common-*` y `cm-*`.
+- presencia/ausencia de `syntax-quoted-code-source`, `HyperMD-codeblock*`, `syntax-common-*` y `cm-*`;
+- estado antes y después de alternar cursor top-level ↔ quoted ↔ fuera.
 
 La instrumentación debe ejecutarse después de que CodeMirror/Obsidian haya materializado el frame, no durante `buildSyntaxDecorations()`.
 
@@ -87,3 +98,11 @@ La revisión inicial incorporó dos comprobaciones que faltaban en la primera ex
 2. separar explícitamente generación de decorations, materialización en CodeMirror genérico, CSS del tema y materialización final en Obsidian real.
 
 Estas distinciones cambian la conclusión: el problema ya no debe tratarse como una simple incompatibilidad CSS, sino como una frontera de host todavía no observada.
+
+## Revisión TM 2
+
+Resultado: CAMBIOS NECESARIOS.
+
+Se corrigió una formulación metodológica demasiado fuerte: el TM anterior sí terminó con un gate manual abierto y, por tanto, no certificó la integración real. La validación actual ha falsado la hipótesis de host en ese gate, no el mecanismo de dos revisiones consecutivas sin cambios.
+
+También se añadió H-E: el diagnóstico `live-preview-source` actual ocurre antes de la materialización/reconciliación DOM y no puede demostrar por sí mismo qué decorations sobreviven después de una transición rendered ↔ source. Esta observación cambia el próximo paso: la siguiente evidencia debe capturarse post-frame antes de decidir arquitectura.
