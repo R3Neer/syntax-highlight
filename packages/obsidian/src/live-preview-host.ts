@@ -1,6 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 
+import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
 import type { LanguageRegistry } from "./languages";
 import {
   READING_PROCESSED_ATTRIBUTE,
@@ -101,6 +102,12 @@ export class LivePreviewRenderedBlockBridge {
       return;
     }
     if (!handled) return;
+    traceHostDiagnostic(
+      "live-preview-rendered",
+      candidate.fence,
+      candidate.source,
+      candidate.pre,
+    );
     host.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
     replaceRenderedCodeBlockCandidate(candidate, host);
   }
