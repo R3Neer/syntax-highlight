@@ -55,7 +55,7 @@ describe("install profiles", () => {
     expect(INSTALL_PROFILES).toEqual(["common", "mud"]);
   });
 
-  it("disables MUD for a common vault without disturbing its configuration", async () => {
+  it("removes the MUD profile from a common vault without disturbing other settings", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "syntax-profile-common-"));
     temporaryDirectories.push(root);
     const dataFile = path.join(root, "data.json");
@@ -64,7 +64,7 @@ describe("install profiles", () => {
       JSON.stringify({
         locale: "es",
         languages: [
-          { id: "mud", enabled: true, themePreset: "catppuccin", custom: "keep" },
+          { id: "mud", enabled: true, themePreset: "catppuccin", custom: "discard-with-mud" },
           { id: "toml", enabled: true },
         ],
       }),
@@ -75,13 +75,8 @@ describe("install profiles", () => {
 
     const settings = JSON.parse(await readFile(dataFile, "utf8"));
     expect(settings.locale).toBe("es");
-    expect(settings.languages).toContainEqual({ id: "toml", enabled: true });
-    expect(settings.languages.find(({ id }) => id === "mud")).toEqual({
-      id: "mud",
-      enabled: false,
-      themePreset: "catppuccin",
-      custom: "keep",
-    });
+    expect(settings.languages).toEqual([{ id: "toml", enabled: true }]);
+    expect(settings.languages.some(({ id }) => id === "mud")).toBe(false);
   });
 
   it("enables MUD for a MUD vault and creates the profile when absent", async () => {
@@ -93,6 +88,33 @@ describe("install profiles", () => {
 
     const settings = JSON.parse(await readFile(dataFile, "utf8"));
     expect(settings.languages).toEqual([{ id: "mud", enabled: true }]);
+  });
+
+  it("preserves an existing MUD profile when enabling the MUD vault", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "syntax-profile-mud-existing-"));
+    temporaryDirectories.push(root);
+    const dataFile = path.join(root, "data.json");
+    await writeFile(
+      dataFile,
+      JSON.stringify({
+        languages: [
+          { id: "mud", enabled: false, themePreset: "catppuccin", custom: "keep" },
+          { id: "toml", enabled: true },
+        ],
+      }),
+      "utf8",
+    );
+
+    await applyInstallProfile(dataFile, "mud");
+
+    const settings = JSON.parse(await readFile(dataFile, "utf8"));
+    expect(settings.languages.find(({ id }) => id === "mud")).toEqual({
+      id: "mud",
+      enabled: true,
+      themePreset: "catppuccin",
+      custom: "keep",
+    });
+    expect(settings.languages).toContainEqual({ id: "toml", enabled: true });
   });
 
   it("rejects unknown profiles instead of guessing", async () => {
