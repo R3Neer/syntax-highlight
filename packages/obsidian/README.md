@@ -30,9 +30,17 @@ specialized code-block processor handles ordinary fences when Obsidian dispatche
 them normally. A late Markdown HTML postprocessor then inspects any untouched
 `<pre><code class="language-…">` blocks that remain, which covers nested containers
 such as callouts on Obsidian paths where the specialized processor is skipped.
-The fallback is structural rather than callout-specific, ignores unknown or
-ambiguous language classes and complex third-party `<pre>` wrappers, and marks
-processed output so repeated post-processing cannot render the same block twice.
+The detector accepts normal host furniture next to the direct `<code>` child,
+including Obsidian's copy button, and moves those existing nodes into the rendered
+block so their identity and listeners survive. Unknown or genuinely ambiguous
+structures remain untouched, and processed output is marked for idempotence.
+
+Live Preview uses a complementary host bridge because callouts may be rendered by
+CodeMirror as `.cm-embed-block` widgets rather than as the source lines decorated
+by the normal Markdown highlighter. A ViewPlugin scoped to its own `EditorView`
+observes only those embedded widgets, routes recognized code DOM through the same
+renderer, preserves host controls, and handles widget insertion/recreation without
+scanning the whole document or depending on a callout name.
 
 Text and Markdown fences are presentational families rather than ordinary code
 furniture. `text`, `plaintext`, and `txt` remain parserless and use the active
