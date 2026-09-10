@@ -36,8 +36,9 @@ describe("CommonContrastManager", () => {
     manager.normalize(document.body);
 
     expect(token.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
-    const adjusted = token.style.getPropertyValue("--syntax-contrast-color");
-    expect(adjusted).not.toBe("");
+    const adjusted = token.style.getPropertyValue("color");
+    expect(token.style.getPropertyPriority("color")).toBe("important");
+    expect(adjusted).not.toBe("rgb(229, 192, 123)");
     expect(contrastRatioCss(adjusted, "rgb(221, 216, 199)"))
       .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
   });
@@ -49,7 +50,7 @@ describe("CommonContrastManager", () => {
     manager.normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
-    expect(token.style.getPropertyValue("--syntax-contrast-color")).toBe("");
+    expect(token.style.getPropertyValue("color")).toBe("rgb(35, 35, 35)");
   });
 
   it("recomputes from the unmodified theme color after the background changes", () => {
@@ -61,10 +62,22 @@ describe("CommonContrastManager", () => {
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(true);
 
     host.style.backgroundColor = "rgb(25, 25, 25)";
-    token.style.color = "rgb(230, 230, 230)";
+    token.style.setProperty("color", "rgb(230, 230, 230)");
     manager.normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(230, 230, 230)");
+  });
+
+  it("restores a pre-existing inline theme color when disposed", () => {
+    const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
+    const manager = new CommonContrastManager();
+    manager.normalize(document.body);
+
+    manager.dispose();
+
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
   });
 
   it("does not rewrite semantic theme previews", () => {
@@ -81,5 +94,6 @@ describe("CommonContrastManager", () => {
     new CommonContrastManager().normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(245, 245, 245)");
   });
 });
