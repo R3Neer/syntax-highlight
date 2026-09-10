@@ -55,6 +55,7 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Nushell");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
+    expect(container.querySelector(".token.keyword")).not.toBeNull();
   });
 
   it("renders Bash with the Bash badge", () => {
@@ -71,6 +72,7 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Bash");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
+    expect(container.querySelector(".token.keyword")).not.toBeNull();
   });
 
   it("colors TOML through its configurable primary profile", () => {
