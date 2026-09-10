@@ -17,13 +17,12 @@ import {
   type EnableReadingBlockEditing,
   type ReadingFenceHandler,
 } from "../src/reading-host";
-import { DEFAULT_SETTINGS } from "../src/settings";
+import { DEFAULT_SETTINGS, loadSettings } from "../src/settings";
 
-function registry(): LanguageRegistry {
-  return new LanguageRegistry(
-    structuredClone(DEFAULT_SETTINGS),
-    () => Promise.resolve(""),
-  );
+function registry(
+  settings = structuredClone(DEFAULT_SETTINGS),
+): LanguageRegistry {
+  return new LanguageRegistry(settings, () => Promise.resolve(""));
 }
 
 function context(): MarkdownPostProcessorContext {
@@ -49,7 +48,7 @@ function actualProcessor(
   settings = structuredClone(DEFAULT_SETTINGS),
   enableEditing: EnableReadingBlockEditing = vi.fn(),
 ): MarkdownPostProcessor {
-  const languages = registry();
+  const languages = registry(settings);
   return createReadingFallbackPostProcessor((source, element, ctx, fence) =>
     renderReadingFence(
       languages,
@@ -162,6 +161,43 @@ describe("Reading View fallback rendering", () => {
     expect(root.querySelector(".token.comment")?.textContent).toBe("# comment");
   });
 
+  it("renders configured TOML through the same fallback path", () => {
+    const root = document.createElement("div");
+    const tomlSource = ["[server]", "port = 8080"].join(String.fromCharCode(10));
+    root.append(codeBlock("toml", tomlSource));
+
+    actualProcessor()(root, context());
+
+    expect(root.querySelector(".syntax-language-badge-text")?.textContent).toBe("TOML");
+    expect(root.querySelectorAll("[data-line-number]")).toHaveLength(2);
+    expect(root.querySelector('[class*="syntax-color-toml-"]')).not.toBeNull();
+  });
+
+  it("keeps MUD isolated by vault profile and renders it when explicitly enabled", () => {
+    const commonRoot = document.createElement("div");
+    const commonMud = codeBlock("mud", "thing World {}");
+    commonRoot.append(commonMud);
+    const commonBefore = commonRoot.innerHTML;
+
+    actualProcessor()(commonRoot, context());
+    expect(commonRoot.innerHTML).toBe(commonBefore);
+
+    const mudSettings = loadSettings({
+      ...structuredClone(DEFAULT_SETTINGS),
+      languages: [
+        ...structuredClone(DEFAULT_SETTINGS.languages),
+        { id: "mud", enabled: true },
+      ],
+    });
+    const mudRoot = document.createElement("div");
+    mudRoot.append(codeBlock("mud", "thing World {}"));
+
+    actualProcessor(mudSettings)(mudRoot, context());
+
+    expect(mudRoot.querySelector(".syntax-language-badge-mud")).not.toBeNull();
+    expect(mudRoot.querySelector('[class*="syntax-color-mud-"]')).not.toBeNull();
+  });
+
   it("renders Markdown as presentational but keeps Markdown syntax highlighting", () => {
     const root = document.createElement("div");
     root.append(codeBlock("markdown-center-ragged", "# Heading\n**bold**"));
@@ -184,6 +220,28 @@ describe("Reading View fallback rendering", () => {
 
     expect(root.querySelector(".syntax-language-badge-text")?.textContent).toBe("C++");
     expect(root.querySelector(".syntax-highlight-frame")).not.toBeNull();
+  });
+
+  it("lets an already-registered specialized processor claim a stale fence as plain text", () => {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    const element = document.createElement("div");
+    const enableEditing = vi.fn<EnableReadingBlockEditing>();
+
+    const handled = renderReadingFence(
+      registry(settings),
+      settings,
+      "raw stale source",
+      element,
+      context(),
+      "removed-profile",
+      enableEditing,
+      true,
+    );
+
+    expect(handled).toBe(true);
+    expect(element.querySelector("pre > code")?.textContent).toBe("raw stale source");
+    expect(element.hasAttribute(READING_PROCESSED_ATTRIBUTE)).toBe(true);
+    expect(enableEditing).toHaveBeenCalledTimes(1);
   });
 
   it("leaves unknown languages byte-for-byte in place", () => {
