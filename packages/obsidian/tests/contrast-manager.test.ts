@@ -53,7 +53,7 @@ describe("CommonContrastManager", () => {
     expect(token.style.getPropertyValue("color")).toBe("rgb(35, 35, 35)");
   });
 
-  it("recomputes from the unmodified theme color after the background changes", () => {
+  it("recomputes from the original theme color after the background changes", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const host = token.parentElement!;
     const manager = new CommonContrastManager();
@@ -62,11 +62,10 @@ describe("CommonContrastManager", () => {
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(true);
 
     host.style.backgroundColor = "rgb(25, 25, 25)";
-    token.style.setProperty("color", "rgb(230, 230, 230)");
     manager.normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
-    expect(token.style.getPropertyValue("color")).toBe("rgb(230, 230, 230)");
+    expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
   });
 
   it("restores a pre-existing inline theme color when disposed", () => {
