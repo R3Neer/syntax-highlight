@@ -97,4 +97,15 @@ describe("active theme compatibility", () => {
     expect(styles).toContain("var(--code-operator");
     expect(styles).toContain("--syntax-common-keyword");
   });
+
+  it("gives parser-unclassified source a theme-safe normal text color", () => {
+    const styles = readFileSync(
+      join(process.cwd(), "packages", "obsidian", "styles.css"),
+      "utf8",
+    );
+
+    expect(styles).toContain(
+      ".syntax-common-plain { color: var(--syntax-common-text, var(--text-normal)); }",
+    );
+  });
 });
