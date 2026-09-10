@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { highlightTree } from "@lezer/highlight";
 import { describe, expect, it } from "vitest";
@@ -28,7 +29,7 @@ describe("active theme compatibility", () => {
   it("emits Prism-compatible token classes in Reading view", () => {
     const classes = highlightedClasses(
       "js",
-      "const value = 1;",
+      "if (value) { return 1; }",
       COMMON_READING_HIGHLIGHT_STYLE,
     );
 
@@ -39,7 +40,7 @@ describe("active theme compatibility", () => {
   it("emits CodeMirror-compatible token classes in Editing view", () => {
     const classes = highlightedClasses(
       "js",
-      "const value = 1;",
+      "if (value) { return 1; }",
       COMMON_EDITOR_HIGHLIGHT_STYLE,
     );
 
@@ -57,7 +58,10 @@ describe("active theme compatibility", () => {
   });
 
   it("uses only theme-agnostic Obsidian code variables as CSS fallbacks", () => {
-    const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+    const styles = readFileSync(
+      join(process.cwd(), "packages", "obsidian", "styles.css"),
+      "utf8",
+    );
 
     expect(styles).not.toContain("Nier");
     expect(styles).not.toMatch(
