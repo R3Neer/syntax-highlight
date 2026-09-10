@@ -12,10 +12,17 @@ import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { yaml } from "@codemirror/lang-yaml";
 import {
   HighlightStyle,
-  type LanguageSupport,
+  LanguageSupport,
+  StreamLanguage,
 } from "@codemirror/language";
+import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import { tags } from "@lezer/highlight";
+
+export interface CommonLanguagePresentation {
+  badge?: boolean;
+  lineNumbers?: boolean;
+}
 
 export interface CommonLanguage {
   id: string;
@@ -24,6 +31,12 @@ export interface CommonLanguage {
   extensions: readonly string[];
   /** Parser-backed languages expose CodeMirror support. Parserless entries are plain text. */
   support?: () => LanguageSupport;
+  /** Optional visual furniture policy. Omitted values keep ordinary code-block behavior. */
+  presentation?: CommonLanguagePresentation;
+}
+
+function powerShellSupport(): LanguageSupport {
+  return new LanguageSupport(StreamLanguage.define(powerShell));
 }
 
 const COMMON_LANGUAGES: readonly CommonLanguage[] = [
@@ -75,6 +88,13 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["nu", "nushell"],
     extensions: ["nu"],
     support: nushell,
+  },
+  {
+    id: "powershell",
+    name: "PowerShell",
+    fences: ["powershell", "pwsh", "ps1"],
+    extensions: ["ps1", "psm1", "psd1"],
+    support: powerShellSupport,
   },
   {
     id: "python",
@@ -137,6 +157,10 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     name: "Text",
     fences: ["text", "plaintext", "txt"],
     extensions: [],
+    presentation: {
+      badge: false,
+      lineNumbers: false,
+    },
   },
 ];
 
