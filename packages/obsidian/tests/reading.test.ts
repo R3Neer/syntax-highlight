@@ -34,7 +34,7 @@ describe("reading view rendering", () => {
     const container = document.createElement("div");
     renderCommonCode("class Example { string Name; }", container, language!);
 
-    expect(container.querySelector("code")?.className).toBe("language-cs");
+    expect(container.querySelector("code")?.classList.contains("language-cs")).toBe(true);
     expect(container.querySelector(".syntax-common-keyword")).not.toBeNull();
     expect(container.querySelectorAll(".syntax-code-line")).toHaveLength(1);
     expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("C#");
@@ -49,7 +49,7 @@ describe("reading view rendering", () => {
 
     renderCommonCode(source, container, language!, true);
 
-    expect(container.querySelector("code")?.className).toBe("language-text");
+    expect(container.querySelector("code")?.classList.contains("language-text")).toBe(true);
     expect(container.querySelector(".syntax-language-badge")).toBeNull();
     expect(container.querySelector(".has-language-badge")).toBeNull();
     expect(container.querySelector(".syntax-highlight-block")?.classList.contains("has-line-numbers"))
@@ -165,7 +165,7 @@ describe("reading view rendering", () => {
       language!,
     );
 
-    expect(container.querySelector("code")?.className).toBe("language-nu");
+    expect(container.querySelector("code")?.classList.contains("language-nu")).toBe(true);
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Nushell");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
@@ -182,7 +182,7 @@ describe("reading view rendering", () => {
       language!,
     );
 
-    expect(container.querySelector("code")?.className).toBe("language-bash");
+    expect(container.querySelector("code")?.classList.contains("language-bash")).toBe(true);
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Bash");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
@@ -199,7 +199,7 @@ describe("reading view rendering", () => {
       language!,
     );
 
-    expect(container.querySelector("code")?.className).toBe("language-powershell");
+    expect(container.querySelector("code")?.classList.contains("language-powershell")).toBe(true);
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("PowerShell");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
@@ -220,7 +220,7 @@ describe("reading view rendering", () => {
       runtime!,
     );
 
-    expect(container.querySelector("code")?.className).toBe("language-toml");
+    expect(container.querySelector("code")?.classList.contains("language-toml")).toBe(true);
     expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("TOML");
     expect(container.querySelector(".syntax-color-toml-bare-key")).not.toBeNull();
     expect(container.querySelector(".syntax-color-toml-table-header")).not.toBeNull();
