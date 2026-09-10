@@ -87,6 +87,7 @@ describe("install profiles", () => {
     await applyInstallProfile(dataFile, "mud");
 
     const settings = JSON.parse(await readFile(dataFile, "utf8"));
+    expect(settings.schemaVersion).toBe(7);
     expect(settings.languages).toEqual([{ id: "mud", enabled: true }]);
   });
 
@@ -197,6 +198,7 @@ describe("installLocal", () => {
         "utf8",
       ),
     );
+    expect(settings.schemaVersion).toBe(7);
     expect(settings.languages).toEqual([{ id: "mud", enabled: true }]);
   });
 });
