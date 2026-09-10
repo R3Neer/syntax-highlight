@@ -64,4 +64,49 @@ describe("contrast normalization", () => {
     expect(result.adjusted.r + result.adjusted.g + result.adjusted.b)
       .toBeGreaterThan(foreground.r + foreground.g + foreground.b);
   });
+
+  it("finds a passing foreground across representative theme color families", () => {
+    const foregrounds = [
+      "#e5c07b",
+      "#98c379",
+      "#c678dd",
+      "#24324a",
+      "#777777",
+      "#ffffff",
+      "#000000",
+      "#ff0000",
+      "#00ff00",
+      "#0000ff",
+    ];
+    const backgrounds = ["#fafafa", "#ddd8c7", "#1e1e1e", "#334455", "#ffccaa"];
+
+    for (const foregroundValue of foregrounds) {
+      for (const backgroundValue of backgrounds) {
+        const foreground = color(foregroundValue);
+        const background = color(backgroundValue);
+        const before = contrastRatio(foreground, background);
+        const originalBackground = structuredClone(background);
+        const result = ensureContrast(foreground, background);
+
+        expect(background).toEqual(originalBackground);
+        if (before >= MINIMUM_TEXT_CONTRAST) {
+          expect(result.changed).toBe(false);
+          expect(result.adjusted).toEqual(foreground);
+        } else {
+          expect(result.changed).toBe(true);
+          expect(result.after).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.001);
+        }
+      }
+    }
+  });
+
+  it("raises opacity only when translucent text cannot pass at its original alpha", () => {
+    const foreground = color("rgba(0, 0, 0, 0.3)");
+    const background = color("#ffffff");
+    const result = ensureContrast(foreground, background);
+
+    expect(result.before).toBeLessThan(MINIMUM_TEXT_CONTRAST);
+    expect(result.adjusted.a).toBe(1);
+    expect(result.after).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.001);
+  });
 });
