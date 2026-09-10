@@ -50,6 +50,28 @@ function addTokenRanges(
   }
 }
 
+function addPlainCommonRanges(
+  ranges: Range<Decoration>[],
+  source: string,
+  base: number,
+): void {
+  let segmentStart = 0;
+  for (let index = 0; index <= source.length; index += 1) {
+    const character = index < source.length ? source[index] : "\n";
+    if (character !== "\n" && character !== "\r") continue;
+    if (index > segmentStart) {
+      ranges.push(
+        Decoration.mark({ class: "syntax-common-plain" }).range(
+          base + segmentStart,
+          base + index,
+        ),
+      );
+    }
+    if (character === "\r" && source[index + 1] === "\n") index += 1;
+    segmentStart = index + 1;
+  }
+}
+
 function addCommonLanguageRanges(
   ranges: Range<Decoration>[],
   source: string,
@@ -58,7 +80,12 @@ function addCommonLanguageRanges(
 ): void {
   const language = commonLanguageByFence(fence);
   if (language === undefined) return;
-  const tree = language.support().language.parser.parse(source);
+  const support = language.support?.();
+  if (support === undefined) {
+    addPlainCommonRanges(ranges, source, base);
+    return;
+  }
+  const tree = support.language.parser.parse(source);
   highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, classes) => {
     if (from >= to) return;
     ranges.push(
