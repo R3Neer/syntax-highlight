@@ -475,7 +475,7 @@ function defaultProfile(
   const theme = themeFromPreset(themePreset);
   return {
     id,
-    enabled: id !== "mud",
+    enabled: true,
     descriptorPath: "",
     lexicalGrammarPath:
       id === "mud" ? "especificacion/gramatica/mud-lexico.ebnf" : "",
@@ -490,6 +490,10 @@ function defaultProfile(
     descriptorOrigin: "builtin",
   };
 }
+
+const OPTIONAL_BUILTIN_PROFILES = {
+  mud: defaultProfile("mud", "catppuccin"),
+} as const;
 
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
   schemaVersion: 7,
@@ -510,7 +514,6 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
   lastBackup: null,
   customThemes: [],
   languages: [
-    defaultProfile("mud", "catppuccin"),
     defaultProfile("ebnf", "vscode-classic"),
     defaultProfile("asdl", "vscode-classic"),
     defaultProfile("toml", "vscode-classic"),
@@ -889,8 +892,20 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     ) {
       continue;
     }
+    const optionalFallback =
+      id === "mud" ? OPTIONAL_BUILTIN_PROFILES.mud : undefined;
+    const fallback = optionalFallback ?? genericFallback(id);
+    const profileValue =
+      id === "mud"
+        ? migrateMudSemanticProfile(entry, storedSchemaVersion)
+        : entry;
     languages.push(
-      mergeLanguage(entry, genericFallback(id), customThemes, migrateLegacyPaletteValues),
+      mergeLanguage(
+        profileValue,
+        fallback,
+        customThemes,
+        migrateLegacyPaletteValues,
+      ),
     );
   }
   return {
