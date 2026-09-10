@@ -204,7 +204,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
         target instanceof Element
           ? target.closest<HTMLElement>(".syntax-code-line")
           : null;
-      const lineNumber = Number(renderedLine?.dataset.lineNumber ?? "1");
+      const lineNumber = Number(
+        renderedLine?.dataset.sourceLine ?? renderedLine?.dataset.lineNumber ?? "1",
+      );
       void this.editReadingBlock(
         element,
         context,
