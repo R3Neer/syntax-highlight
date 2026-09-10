@@ -15,6 +15,7 @@ import {
   registerReadingFallbackPostProcessor,
   renderReadingFence,
   type EnableReadingBlockEditing,
+  type ReadingFenceHandler,
 } from "../src/reading-host";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
@@ -208,7 +209,7 @@ describe("Reading View fallback rendering", () => {
     actualProcessor()(root, context());
 
     expect(root.querySelectorAll(`[${READING_PROCESSED_ATTRIBUTE}]`)).toHaveLength(3);
-    expect(root.querySelectorAll("pre > code[class^='language-']")).toHaveLength(0);
+    expect(collectUnprocessedRenderedCodeBlocks(root)).toEqual([]);
   });
 
   it("is idempotent across repeated postprocessor passes", () => {
@@ -280,7 +281,7 @@ describe("Reading View fallback host registration", () => {
       captured = processor;
       return processor;
     });
-    const handler = vi.fn(() => true);
+    const handler = vi.fn<ReadingFenceHandler>(() => true);
 
     const registered = registerReadingFallbackPostProcessor(registrar, handler);
 
