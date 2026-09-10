@@ -13,6 +13,11 @@ text = text.replace(
     "    const handler = vi.fn<ReadingFenceHandler>(() => true);",
     1,
 )
+text = text.replace(
+    '    expect(root.querySelectorAll("pre > code[class^=\'language-\']")).toHaveLength(0);',
+    "    expect(collectUnprocessedRenderedCodeBlocks(root)).toEqual([]);",
+    1,
+)
 path.write_text(text, encoding="utf-8")
 
 (root / "scripts/.tmp-fix-reading-fallback-test.py").unlink()
