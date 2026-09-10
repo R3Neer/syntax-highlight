@@ -22,6 +22,13 @@ If a theme does not style those token classes, `styles.css` falls back to
 Obsidian's semantic code variables (`--code-keyword`, `--code-string`,
 `--code-function`, `--code-operator`, and the rest).
 
+Some parsers intentionally leave parts of the source unclassified. Command
+names, sigils, paths, whitespace, or other grammar-specific fragments may
+therefore sit between highlighted ranges. Reading view keeps those fragments
+verbatim and wraps them with `syntax-common-plain`, whose default color is the
+active theme's `--text-normal`. This prevents a broken or missing code-normal
+color in a community theme from making otherwise valid source visually vanish.
+
 ## Vault-level overrides
 
 A vault or theme snippet can override the plugin's semantic bridge without
@@ -29,6 +36,7 @@ modifying the plugin. For example:
 
 ```css
 .theme-dark {
+  --syntax-common-text: var(--text-normal);
   --syntax-common-keyword: var(--text-accent);
   --syntax-common-string: var(--color-green);
   --syntax-common-operator: var(--color-cyan);
