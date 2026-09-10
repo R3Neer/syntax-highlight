@@ -24,6 +24,10 @@ export interface MudCodeBlock {
   languageFrom: number;
   languageTo: number;
   openingLine: number;
+  openingLineFrom: number;
+  openingLineTo: number;
+  closingLineFrom?: number;
+  closingLineTo?: number;
   quoteDepth: number;
   body: string;
   bodyLines: readonly CodeBlockBodyLine[];
@@ -293,6 +297,8 @@ export function findCodeBlocks(
     );
     const bodyFrom = line.next;
     const bodyTo = lines[bodyEndIndex]?.from ?? source.length;
+    const closingLine =
+      closingIndex === undefined ? undefined : lines[closingIndex];
 
     // Skip the complete fenced container whether or not its language is one of
     // the requested ones. This prevents false positives inside unrelated fences.
@@ -306,6 +312,10 @@ export function findCodeBlocks(
       languageFrom: opening.languageFrom,
       languageTo: opening.languageTo,
       openingLine: openingIndex,
+      openingLineFrom: line.from,
+      openingLineTo: line.to,
+      closingLineFrom: closingLine?.from,
+      closingLineTo: closingLine?.to,
       quoteDepth: opening.quoteDepth,
       body,
       bodyLines,
