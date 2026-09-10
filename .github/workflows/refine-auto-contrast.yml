@@ -23,13 +23,14 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path('packages/obsidian/styles.css')
           text = path.read_text(encoding='utf-8')
-          old = '''/* Shell command names must remain legible even if a theme's Prism function color relies on native renderer context. */
-.language-bash .syntax-common-callable.token.function,
-.language-nu .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--text-normal)) !important; }
-'''
+          old = "\n".join([
+              "/* Shell command names must remain legible even if a theme's Prism function color relies on native renderer context. */",
+              ".language-bash .syntax-common-callable.token.function,",
+              ".language-nu .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--text-normal)) !important; }",
+              "",
+          ])
           if text.count(old) != 1:
               raise SystemExit(f'expected one shell safeguard block, found {text.count(old)}')
           path.write_text(text.replace(old, '', 1), encoding='utf-8')
