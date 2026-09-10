@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findCodeBlockBodyStartLine,
   findCodeBlocks,
   findMudCodeBlocks,
   isCodeBlockContentPosition,
@@ -50,6 +51,7 @@ describe("findCodeBlocks", () => {
     expect(source.slice(block?.from, block?.to)).toBe("var value = 1;\n");
     expect(block?.body).toBe("var value = 1;\n");
     expect(block?.quoteDepth).toBe(0);
+    expect(block?.openingLine).toBe(0);
   });
 
   it("recognizes fences inside blockquotes and Obsidian callouts", () => {
@@ -66,6 +68,7 @@ describe("findCodeBlocks", () => {
     const [block] = findCodeBlocks(source, new Set(["powershell"]));
     expect(block).toBeDefined();
     expect(block?.quoteDepth).toBe(1);
+    expect(block?.openingLine).toBe(2);
     expect(source.slice(block?.languageFrom, block?.languageTo)).toBe("powershell");
     expect(block?.body).toBe("$items = Get-ChildItem\nWrite-Host $items\n");
     expect(block?.bodyLines.map(({ sourceFrom, sourceTo }) =>
@@ -160,5 +163,59 @@ describe("findCodeBlocks", () => {
     expect(blocks).toHaveLength(2);
     expect(blocks[0]?.body).toBe("quoted body\n");
     expect(blocks[1]?.body).toBe("real top-level\n");
+  });
+});
+
+describe("findCodeBlockBodyStartLine", () => {
+  it("locates an ordinary top-level processor source", () => {
+    const source = [
+      "before",
+      "```bash",
+      "echo one",
+      "echo two",
+      "```",
+      "after",
+    ].join("\n");
+
+    expect(findCodeBlockBodyStartLine(source, "bash", "echo one\necho two")).toBe(2);
+  });
+
+  it("locates a callout fence even when section metadata describes the outer callout", () => {
+    const source = [
+      "before",
+      "> [!note]",
+      "> intro",
+      "> ```powershell",
+      "> Get-ChildItem",
+      "> Write-Host done",
+      "> ```",
+      "> outro",
+      "after",
+    ].join("\n");
+
+    expect(
+      findCodeBlockBodyStartLine(
+        source,
+        "powershell",
+        "Get-ChildItem\nWrite-Host done",
+        { lineStart: 1, lineEnd: 7 },
+      ),
+    ).toBe(4);
+  });
+
+  it("locates a unique quoted block when section metadata is unavailable", () => {
+    const source = [
+      "> [!tip]",
+      "> ```text-center",
+      "> centered",
+      "> ```",
+    ].join("\n");
+
+    expect(findCodeBlockBodyStartLine(source, "text-center", "centered", null)).toBe(2);
+  });
+
+  it("matches processor source across CRLF normalization", () => {
+    const source = "> ```nu\r\n> let x = 1\r\n> $x\r\n> ```\r\n";
+    expect(findCodeBlockBodyStartLine(source, "nu", "let x = 1\n$x")).toBe(1);
   });
 });
