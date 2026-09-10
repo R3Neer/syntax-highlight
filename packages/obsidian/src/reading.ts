@@ -133,13 +133,13 @@ function renderRanges(
   languageClass: string,
   ranges: readonly RenderedRange[],
   showLineNumbers: boolean,
-  badge: LanguageBadge,
+  badge?: LanguageBadge,
   plainClass?: string,
 ): void {
   container.replaceChildren();
   const frame = document.createElement("div");
   frame.className = "syntax-highlight-frame";
-  appendLanguageBadge(frame, badge);
+  if (badge !== undefined) appendLanguageBadge(frame, badge);
   const pre = document.createElement("pre");
   const code = document.createElement("code");
   pre.className = "syntax-highlight-block";
@@ -209,13 +209,18 @@ export function renderCommonCode(
       ranges.push({ from, to, classes });
     });
   }
+  const effectiveLineNumbers =
+    showLineNumbers && (language.presentation?.lineNumbers ?? true);
+  const badge = language.presentation?.badge === false
+    ? undefined
+    : { label: language.name };
   renderRanges(
     source,
     container,
     `language-${language.fences[0] ?? language.id}`,
     ranges,
-    showLineNumbers,
-    { label: language.name },
+    effectiveLineNumbers,
+    badge,
     "syntax-common-plain",
   );
 }

@@ -41,23 +41,41 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-mud")).toBeNull();
   });
 
-  it("renders Text blocks as theme-aware plain source without inventing syntax", () => {
+  it("renders Text blocks as theme-aware plain source without code furniture", () => {
     const language = commonLanguageByFence("text");
     expect(language?.support).toBeUndefined();
     const source = "Comando conceptual\n  salida literal: foo & bar";
     const container = document.createElement("div");
 
-    renderCommonCode(source, container, language!);
+    renderCommonCode(source, container, language!, true);
 
     expect(container.querySelector("code")?.className).toBe("language-text");
-    expect(container.querySelector(".syntax-language-badge-text")?.textContent).toBe("Text");
-    expect(container.querySelectorAll(".syntax-code-line")).toHaveLength(2);
+    expect(container.querySelector(".syntax-language-badge")).toBeNull();
+    expect(container.querySelector(".has-language-badge")).toBeNull();
+    expect(container.querySelector(".syntax-highlight-block")?.classList.contains("has-line-numbers"))
+      .toBe(false);
+    const lines = Array.from(container.querySelectorAll(".syntax-code-line"));
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => !line.hasAttribute("data-line-number"))).toBe(true);
     const plain = Array.from(container.querySelectorAll(".syntax-common-plain"));
     expect(plain.map((node) => node.textContent).join("\n")).toContain("Comando conceptual");
     expect(container.querySelector("[class*='token ']")).toBeNull();
     expect(container.querySelector("code")?.textContent).toBe(
       "Comando conceptual  salida literal: foo & bar",
     );
+  });
+
+  it("applies the no-furniture Text policy through plaintext and txt aliases", () => {
+    for (const fence of ["plaintext", "txt"]) {
+      const language = commonLanguageByFence(fence);
+      expect(language?.id).toBe("text");
+      const container = document.createElement("div");
+      renderCommonCode("uno\ndos", container, language!, true);
+
+      expect(container.querySelector(".syntax-language-badge")).toBeNull();
+      expect(container.querySelector(".has-line-numbers")).toBeNull();
+      expect(container.querySelector("[data-line-number]")).toBeNull();
+    }
   });
 
   it("keeps the exact Bash command source while exposing callable and operator semantics", () => {
@@ -129,6 +147,23 @@ describe("reading view rendering", () => {
       .toBe("Bash");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
     expect(container.querySelector(".token.keyword")).not.toBeNull();
+  });
+
+  it("renders PowerShell with theme-compatible semantic classes", () => {
+    const language = commonLanguageByFence("powershell");
+    expect(language?.id).toBe("powershell");
+    const container = document.createElement("div");
+    renderCommonCode(
+      "$items = Get-ChildItem | Where-Object { $_.Length -gt 0 }\n# comentario",
+      container,
+      language!,
+    );
+
+    expect(container.querySelector("code")?.className).toBe("language-powershell");
+    expect(container.querySelector(".syntax-language-badge-text")?.textContent)
+      .toBe("PowerShell");
+    expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
+    expect(container.querySelector(".token.comment")?.textContent).toBe("# comentario");
   });
 
   it("colors TOML through its configurable primary profile", () => {

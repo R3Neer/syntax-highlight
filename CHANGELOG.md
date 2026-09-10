@@ -13,9 +13,12 @@
   color. This covers commands, sigils, paths, and other source fragments that a
   language grammar does not assign a highlight tag.
 - Treat `text`, `plaintext`, and `txt` Markdown fences as parserless common
-  blocks so they use the same active-vault theme, badge, line-number behavior,
-  and contrast policy without inventing syntax categories or claiming `.txt`
+  blocks that follow the active-vault theme and contrast policy without
+  code-specific badge or line-number furniture; they still do not claim `.txt`
   files from Obsidian's normal file handling.
+- Add PowerShell as a parser-backed common language with `powershell`, `pwsh`,
+  and `ps1` fences plus `.ps1`, `.psm1`, and `.psd1` source extensions through
+  CodeMirror's PowerShell stream mode.
 - Normalize low-contrast common-language foreground colors automatically to a
   `4.5:1` target against their effective CSS background. Passing theme colors
   remain untouched; failing colors move by the smallest viable OKLab-lightness

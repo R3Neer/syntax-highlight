@@ -13,6 +13,17 @@ function registry(): LanguageRegistry {
   );
 }
 
+function widgetCount(source: string, lineNumbers = true): number {
+  const state = EditorState.create({ doc: source });
+  const view = { state } as EditorView;
+  const decorations = buildSyntaxDecorations(view, registry(), lineNumbers);
+  let count = 0;
+  decorations.between(0, state.doc.length, (_from, _to, decoration) => {
+    if ((decoration.spec as { widget?: unknown }).widget !== undefined) count += 1;
+  });
+  return count;
+}
+
 describe("plain Text blocks in Markdown editing", () => {
   it("marks only Text block body lines with the theme-aware plain class", () => {
     const source = "before\n```text\nalpha\nbeta & gamma\n```\nafter";
@@ -50,5 +61,17 @@ describe("plain Text blocks in Markdown editing", () => {
 
       expect(texts).toEqual(["literal <not syntax>"]);
     }
+  });
+
+  it("never adds line-number widgets to Text aliases even when globally enabled", () => {
+    for (const fence of ["text", "plaintext", "txt"]) {
+      const source = `\`\`\`${fence}\nuno\ndos\n\`\`\``;
+      expect(widgetCount(source, true)).toBe(0);
+    }
+  });
+
+  it("keeps line-number widgets for actual code blocks", () => {
+    const source = "```bash\necho uno\necho dos\n```";
+    expect(widgetCount(source, true)).toBe(2);
   });
 });
