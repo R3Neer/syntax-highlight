@@ -56,6 +56,26 @@ blockquotes and callouts as well. A rewrite still changes only the language labe
 of the opening fence; quote markers, callout markers, body content, closing fence,
 and additional info text stay untouched.
 
+### Reading View host fallback
+
+Reading View cannot rely exclusively on Obsidian dispatching every nested fence
+to `registerMarkdownCodeBlockProcessor`. Syntax Highlight therefore keeps that
+specialized fast path and also registers a later Markdown postprocessor. The
+fallback inspects the HTML that remains after normal Markdown processing and
+looks structurally for untouched `<pre><code class="language-…">` blocks. A
+recognized fence is handed to exactly the same configured/common renderer as a
+normally dispatched top-level block, so theme classes, contrast normalization,
+line-number policy, Text/Markdown presentation and click-to-edit behavior do not
+diverge between host paths.
+
+The fallback deliberately fails closed. It ignores unknown languages, multiple
+distinct `language-*` classes, deceptive class names, complex `<pre>` elements
+that already contain third-party UI, and any subtree already produced by Syntax
+Highlight. Candidates are snapshotted before DOM replacement and processed output
+is marked, making repeated postprocessor passes idempotent. The fallback also
+handles recognized aliases that cannot be registered as specialized processors,
+such as names containing characters rejected by Obsidian's processor selector.
+
 ## Text and Markdown presentation families
 
 Text and Markdown fences share the theme/contrast infrastructure but deliberately

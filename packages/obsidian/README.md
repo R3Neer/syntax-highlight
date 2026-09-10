@@ -25,6 +25,15 @@ presentation without treating the container's `>` markers as source code.
 Nested quote depth is preserved, and editor line-number widgets are anchored at
 the actual code content rather than before the blockquote prefix.
 
+Reading View has two host entry paths that converge on the same renderer. The
+specialized code-block processor handles ordinary fences when Obsidian dispatches
+them normally. A late Markdown HTML postprocessor then inspects any untouched
+`<pre><code class="language-…">` blocks that remain, which covers nested containers
+such as callouts on Obsidian paths where the specialized processor is skipped.
+The fallback is structural rather than callout-specific, ignores unknown or
+ambiguous language classes and complex third-party `<pre>` wrappers, and marks
+processed output so repeated post-processing cannot render the same block twice.
+
 Text and Markdown fences are presentational families rather than ordinary code
 furniture. `text`, `plaintext`, and `txt` remain parserless and use the active
 theme and contrast bridge without inventing syntax categories; `md` and
