@@ -57,6 +57,7 @@ describe("reading view rendering", () => {
     const lines = Array.from(container.querySelectorAll(".syntax-code-line"));
     expect(lines).toHaveLength(2);
     expect(lines.every((line) => !line.hasAttribute("data-line-number"))).toBe(true);
+    expect(lines.map((line) => line.getAttribute("data-source-line"))).toEqual(["1", "2"]);
     const plain = Array.from(container.querySelectorAll(".syntax-common-plain"));
     expect(plain.map((node) => node.textContent).join("\n")).toContain("Comando conceptual");
     expect(container.querySelector("[class*='token ']")).toBeNull();

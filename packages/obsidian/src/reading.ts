@@ -78,6 +78,7 @@ function appendLine(
 ): void {
   const element = document.createElement("span");
   element.className = "syntax-code-line";
+  element.dataset.sourceLine = String(lineNumber);
   if (showLineNumbers) element.dataset.lineNumber = String(lineNumber);
   const content = document.createElement("span");
   content.className = "syntax-code-line-content";

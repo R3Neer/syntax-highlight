@@ -1408,6 +1408,12 @@ export class SyntaxSettingTab extends PluginSettingTab {
   ): Promise<string> {
     return new Promise((resolve) => {
       const modal = new Modal(this.plugin.app);
+      let settled = false;
+      const finish = (value: string): void => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
       modal.titleEl.setText(title);
       if (description !== undefined) {
         modal.contentEl.createEl("p", {
@@ -1418,11 +1424,11 @@ export class SyntaxSettingTab extends PluginSettingTab {
       for (const [value, label] of choices) {
         const button = modal.contentEl.createEl("button", { text: label });
         button.addEventListener("click", () => {
+          finish(value);
           modal.close();
-          resolve(value);
         });
       }
-      modal.onClose = () => resolve("cancel");
+      modal.onClose = () => finish("cancel");
       modal.open();
     });
   }
