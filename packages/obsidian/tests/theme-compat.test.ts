@@ -8,6 +8,7 @@ import {
   COMMON_EDITOR_HIGHLIGHT_STYLE,
   COMMON_READING_HIGHLIGHT_STYLE,
   commonLanguageByFence,
+  parseCommonLanguageTree,
 } from "../src/common-languages";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import { buildThemeCss } from "../src/themes";
@@ -21,7 +22,10 @@ function highlightedClasses(
   if (language?.support === undefined) {
     throw new Error(`Missing parser-backed common language: ${fence}`);
   }
-  const tree = language.support().language.parser.parse(source);
+  const tree = parseCommonLanguageTree(language, source);
+  if (tree === undefined) {
+    throw new Error(`Missing syntax tree for parser-backed language: ${fence}`);
+  }
   const classes: string[] = [];
   highlightTree(tree, style, (_from, _to, value) => classes.push(value));
   return classes;
