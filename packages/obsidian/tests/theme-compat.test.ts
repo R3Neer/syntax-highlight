@@ -50,6 +50,17 @@ describe("active theme compatibility", () => {
     expect(classes.some((value) => value.includes("cm-keyword"))).toBe(true);
   });
 
+  it("routes PowerShell editor tokens through the same theme bridge", () => {
+    const classes = highlightedClasses(
+      "powershell",
+      "# note\n$items = Get-ChildItem",
+      COMMON_EDITOR_HIGHLIGHT_STYLE,
+    );
+
+    expect(classes.some((value) => value.includes("syntax-common-comment"))).toBe(true);
+    expect(classes.some((value) => value.includes("cm-comment"))).toBe(true);
+  });
+
   it("maps declaration keywords to the active theme's keyword color", () => {
     const reading = highlightedClasses(
       "js",
