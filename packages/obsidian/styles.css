@@ -27,6 +27,21 @@
   white-space: pre;
 }
 
+.syntax-highlight-frame.syntax-presentational .syntax-code-line {
+  text-align: var(--syntax-presentation-text-align, left);
+  text-align-last: var(--syntax-presentation-text-align-last, auto);
+}
+
+.syntax-highlight-frame.syntax-presentational .syntax-code-line-content {
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.cm-line.syntax-presentational {
+  text-align: var(--syntax-presentation-text-align, left);
+  text-align-last: var(--syntax-presentation-text-align-last, auto);
+}
+
 .has-line-numbers .syntax-code-line::before {
   content: attr(data-line-number);
   padding-right: 1em;
@@ -153,6 +168,46 @@
 
 .syntax-settings-section[open] > summary {
   margin-bottom: 0.85rem;
+}
+
+.syntax-presentation-group-title {
+  margin: 1rem 0 0.25rem;
+  font-size: var(--font-ui-medium);
+}
+
+.syntax-segmented-control {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.syntax-segmented-button {
+  min-width: 4.8rem;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.syntax-segmented-button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.syntax-presentation-info {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+}
+
+.syntax-presentation-info p {
+  margin: 0.35rem 0 0;
 }
 
 .syntax-validation-error,

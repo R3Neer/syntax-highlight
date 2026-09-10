@@ -44,7 +44,21 @@ describe("common language catalog", () => {
     expect(text?.name).toBe("Text");
     expect(text?.support).toBeUndefined();
     expect(text?.extensions).toEqual([]);
-    expect(text?.presentation).toEqual({ badge: false, lineNumbers: false });
+    expect(text?.presentation).toEqual({
+      badge: false,
+      lineNumbers: false,
+      family: "text",
+    });
+  });
+
+  it("marks Markdown as a syntax-highlighted presentational family", () => {
+    const markdown = commonLanguageByFence("markdown");
+    expect(markdown?.support).toBeDefined();
+    expect(markdown?.presentation).toEqual({
+      badge: false,
+      lineNumbers: false,
+      family: "markdown",
+    });
   });
 
   it("uses CodeMirror's PowerShell mode as a parser-backed common language", () => {

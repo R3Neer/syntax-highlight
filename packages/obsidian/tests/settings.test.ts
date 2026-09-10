@@ -31,7 +31,7 @@ describe("settings, descriptors and themes", () => {
       continueLineComments: false,
     });
     expect(loaded).toMatchObject({
-      schemaVersion: 7,
+      schemaVersion: 8,
       indentStyle: "tabs",
       indentSize: 2,
       lineNumbers: false,
@@ -41,6 +41,25 @@ describe("settings, descriptors and themes", () => {
     });
 
     expect(loadSettings({ indentSize: 20 }).indentSize).toBe(4);
+  });
+
+  it("loads block presentation defaults safely from old and partial settings", () => {
+    expect(loadSettings({ schemaVersion: 7 }).blockPresentation).toEqual({
+      text: { alignment: "left", flow: "ragged" },
+      markdown: { alignment: "left", flow: "ragged" },
+    });
+    expect(
+      loadSettings({
+        schemaVersion: 8,
+        blockPresentation: {
+          text: { alignment: "center", flow: "justified" },
+          markdown: { alignment: "sideways", flow: "dense" },
+        },
+      }).blockPresentation,
+    ).toEqual({
+      text: { alignment: "center", flow: "justified" },
+      markdown: { alignment: "left", flow: "ragged" },
+    });
   });
 
   it("preserves the current palettes and examples as language defaults", () => {

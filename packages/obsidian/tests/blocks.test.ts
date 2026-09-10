@@ -46,6 +46,7 @@ describe("findCodeBlocks", () => {
     const source = "```csharp\nvar value = 1;\n```\n";
     const [block] = findCodeBlocks(source, new Set(["cs", "csharp"]));
     expect(block?.language).toBe("csharp");
+    expect(source.slice(block?.languageFrom, block?.languageTo)).toBe("csharp");
     expect(source.slice(block?.from, block?.to)).toBe("var value = 1;\n");
   });
 });

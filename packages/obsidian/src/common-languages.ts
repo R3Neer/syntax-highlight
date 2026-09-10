@@ -19,9 +19,12 @@ import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import { tags } from "@lezer/highlight";
 
+export type CommonPresentationFamily = "text" | "markdown";
+
 export interface CommonLanguagePresentation {
   badge?: boolean;
   lineNumbers?: boolean;
+  family?: CommonPresentationFamily;
 }
 
 export interface CommonLanguage {
@@ -151,6 +154,11 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["md", "markdown"],
     extensions: ["md", "markdown"],
     support: markdown,
+    presentation: {
+      badge: false,
+      lineNumbers: false,
+      family: "markdown",
+    },
   },
   {
     id: "text",
@@ -160,6 +168,7 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     presentation: {
       badge: false,
       lineNumbers: false,
+      family: "text",
     },
   },
 ];

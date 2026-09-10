@@ -78,6 +78,45 @@ describe("reading view rendering", () => {
     }
   });
 
+  it("propagates explicit Text presentation modifiers without restoring code furniture", () => {
+    const language = commonLanguageByFence("text")!;
+    const container = document.createElement("div");
+    renderCommonCode(
+      "alpha beta gamma",
+      container,
+      language,
+      true,
+      "text-right-justified",
+    );
+
+    const frame = container.querySelector(".syntax-highlight-frame");
+    expect(frame?.classList.contains("syntax-presentation-family-text")).toBe(true);
+    expect(frame?.classList.contains("syntax-presentation-align-right")).toBe(true);
+    expect(frame?.classList.contains("syntax-presentation-flow-justified")).toBe(true);
+    expect(container.querySelector(".syntax-language-badge")).toBeNull();
+    expect(container.querySelector(".has-line-numbers")).toBeNull();
+  });
+
+  it("treats Markdown as presentational while retaining Markdown syntax tokens", () => {
+    const language = commonLanguageByFence("markdown")!;
+    const container = document.createElement("div");
+    renderCommonCode(
+      "# Heading\n**bold**",
+      container,
+      language,
+      true,
+      "markdown-center-ragged",
+    );
+
+    const frame = container.querySelector(".syntax-highlight-frame");
+    expect(frame?.classList.contains("syntax-presentation-family-markdown")).toBe(true);
+    expect(frame?.classList.contains("syntax-presentation-align-center")).toBe(true);
+    expect(frame?.classList.contains("syntax-presentation-flow-ragged")).toBe(true);
+    expect(container.querySelector(".syntax-language-badge")).toBeNull();
+    expect(container.querySelector(".has-line-numbers")).toBeNull();
+    expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
+  });
+
   it("keeps the exact Bash command source while exposing callable and operator semantics", () => {
     const language = commonLanguageByFence("bash");
     expect(language).toBeDefined();

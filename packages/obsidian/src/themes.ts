@@ -1,3 +1,4 @@
+import { buildBlockPresentationCss } from "./block-presentation";
 import { CommonContrastManager } from "./contrast-manager";
 import { BUILTIN_DESCRIPTORS, type LanguageDescriptor } from "./descriptor";
 import type { LanguageRegistry } from "./languages";
@@ -14,7 +15,7 @@ export function buildThemeCss(
   settings: SyntaxPluginSettings,
   descriptors: ReadonlyMap<string, LanguageDescriptor> = new Map(),
 ): string {
-  const rules: string[] = [];
+  const rules: string[] = [buildBlockPresentationCss(settings.blockPresentation)];
 
   // Common-language blocks use the active Obsidian theme in normal views. Keep
   // the selected syntax preset scoped to settings previews only, where showing

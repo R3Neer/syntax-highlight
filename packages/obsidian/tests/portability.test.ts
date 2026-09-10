@@ -22,7 +22,7 @@ describe("schema v7 and portability", () => {
       languages: DEFAULT_SETTINGS.languages,
       customThemes: [],
     });
-    expect(loaded.schemaVersion).toBe(7);
+    expect(loaded.schemaVersion).toBe(8);
     expect(loaded.markdownReading).toBe(true);
     expect(loaded.markdownEditor).toBe(true);
     expect(loaded.sourceEditor).toBe(true);

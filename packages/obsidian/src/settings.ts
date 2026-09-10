@@ -6,6 +6,7 @@ import {
   type LanguageEngine,
   type VisualRole,
 } from "./descriptor";
+import type { BlockPresentationSettings } from "./block-presentation";
 
 export type ColorMode = "light" | "dark";
 export type ThemeColors = Record<VisualRole, string>;
@@ -44,12 +45,13 @@ export interface LanguageProfileSettings {
 }
 
 export interface SyntaxPluginSettings {
-  schemaVersion: 7;
+  schemaVersion: 8;
   locale: "auto" | "en" | "es";
   autoReloadGrammar: boolean;
   markdownReading: boolean;
   markdownEditor: boolean;
   sourceEditor: boolean;
+  blockPresentation: BlockPresentationSettings;
   indentStyle: "spaces" | "tabs";
   indentSize: number;
   lineNumbers: boolean;
@@ -495,13 +497,19 @@ const OPTIONAL_BUILTIN_PROFILES = {
   mud: defaultProfile("mud", "catppuccin"),
 } as const;
 
+export const DEFAULT_BLOCK_PRESENTATION: BlockPresentationSettings = {
+  text: { alignment: "left", flow: "ragged" },
+  markdown: { alignment: "left", flow: "ragged" },
+};
+
 export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   locale: "auto",
   autoReloadGrammar: true,
   markdownReading: true,
   markdownEditor: true,
   sourceEditor: true,
+  blockPresentation: structuredClone(DEFAULT_BLOCK_PRESENTATION),
   indentStyle: "spaces",
   indentSize: 4,
   lineNumbers: true,
@@ -851,6 +859,37 @@ function genericFallback(id: string): LanguageProfileSettings {
   };
 }
 
+function mergeBlockPresentationSettings(value: unknown): BlockPresentationSettings {
+  const object =
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const merge = (
+    raw: unknown,
+    fallback: BlockPresentationSettings["text"],
+  ): BlockPresentationSettings["text"] => {
+    const entry =
+      typeof raw === "object" && raw !== null && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    const alignment =
+      entry.alignment === "left" ||
+      entry.alignment === "center" ||
+      entry.alignment === "right"
+        ? entry.alignment
+        : fallback.alignment;
+    const flow =
+      entry.flow === "ragged" || entry.flow === "justified"
+        ? entry.flow
+        : fallback.flow;
+    return { alignment, flow };
+  };
+  return {
+    text: merge(object.text, DEFAULT_BLOCK_PRESENTATION.text),
+    markdown: merge(object.markdown, DEFAULT_BLOCK_PRESENTATION.markdown),
+  };
+}
+
 export function loadSettings(value: unknown): SyntaxPluginSettings {
   if (typeof value !== "object" || value === null) {
     return structuredClone(DEFAULT_SETTINGS);
@@ -909,7 +948,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     );
   }
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     locale:
       object.locale === "en" || object.locale === "es" || object.locale === "auto"
         ? object.locale
@@ -924,6 +963,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       typeof object.markdownEditor === "boolean" ? object.markdownEditor : true,
     sourceEditor:
       typeof object.sourceEditor === "boolean" ? object.sourceEditor : true,
+    blockPresentation: mergeBlockPresentationSettings(object.blockPresentation),
     indentStyle: object.indentStyle === "tabs" ? "tabs" : "spaces",
     indentSize:
       typeof object.indentSize === "number" &&

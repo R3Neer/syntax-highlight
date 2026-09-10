@@ -2,6 +2,8 @@ export interface MudCodeBlock {
   from: number;
   to: number;
   language: string;
+  languageFrom: number;
+  languageTo: number;
 }
 
 export function isSafeMarkdownProcessorLanguage(language: string): boolean {
@@ -49,8 +51,13 @@ export function findCodeBlocks(
         line.text,
       );
     if (opening === null) continue;
-    const language = opening[2]?.toLocaleLowerCase() ?? "";
+    const rawLanguage = opening[2] ?? "";
+    const language = rawLanguage.toLocaleLowerCase();
     if (!acceptedLanguages.has(language)) continue;
+    const languageOffset = line.text.indexOf(rawLanguage);
+    if (languageOffset < 0) continue;
+    const languageFrom = line.from + languageOffset;
+    const languageTo = languageFrom + rawLanguage.length;
 
     const fence = opening[1] ?? "```";
     const fenceChar = fence[0] ?? "`";
@@ -69,7 +76,13 @@ export function findCodeBlocks(
         break;
       }
     }
-    blocks.push({ from: bodyFrom, to: bodyTo, language });
+    blocks.push({
+      from: bodyFrom,
+      to: bodyTo,
+      language,
+      languageFrom,
+      languageTo,
+    });
   }
 
   return blocks;
