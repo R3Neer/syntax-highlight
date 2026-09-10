@@ -135,12 +135,49 @@ describe("presentation-preserving fence rewrite", () => {
     expect(result).toEqual({ source, changedBlocks: 0 });
   });
 
+  it("rewrites inherited presentation inside blockquotes and callouts only at the fence label", () => {
+    const source = [
+      "> [!info]",
+      "> before",
+      "> ```text title=quoted",
+      "> alpha beta",
+      "> ```",
+      "> ~~~markdown-center extra",
+      "> # heading",
+      "> ~~~",
+    ].join("\n");
+
+    const textResult = rewritePresentationFences(
+      source,
+      "text",
+      { alignment: "left", flow: "ragged" },
+      { alignment: "right", flow: "ragged" },
+    );
+    expect(textResult.changedBlocks).toBe(1);
+    expect(textResult.source).toContain("> ```text-left-ragged title=quoted");
+    expect(textResult.source).toContain("> alpha beta");
+    expect(textResult.source).toContain("> ```\n");
+
+    const markdownResult = rewritePresentationFences(
+      textResult.source,
+      "markdown",
+      { alignment: "left", flow: "ragged" },
+      { alignment: "left", flow: "justified" },
+    );
+    expect(markdownResult.changedBlocks).toBe(1);
+    expect(markdownResult.source).toContain("> ~~~markdown-center-ragged extra");
+    expect(markdownResult.source).toContain("> # heading");
+  });
+
   it("does not rewrite presentational fence examples nested in unrelated fences", () => {
     const source = [
       "````example",
       "```text",
       "literal example",
       "```",
+      "> ```text",
+      "> quoted literal example",
+      "> ```",
       "````",
       "```text",
       "real block",
@@ -154,7 +191,9 @@ describe("presentation-preserving fence rewrite", () => {
     );
 
     expect(result.changedBlocks).toBe(1);
-    expect(result.source).toContain("````example\n```text\nliteral example\n```\n````");
+    expect(result.source).toContain(
+      "````example\n```text\nliteral example\n```\n> ```text\n> quoted literal example\n> ```\n````",
+    );
     expect(result.source).toContain("```text-left-ragged\nreal block\n```");
   });
 });
