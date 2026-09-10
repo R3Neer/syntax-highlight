@@ -135,7 +135,7 @@ export function createReadingFallbackPostProcessor(
     for (const candidate of candidates) {
       if (candidate.pre.parentNode === null) continue;
       const host = document.createElement("div");
-      let handled = false;
+      let handled: boolean;
       try {
         handled = handleFence(
           candidate.source,
