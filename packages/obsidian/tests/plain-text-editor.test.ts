@@ -2,7 +2,7 @@ import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { describe, expect, it } from "vitest";
 
-import { buildSyntaxDecorations } from "../src/editor";
+import { buildMudDecorations, buildSyntaxDecorations } from "../src/editor";
 import { LanguageRegistry } from "../src/languages";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
@@ -13,15 +13,19 @@ function registry(): LanguageRegistry {
   );
 }
 
-function widgetCount(source: string, lineNumbers = true): number {
+function widgetPositions(source: string, lineNumbers = true): number[] {
   const state = EditorState.create({ doc: source });
   const view = { state } as EditorView;
   const decorations = buildSyntaxDecorations(view, registry(), lineNumbers);
-  let count = 0;
-  decorations.between(0, state.doc.length, (_from, _to, decoration) => {
-    if ((decoration.spec as { widget?: unknown }).widget !== undefined) count += 1;
+  const positions: number[] = [];
+  decorations.between(0, state.doc.length, (from, _to, decoration) => {
+    if ((decoration.spec as { widget?: unknown }).widget !== undefined) positions.push(from);
   });
-  return count;
+  return positions;
+}
+
+function widgetCount(source: string, lineNumbers = true): number {
+  return widgetPositions(source, lineNumbers).length;
 }
 
 describe("plain Text blocks in Markdown editing", () => {
@@ -91,6 +95,37 @@ describe("plain Text blocks in Markdown editing", () => {
     )).toBe(true);
   });
 
+  it("applies Text presentation inside blockquotes without styling quote markers", () => {
+    const source = [
+      "> [!note]",
+      "> ```text-center-justified",
+      "> alpha beta",
+      "> gamma delta",
+      "> ```",
+    ].join("\n");
+    const state = EditorState.create({ doc: source });
+    const view = { state } as EditorView;
+    const decorations = buildSyntaxDecorations(view, registry(), true);
+    const plainTexts: string[] = [];
+    const presentationLines: number[] = [];
+
+    decorations.between(0, state.doc.length, (from, to, decoration) => {
+      const spec = decoration.spec as {
+        class?: string;
+        attributes?: { class?: string };
+      };
+      if (spec.class === "syntax-common-plain") plainTexts.push(source.slice(from, to));
+      if (from === to && spec.attributes?.class?.includes("syntax-presentational")) {
+        presentationLines.push(from);
+      }
+    });
+
+    expect(plainTexts).toEqual(["alpha beta", "gamma delta"]);
+    expect(plainTexts.every((text) => !text.includes(">"))).toBe(true);
+    expect(presentationLines).toHaveLength(2);
+    expect(widgetCount(source, true)).toBe(0);
+  });
+
   it("suppresses line-number widgets for Markdown while keeping code languages unchanged", () => {
     expect(widgetCount("```markdown\n# one\n## two\n```", true)).toBe(0);
     expect(widgetCount("```md-right-ragged\n# one\n## two\n```", true)).toBe(0);
@@ -100,5 +135,55 @@ describe("plain Text blocks in Markdown editing", () => {
   it("keeps line-number widgets for actual code blocks", () => {
     const source = "```bash\necho uno\necho dos\n```";
     expect(widgetCount(source, true)).toBe(2);
+  });
+
+  it("highlights parser-backed code inside callouts and anchors numbers after the quote prefix", () => {
+    const source = [
+      "> [!example]",
+      "> ```powershell",
+      "> $items = Get-ChildItem",
+      "> Write-Host $items",
+      "> ```",
+    ].join("\n");
+    const state = EditorState.create({ doc: source });
+    const view = { state } as EditorView;
+    const decorations = buildSyntaxDecorations(view, registry(), true);
+    const highlighted: string[] = [];
+
+    decorations.between(0, state.doc.length, (from, to, decoration) => {
+      const className = (decoration.spec as { class?: string }).class;
+      if (className?.includes("syntax-common-")) highlighted.push(source.slice(from, to));
+    });
+
+    expect(highlighted.length).toBeGreaterThan(0);
+    expect(highlighted.every((text) => !text.includes(">"))).toBe(true);
+    const positions = widgetPositions(source, true);
+    expect(positions).toHaveLength(2);
+    expect(positions.map((position) => source.slice(position - 2, position))).toEqual([
+      "> ",
+      "> ",
+    ]);
+  });
+
+  it("maps MUD highlighting through quoted bodies without coloring quote markers", () => {
+    const source = [
+      "> ```mud",
+      "> thing World {}",
+      "> rule Ready { true }",
+      "> ```",
+    ].join("\n");
+    const state = EditorState.create({ doc: source });
+    const view = { state } as EditorView;
+    const decorations = buildMudDecorations(view);
+    const marked: string[] = [];
+
+    decorations.between(0, state.doc.length, (from, to, decoration) => {
+      if ((decoration.spec as { class?: string }).class !== undefined) {
+        marked.push(source.slice(from, to));
+      }
+    });
+
+    expect(marked.length).toBeGreaterThan(0);
+    expect(marked.every((text) => !text.includes(">"))).toBe(true);
   });
 });
