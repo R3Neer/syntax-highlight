@@ -27,6 +27,11 @@
   maps token ranges back to the physical document, so quoted code, Text/Markdown
   presentation, line numbers, MUD/configured languages, and preservation rewrites
   behave like their top-level equivalents without coloring `>` markers as code.
+- Add a late Reading View HTML fallback for recognized fenced blocks that
+  Obsidian does not deliver to the specialized code-block processor, including
+  nested blockquotes/callouts. It reuses the same renderer, leaves unknown or
+  ambiguous third-party blocks untouched, and is idempotent across repeated
+  post-processing passes.
 - Add PowerShell as a parser-backed common language with `powershell`, `pwsh`,
   and `ps1` fences plus `.ps1`, `.psm1`, and `.psd1` source extensions through
   CodeMirror's PowerShell stream mode.
