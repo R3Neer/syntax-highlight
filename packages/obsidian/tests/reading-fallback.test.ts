@@ -270,6 +270,31 @@ describe("Reading View fallback rendering", () => {
     expect(collectUnprocessedRenderedCodeBlocks(root)).toEqual([]);
   });
 
+  it("isolates a throwing handler, preserves that original block, and continues with siblings", () => {
+    const root = document.createElement("div");
+    const broken = codeBlock("text", "broken");
+    const healthy = codeBlock("powershell", "healthy");
+    root.append(broken, healthy);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const processor = createReadingFallbackPostProcessor((source, element) => {
+      if (source === "broken") throw new Error("adversarial failure");
+      element.textContent = source;
+      return true;
+    });
+
+    try {
+      processor(root, context());
+      expect(root.firstElementChild).toBe(broken);
+      expect(root.textContent).toContain("broken");
+      expect(root.textContent).toContain("healthy");
+      expect(root.querySelector(`[${READING_PROCESSED_ATTRIBUTE}]`)?.textContent)
+        .toBe("healthy");
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("is idempotent across repeated postprocessor passes", () => {
     const root = document.createElement("div");
     root.append(codeBlock("text-center", "once"));
@@ -333,18 +358,23 @@ describe("Reading View fallback rendering", () => {
 });
 
 describe("Reading View fallback host registration", () => {
-  it("registers a late postprocessor and the captured callback really dispatches DOM candidates", () => {
+  it("passes a late sort order to the host and the captured callback really dispatches candidates", () => {
     let captured: MarkdownPostProcessor | undefined;
-    const registrar = vi.fn((processor: MarkdownPostProcessor) => {
-      captured = processor;
-      return processor;
-    });
+    let capturedSortOrder: number | undefined;
+    const registrar = vi.fn(
+      (processor: MarkdownPostProcessor, sortOrder?: number) => {
+        captured = processor;
+        capturedSortOrder = sortOrder;
+        return processor;
+      },
+    );
     const handler = vi.fn<ReadingFenceHandler>(() => true);
 
     const registered = registerReadingFallbackPostProcessor(registrar, handler);
 
     expect(registrar).toHaveBeenCalledTimes(1);
     expect(registered).toBe(captured);
+    expect(capturedSortOrder).toBe(READING_FALLBACK_SORT_ORDER);
     expect(registered.sortOrder).toBe(READING_FALLBACK_SORT_ORDER);
 
     const root = document.createElement("div");
