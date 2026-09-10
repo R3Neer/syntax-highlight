@@ -9,6 +9,19 @@ Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real 
 ## Fase 0: contrato real con Obsidian
 
 - [x] Añadir instrumentación temporal activable solo en desarrollo para registrar qué path reclama cada fence: specialized processor, Reading fallback, LP rendered bridge o source decorations.
+
+### Fase 0A: prerrequisito descubierto por captura real
+
+La primera captura expuso un crash de PowerShell anterior al problema de callouts: el bridge común llama `support.language.parser.parse(...)` directamente sobre un `StreamLanguage` y el CodeMirror expuesto por Obsidian puede requerir `ParseContext` activo. Se corrige este bloqueador antes de repetir la matriz para no contaminar la evidencia de Fase 0.
+
+- [ ] Añadir regresión que demuestre que un common language basado en `StreamLanguage` no depende de `parser.parse(...)` directo.
+- [ ] Introducir un único helper de parse de common languages que use el lifecycle de `EditorState` para `StreamLanguage` y mantenga el camino directo para parsers Lezer ordinarios.
+- [ ] Reutilizar ese helper en Reading y en decorations de Markdown editor.
+- [ ] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
+- [ ] Reinstalar el build y comprobar que PowerShell top-level/nested deja de provocar el `viewport` null antes de continuar capturas.
+
+### Captura host
+
 - [ ] Capturar DOM/clases/atributos para `text` top-level Reading y callout Reading.
 - [ ] Capturar top-level LP y callout LP con cursor fuera/dentro.
 - [ ] Repetir al menos con PowerShell para no deducir la arquitectura solo del parserless Text.
