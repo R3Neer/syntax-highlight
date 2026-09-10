@@ -4,7 +4,7 @@ export type HostDiagnosticPath =
   | "live-preview-rendered"
   | "live-preview-source";
 
-export type HostDiagnosticPhase = "observed" | "claimed";
+export type HostDiagnosticPhase = "observed" | "claimed" | "rendered";
 
 export interface HostDiagnosticElementSnapshot {
   tag: string;
