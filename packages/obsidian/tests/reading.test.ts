@@ -42,25 +42,19 @@ describe("reading view rendering", () => {
   });
 
   it("keeps parser-unclassified Bash and Nushell source visible as plain theme text", () => {
-    const cases = [
-      { fence: "bash", source: "./programa &", expectedPlain: ["./programa"] },
-      { fence: "nu", source: "job spawn { ^./programa }", expectedPlain: ["job", "^"] },
-    ] as const;
-
-    for (const { fence, source, expectedPlain } of cases) {
+    const rendered: Array<{ fence: string; html: string }> = [];
+    for (const [fence, source] of [
+      ["bash", "./programa &"],
+      ["nu", "job spawn { ^./programa }"],
+    ] as const) {
       const language = commonLanguageByFence(fence);
       expect(language).toBeDefined();
       const container = document.createElement("div");
-
       renderCommonCode(source, container, language!);
-
       const line = container.querySelector(".syntax-code-line-content");
-      expect(line?.textContent).toBe(source);
-      const plainText = Array.from(
-        line?.querySelectorAll(".syntax-common-plain") ?? [],
-      ).map((node) => node.textContent ?? "").join("");
-      for (const fragment of expectedPlain) expect(plainText).toContain(fragment);
+      rendered.push({ fence, html: line?.innerHTML ?? "" });
     }
+    expect(rendered).toEqual([]);
   });
 
   it("renders Nushell from the nu fence and labels it as Nushell", () => {
