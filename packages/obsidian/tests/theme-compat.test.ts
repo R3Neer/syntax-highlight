@@ -109,14 +109,17 @@ describe("active theme compatibility", () => {
     );
   });
 
-  it("protects Reading-view callables from illegible direct Prism function rules", () => {
+  it("protects Bash and Nushell command names without changing other callables", () => {
     const styles = readFileSync(
       join(process.cwd(), "packages", "obsidian", "styles.css"),
       "utf8",
     );
 
     expect(styles).toContain(
-      ".syntax-highlight-frame .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--code-function, var(--text-normal))) !important; }",
+      ".language-bash .syntax-common-callable.token.function,\n.language-nu .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--text-normal)) !important; }",
+    );
+    expect(styles).not.toContain(
+      ".syntax-highlight-frame .syntax-common-callable.token.function",
     );
   });
 });
