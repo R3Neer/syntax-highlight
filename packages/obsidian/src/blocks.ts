@@ -17,6 +17,13 @@ interface SourceLine {
   text: string;
 }
 
+interface OpeningFence {
+  fence: string;
+  rawLanguage: string;
+  languageFrom: number;
+  languageTo: number;
+}
+
 function sourceLines(source: string): SourceLine[] {
   const lines: SourceLine[] = [];
   let from = 0;
@@ -36,6 +43,41 @@ function sourceLines(source: string): SourceLine[] {
   return lines;
 }
 
+function openingFence(line: SourceLine): OpeningFence | undefined {
+  // Every fenced block is a container, even when its language is irrelevant to
+  // Syntax Highlight. Otherwise a literal ```text example inside another fence
+  // could be mistaken for a real top-level Text block during a vault rewrite.
+  const opening = /^[\t ]*(`{3,}|~{3,})(.*)$/.exec(line.text);
+  if (opening === null) return undefined;
+  const fence = opening[1] ?? "```";
+  const remainder = opening[2] ?? "";
+  const info = remainder.replace(/^[\t ]+/, "");
+
+  // CommonMark does not allow a backtick inside the info string of a backtick
+  // fence. Treating such a line as an opener would make this scanner less safe.
+  if (fence[0] === "`" && info.includes("`")) return undefined;
+
+  const rawLanguage = /^[^\t ]+/.exec(info)?.[0] ?? "";
+  if (!rawLanguage) {
+    const end = line.from + line.text.length;
+    return { fence, rawLanguage: "", languageFrom: end, languageTo: end };
+  }
+
+  const fenceOffset = line.text.indexOf(fence);
+  const languageOffset = line.text.indexOf(
+    rawLanguage,
+    Math.max(0, fenceOffset + fence.length),
+  );
+  if (languageOffset < 0) return undefined;
+  const languageFrom = line.from + languageOffset;
+  return {
+    fence,
+    rawLanguage,
+    languageFrom,
+    languageTo: languageFrom + rawLanguage.length,
+  };
+}
+
 export function findCodeBlocks(
   source: string,
   acceptedLanguages: ReadonlySet<string>,
@@ -46,42 +88,39 @@ export function findCodeBlocks(
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     if (line === undefined) continue;
-    const opening =
-      /^[\t ]*(`{3,}|~{3,})[\t ]*([A-Za-z0-9_-]+)(?:[\t ].*)?$/.exec(
-        line.text,
-      );
-    if (opening === null) continue;
-    const rawLanguage = opening[2] ?? "";
-    const language = rawLanguage.toLocaleLowerCase();
-    if (!acceptedLanguages.has(language)) continue;
-    const languageOffset = line.text.indexOf(rawLanguage);
-    if (languageOffset < 0) continue;
-    const languageFrom = line.from + languageOffset;
-    const languageTo = languageFrom + rawLanguage.length;
+    const opening = openingFence(line);
+    if (opening === undefined) continue;
 
-    const fence = opening[1] ?? "```";
-    const fenceChar = fence[0] ?? "`";
-    const minimum = fence.length;
+    const language = opening.rawLanguage.toLocaleLowerCase();
+    const fenceChar = opening.fence[0] ?? "`";
+    const minimum = opening.fence.length;
     const closingPattern = new RegExp(
       `^[\\t ]*${fenceChar === "`" ? "`" : "~"}{${minimum},}[\\t ]*$`,
     );
     const bodyFrom = line.next;
     let bodyTo = source.length;
+    let closingIndex: number | undefined;
 
-    for (let closingIndex = index + 1; closingIndex < lines.length; closingIndex += 1) {
-      const closingLine = lines[closingIndex];
+    for (let candidate = index + 1; candidate < lines.length; candidate += 1) {
+      const closingLine = lines[candidate];
       if (closingLine !== undefined && closingPattern.test(closingLine.text)) {
         bodyTo = closingLine.from;
-        index = closingIndex;
+        closingIndex = candidate;
         break;
       }
     }
+
+    // Skip the complete fenced container whether or not its language is one of
+    // the requested ones. This prevents false positives inside unrelated fences.
+    index = closingIndex ?? lines.length;
+
+    if (!language || !acceptedLanguages.has(language)) continue;
     blocks.push({
       from: bodyFrom,
       to: bodyTo,
       language,
-      languageFrom,
-      languageTo,
+      languageFrom: opening.languageFrom,
+      languageTo: opening.languageTo,
     });
   }
 
