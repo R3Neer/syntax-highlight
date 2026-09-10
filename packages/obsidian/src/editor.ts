@@ -112,6 +112,9 @@ export function buildSyntaxDecorations(
   for (const block of findCodeBlocks(source, fences)) {
     const body = source.slice(block.from, block.to);
     const runtime = registry.byFence(block.language);
+    const common = runtime === undefined
+      ? commonLanguageByFence(block.language)
+      : undefined;
     if (runtime !== undefined) {
       for (const token of runtime.tokenize(body)) {
         addTokenRanges(ranges, token, block.from, runtime.settings.id);
@@ -119,7 +122,9 @@ export function buildSyntaxDecorations(
     } else {
       addCommonLanguageRanges(ranges, body, block.from, block.language);
     }
-    if (lineNumbers) {
+    const showLineNumbers =
+      lineNumbers && (common?.presentation?.lineNumbers ?? true);
+    if (showLineNumbers) {
       let line = view.state.doc.lineAt(block.from);
       let number = 1;
       while (line.from < block.to || (number === 1 && line.from === block.to)) {
