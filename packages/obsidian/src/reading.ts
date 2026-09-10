@@ -3,6 +3,7 @@ import { highlightTree } from "@lezer/highlight";
 import { commonFenceMatch, presentationClassNames } from "./block-presentation";
 import {
   COMMON_READING_HIGHLIGHT_STYLE,
+  parseCommonLanguageTree,
   type CommonLanguage,
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
@@ -207,9 +208,8 @@ export function renderCommonCode(
   fence = language.fences[0] ?? language.id,
 ): void {
   const ranges: RenderedRange[] = [];
-  const support = language.support?.();
-  if (support !== undefined) {
-    const tree = support.language.parser.parse(source);
+  const tree = parseCommonLanguageTree(language, source);
+  if (tree !== undefined) {
     highlightTree(tree, COMMON_READING_HIGHLIGHT_STYLE, (from, to, classes) => {
       ranges.push({ from, to, classes });
     });
