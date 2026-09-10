@@ -149,7 +149,7 @@ function renderRanges(
   const code = document.createElement("code");
   pre.className = "syntax-highlight-block";
   pre.classList.toggle("has-line-numbers", showLineNumbers);
-  code.className = languageClass;
+  code.className = `${languageClass} is-loaded`;
 
   const sorted = [...ranges].sort(
     (left, right) => left.from - right.from || left.to - right.to,
