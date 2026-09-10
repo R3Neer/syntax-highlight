@@ -121,10 +121,6 @@ export function createLivePreviewEmbeddedBlockExtension(
         this.bridge.start();
       }
 
-      update(): void {
-        this.bridge.scheduleScan();
-      }
-
       destroy(): void {
         this.bridge.dispose();
       }
