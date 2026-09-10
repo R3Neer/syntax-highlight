@@ -3,6 +3,7 @@ import type {
   MarkdownPostProcessorContext,
 } from "obsidian";
 
+import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
 import { commonFenceMatch } from "./block-presentation";
 import type { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
@@ -81,6 +82,15 @@ export function renderReadingFence(
     registry.byFence(normalizedFence) !== undefined ||
     commonFenceMatch(normalizedFence) !== undefined;
   if (!recognized && !claimUnknown) return false;
+
+  if (claimUnknown) {
+    traceHostDiagnostic(
+      "reading-specialized",
+      normalizedFence,
+      source,
+      element,
+    );
+  }
 
   element.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
   if (!settings.markdownReading || !recognized) {
@@ -181,6 +191,12 @@ export function createReadingFallbackPostProcessor(
         continue;
       }
       if (!handled) continue;
+      traceHostDiagnostic(
+        "reading-fallback",
+        candidate.fence,
+        candidate.source,
+        candidate.pre,
+      );
       host.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
       replaceRenderedCodeBlockCandidate(candidate, host);
     }
