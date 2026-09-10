@@ -26,10 +26,14 @@ const COMMON_TOKEN_SELECTOR = [
 ].join(",");
 
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
-const ADJUSTED_VARIABLE = "--syntax-contrast-color";
 const OPAQUE_EPSILON = 0.999;
 
-function effectiveBackground(element: Element): RgbaColor | undefined {
+interface InlineColor {
+  value: string;
+  priority: string;
+}
+
+function effectiveBackground(element: Element): RgbaColor {
   let result: RgbaColor = { r: 0, g: 0, b: 0, a: 0 };
   let current: Element | null = element;
 
@@ -43,9 +47,10 @@ function effectiveBackground(element: Element): RgbaColor | undefined {
   }
 
   // CSS can legitimately leave every ancestor transparent. In that case the
-  // browser ultimately paints over the canvas, which is white in Obsidian's
-  // normal document environment. Keeping this final fallback explicit also
-  // makes the contrast calculation deterministic.
+  // browser canvas is the final backing surface. Obsidian's document canvas is
+  // effectively opaque, and white is the conservative deterministic fallback
+  // when no CSS color can be recovered. Background images are intentionally not
+  // sampled pixel-by-pixel; declared translucent backgrounds are still composed.
   return compositeOver(result, { r: 1, g: 1, b: 1, a: 1 });
 }
 
@@ -63,6 +68,7 @@ function commonTokens(root: ParentNode): HTMLElement[] {
 export class CommonContrastManager {
   private readonly observer: MutationObserver;
   private readonly rootObserver: MutationObserver;
+  private readonly originalInlineColors = new WeakMap<HTMLElement, InlineColor>();
   private scheduled = false;
 
   constructor(private readonly minimumContrast = MINIMUM_TEXT_CONTRAST) {
@@ -111,33 +117,46 @@ export class CommonContrastManager {
     this.observer.disconnect();
     this.rootObserver.disconnect();
     this.scheduled = false;
-    for (const element of commonTokens(document)) this.clearAdjustment(element);
+    for (const element of commonTokens(document)) this.restoreThemeColor(element);
   }
 
   private normalizeElement(element: HTMLElement): void {
     // Settings previews intentionally show their selected semantic preset rather
     // than the active vault theme, so runtime normalization must not rewrite it.
-    if (element.closest(".syntax-preview-output") !== null) return;
+    if (element.closest(".syntax-preview-output") !== null) {
+      this.restoreThemeColor(element);
+      return;
+    }
     if ((element.textContent ?? "").trim().length === 0) {
-      this.clearAdjustment(element);
+      this.restoreThemeColor(element);
       return;
     }
 
-    this.clearAdjustment(element);
+    this.restoreThemeColor(element);
     const foreground = parseCssColor(getComputedStyle(element).color);
+    if (foreground === undefined) return;
     const background = effectiveBackground(element);
-    if (foreground === undefined || background === undefined) return;
-
     const adjustment = ensureContrast(foreground, background, this.minimumContrast);
     if (!adjustment.changed) return;
 
-    element.style.setProperty(ADJUSTED_VARIABLE, toCssColor(adjustment.adjusted));
+    this.originalInlineColors.set(element, {
+      value: element.style.getPropertyValue("color"),
+      priority: element.style.getPropertyPriority("color"),
+    });
+    element.style.setProperty("color", toCssColor(adjustment.adjusted), "important");
     element.setAttribute(ADJUSTED_ATTRIBUTE, "true");
   }
 
-  private clearAdjustment(element: HTMLElement): void {
+  private restoreThemeColor(element: HTMLElement): void {
+    if (!element.hasAttribute(ADJUSTED_ATTRIBUTE)) return;
+    const original = this.originalInlineColors.get(element);
+    if (original === undefined || original.value === "") {
+      element.style.removeProperty("color");
+    } else {
+      element.style.setProperty("color", original.value, original.priority);
+    }
+    this.originalInlineColors.delete(element);
     element.removeAttribute(ADJUSTED_ATTRIBUTE);
-    element.style.removeProperty(ADJUSTED_VARIABLE);
   }
 
   private schedule(): void {
