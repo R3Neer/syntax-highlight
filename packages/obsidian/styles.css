@@ -98,21 +98,26 @@
   user-select: none;
 }
 
-/* Prefer the active theme's Nier syntax palette when it exposes those variables. */
-.syntax-common-comment { color: var(--syntax-common-comment, var(--gray-2, var(--text-muted))); font-style: italic; }
-.syntax-common-keyword { color: var(--syntax-common-keyword, var(--purple, var(--color-purple))); font-weight: 600; }
-.syntax-common-type { color: var(--syntax-common-type, var(--yellow, var(--color-yellow))); }
-.syntax-common-variable { color: var(--syntax-common-variable, var(--blue, var(--color-blue))); }
-.syntax-common-callable { color: var(--syntax-common-callable, var(--blue, var(--color-blue))); }
-.syntax-common-declaration { color: var(--syntax-common-declaration, var(--blue, var(--color-blue))); }
-.syntax-common-property { color: var(--syntax-common-property, var(--red, var(--color-red))); }
-.syntax-common-string { color: var(--syntax-common-string, var(--green, var(--color-green))); }
-.syntax-common-regex { color: var(--syntax-common-regex, var(--purple, var(--color-purple))); }
-.syntax-common-number { color: var(--syntax-common-number, var(--orange, var(--color-orange))); }
-.syntax-common-operator { color: var(--syntax-common-operator, var(--aqua, var(--color-cyan))); }
-.syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--gray-2, var(--text-muted))); }
-.syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--gray-2, var(--text-muted))); }
-.syntax-common-meta { color: var(--syntax-common-meta, var(--red, var(--color-red))); }
+/*
+ * Theme-agnostic semantic fallbacks for common languages. Reading and editing
+ * tokens also carry Obsidian's native Prism/CodeMirror classes, so an active
+ * community theme can style them directly. Vault snippets may override any
+ * --syntax-common-* variable without modifying the plugin.
+ */
+.syntax-common-comment { color: var(--syntax-common-comment, var(--code-comment, var(--text-muted))); font-style: italic; }
+.syntax-common-keyword { color: var(--syntax-common-keyword, var(--code-keyword, var(--color-pink))); font-weight: 600; }
+.syntax-common-type { color: var(--syntax-common-type, var(--code-tag, var(--color-red))); }
+.syntax-common-variable { color: var(--syntax-common-variable, var(--code-normal, var(--text-normal))); }
+.syntax-common-callable { color: var(--syntax-common-callable, var(--code-function, var(--color-yellow))); }
+.syntax-common-declaration { color: var(--syntax-common-declaration, var(--code-function, var(--color-yellow))); }
+.syntax-common-property { color: var(--syntax-common-property, var(--code-property, var(--color-cyan))); }
+.syntax-common-string { color: var(--syntax-common-string, var(--code-string, var(--color-green))); }
+.syntax-common-regex { color: var(--syntax-common-regex, var(--code-important, var(--color-orange))); }
+.syntax-common-number { color: var(--syntax-common-number, var(--code-value, var(--color-purple))); }
+.syntax-common-operator { color: var(--syntax-common-operator, var(--code-operator, var(--color-red))); }
+.syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--code-punctuation, var(--text-muted))); }
+.syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--code-punctuation, var(--text-muted))); }
+.syntax-common-meta { color: var(--syntax-common-meta, var(--code-tag, var(--color-red))); }
 
 .syntax-token-comment {
   font-style: italic;
