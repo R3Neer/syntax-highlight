@@ -12,13 +12,23 @@ Cada bloque de trabajo se ejecutará test-first/adversarial. Si la captura real 
 
 ### Fase 0A: prerrequisito descubierto por captura real
 
-La primera captura expuso un crash de PowerShell anterior al problema de callouts: el bridge común llama `support.language.parser.parse(...)` directamente sobre un `StreamLanguage` y el CodeMirror expuesto por Obsidian puede requerir `ParseContext` activo. Se corrige este bloqueador antes de repetir la matriz para no contaminar la evidencia de Fase 0.
+La primera captura expuso un crash de PowerShell anterior al problema de callouts: el bridge común llamaba `support.language.parser.parse(...)` directamente sobre un `StreamLanguage` y el CodeMirror expuesto por Obsidian requiere `ParseContext` activo en esa ruta.
 
 - [x] Añadir regresión que demuestre que un common language basado en `StreamLanguage` no depende de `parser.parse(...)` directo.
 - [x] Introducir un único helper de parse de common languages que use el lifecycle de `EditorState` para `StreamLanguage` y mantenga el camino directo para parsers Lezer ordinarios.
 - [x] Reutilizar ese helper en Reading y en decorations de Markdown editor.
 - [x] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
-- [ ] Reinstalar el build y comprobar que PowerShell top-level/nested deja de provocar el `viewport` null antes de continuar capturas.
+- [x] Reinstalar el build y comprobar en Obsidian real que PowerShell top-level/nested deja de provocar el `viewport` null.
+
+### Fase 0B: mutación tardía del host sobre output ya renderizado
+
+La captura posterior demuestra que el processor especializado sí reclama y termina PowerShell dentro de `.cm-embed-block.cm-callout`. Tras `rendered`, Obsidian vuelve a ejecutar su highlighter nativo: añade `is-loaded` al CODE y propaga `language-powershell` al PRE. En Nier esa clase tardía activa el fondo negro y degrada el layout de líneas.
+
+- [ ] Añadir una regresión adversarial que modele el segundo pase observado: un host solo re-clasifica `PRE` si el `CODE.language-*` no está ya marcado `is-loaded`.
+- [ ] Hacer que todo output renderizado por Syntax Highlight conserve `language-*` en CODE para compatibilidad temática pero salga ya marcado `is-loaded`; PRE debe seguir sin `language-*`.
+- [ ] Verificar Text, Markdown, common parser-backed, perfiles configurados y MUD para evitar un fix exclusivo de PowerShell.
+- [ ] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
+- [ ] Reinstalar en Obsidian real y comprobar top-level/callout con cursor fuera/dentro. Si PRE sigue recibiendo `language-*`, descartar esta hipótesis y volver a análisis.
 
 ### Captura host
 
@@ -29,7 +39,7 @@ La primera captura expuso un crash de PowerShell anterior al problema de callout
 - [ ] Registrar clases de opening/body/closing lines top-level y nested cuando están visibles en source.
 - [ ] Eliminar datos específicos del vault y convertir solo estructura mínima en fixtures sanitizados.
 - [ ] Crear tests RED que reproduzcan exactamente las divergencias observadas antes de tocar producción.
-- [ ] Si la captura contradice H4/H6, detener esta ejecución y volver a análisis arquitectónico.
+- [ ] Si la captura contradice la arquitectura revisada, detener esta ejecución y volver a análisis arquitectónico.
 
 Helper temporal implementado: `packages/obsidian/src/_tmp-host-diagnostics.ts`. Está inerte por defecto y expone `window.SyntaxHighlightHostDiagnostics` para habilitar, limpiar y exportar la captura desde DevTools. Los fixtures sanitizados pueden ser permanentes; el helper, su test temporal y las capturas crudas se eliminan antes de merge.
 
