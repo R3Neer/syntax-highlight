@@ -475,7 +475,7 @@ function defaultProfile(
   const theme = themeFromPreset(themePreset);
   return {
     id,
-    enabled: true,
+    enabled: id !== "mud",
     descriptorPath: "",
     lexicalGrammarPath:
       id === "mud" ? "especificacion/gramatica/mud-lexico.ebnf" : "",

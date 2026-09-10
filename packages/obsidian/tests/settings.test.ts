@@ -73,6 +73,7 @@ describe("settings, descriptors and themes", () => {
     expect(BUILTIN_DESCRIPTORS.asdl.previewSource).toContain("module Mud");
     expect(BUILTIN_DESCRIPTORS.asdl.extensions).toEqual(["asdl"]);
     expect(BUILTIN_DESCRIPTORS.toml.previewSource).toContain("[export]");
+    expect(settings.languages.find(({ id }) => id === "mud")?.enabled).toBe(false);
     expect(settings.languages.find(({ id }) => id === "toml")?.enabled).toBe(true);
   });
 
@@ -371,8 +372,11 @@ describe("language registry", () => {
   });
 
   it("resolves source file extensions through loaded descriptors", () => {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    const mud = settings.languages.find(({ id }) => id === "mud");
+    if (mud !== undefined) mud.enabled = true;
     const registry = new LanguageRegistry(
-      structuredClone(DEFAULT_SETTINGS),
+      settings,
       () => Promise.resolve(""),
     );
 
@@ -397,6 +401,8 @@ describe("language registry", () => {
 
   it("reports active collisions as configuration errors", async () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
+    const mud = settings.languages.find(({ id }) => id === "mud");
+    if (mud !== undefined) mud.enabled = true;
     settings.languages[1].embeddedDescriptor = structuredClone(
       BUILTIN_DESCRIPTORS.ebnf,
     );
