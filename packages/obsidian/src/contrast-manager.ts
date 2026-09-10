@@ -27,10 +27,45 @@ const COMMON_TOKEN_SELECTOR = [
 
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
+const resolvedColorCache = new Map<string, RgbaColor | undefined>();
 
 interface InlineColor {
   value: string;
   priority: string;
+}
+
+function resolveCssColor(value: string): RgbaColor | undefined {
+  const direct = parseCssColor(value);
+  if (direct !== undefined) return direct;
+  if (resolvedColorCache.has(value)) return resolvedColorCache.get(value);
+
+  // Computed styles in current Chromium usually serialize to rgb()/rgba(), but
+  // CSS Color 4 permits resolved values such as oklab(), oklch() and color().
+  // Let the browser convert those to the canvas' sRGB pixel space rather than
+  // maintaining our own ever-growing parser for every CSS color syntax.
+  let resolved: RgbaColor | undefined;
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (context !== null) {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+      const pixel = context.getImageData(0, 0, 1, 1).data;
+      resolved = {
+        r: (pixel[0] ?? 0) / 255,
+        g: (pixel[1] ?? 0) / 255,
+        b: (pixel[2] ?? 0) / 255,
+        a: (pixel[3] ?? 0) / 255,
+      };
+    }
+  } catch {
+    resolved = undefined;
+  }
+  resolvedColorCache.set(value, resolved);
+  return resolved;
 }
 
 function effectiveBackground(element: Element): RgbaColor {
@@ -38,7 +73,7 @@ function effectiveBackground(element: Element): RgbaColor {
   let current: Element | null = element;
 
   while (current !== null) {
-    const background = parseCssColor(getComputedStyle(current).backgroundColor);
+    const background = resolveCssColor(getComputedStyle(current).backgroundColor);
     if (background !== undefined && background.a > 0) {
       result = compositeOver(result, background);
       if (result.a >= OPAQUE_EPSILON) return { ...result, a: 1 };
@@ -68,6 +103,7 @@ function commonTokens(root: ParentNode): HTMLElement[] {
 export class CommonContrastManager {
   private readonly observer: MutationObserver;
   private readonly rootObserver: MutationObserver;
+  private readonly headObserver: MutationObserver;
   private readonly originalInlineColors = new WeakMap<HTMLElement, InlineColor>();
   private scheduled = false;
 
@@ -84,6 +120,10 @@ export class CommonContrastManager {
       }
     });
     this.rootObserver = new MutationObserver(() => this.schedule());
+    this.headObserver = new MutationObserver(() => {
+      resolvedColorCache.clear();
+      this.schedule();
+    });
   }
 
   start(): void {
@@ -102,6 +142,15 @@ export class CommonContrastManager {
       attributes: true,
       attributeFilter: ["class", "style"],
     });
+    if (document.head !== null) {
+      this.headObserver.observe(document.head, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["href", "media"],
+      });
+    }
     this.refreshAll();
   }
 
@@ -116,6 +165,7 @@ export class CommonContrastManager {
   dispose(): void {
     this.observer.disconnect();
     this.rootObserver.disconnect();
+    this.headObserver.disconnect();
     this.scheduled = false;
     for (const element of commonTokens(document)) this.restoreThemeColor(element);
   }
@@ -133,7 +183,7 @@ export class CommonContrastManager {
     }
 
     this.restoreThemeColor(element);
-    const foreground = parseCssColor(getComputedStyle(element).color);
+    const foreground = resolveCssColor(getComputedStyle(element).color);
     if (foreground === undefined) return;
     const background = effectiveBackground(element);
     const adjustment = ensureContrast(foreground, background, this.minimumContrast);
