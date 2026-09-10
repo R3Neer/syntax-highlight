@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Make common-language syntax colors follow the active Obsidian theme instead
+  of knowing about any specific community theme.
+- Emit Prism-compatible token classes in Reading view and CodeMirror-compatible
+  classes in Editing view so existing theme syntax rules apply automatically.
+- Fall back to Obsidian's semantic `--code-*` variables and keep
+  `--syntax-common-*` as vault-level override hooks.
+- Scope configured syntax-preset colors to settings previews so they no longer
+  leak into ordinary Bash, Nushell, or other common-language code blocks.
+
 ## 1.1.1
 
 - Highlight `Interval` as the type constructor in declarations such as
