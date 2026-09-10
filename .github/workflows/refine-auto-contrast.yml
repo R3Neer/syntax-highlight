@@ -1,0 +1,47 @@
+name: Refine automatic contrast implementation
+
+on:
+  push:
+    branches:
+      - feat/automatic-contrast-normalization
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Remove superseded shell-only color safeguard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('packages/obsidian/styles.css')
+          text = path.read_text(encoding='utf-8')
+          old = '''/* Shell command names must remain legible even if a theme's Prism function color relies on native renderer context. */
+.language-bash .syntax-common-callable.token.function,
+.language-nu .syntax-common-callable.token.function { color: var(--syntax-common-callable, var(--text-normal)) !important; }
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one shell safeguard block, found {text.count(old)}')
+          path.write_text(text.replace(old, '', 1), encoding='utf-8')
+          PY
+      - run: npm run check
+      - name: Commit cleanup
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/obsidian/styles.css
+          git commit -m "refactor(obsidian): replace shell exception with contrast normalizer"
+          git push
