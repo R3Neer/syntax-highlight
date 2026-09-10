@@ -25,6 +25,7 @@ import {
 } from "./block-presentation";
 import {
   COMMON_EDITOR_HIGHLIGHT_STYLE,
+  parseCommonLanguageTree,
   type CommonLanguage,
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
@@ -86,12 +87,11 @@ function addCommonLanguageRanges(
   block: MudCodeBlock,
   language: CommonLanguage,
 ): void {
-  const support = language.support?.();
-  if (support === undefined) {
+  const tree = parseCommonLanguageTree(language, block.body);
+  if (tree === undefined) {
     addPlainCommonRanges(ranges, block);
     return;
   }
-  const tree = support.language.parser.parse(block.body);
   highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, classes) => {
     if (from >= to) return;
     addMappedMark(ranges, block, from, to, classes);
