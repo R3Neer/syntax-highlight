@@ -10,6 +10,11 @@
   `--syntax-common-*` as vault-level override hooks.
 - Scope configured syntax-preset colors to settings previews so they no longer
   leak into ordinary Bash, Nushell, or other common-language code blocks.
+- Remove MUD from the default configured language list. The built-in MUD profile
+  is now added only when a vault explicitly opts into it.
+- Add `common` and `mud` local-install profiles so one plugin build can serve
+  multiple vaults: `common` removes stored MUD configuration, while `mud` adds
+  or enables MUD and preserves that vault's existing MUD settings.
 
 ## 1.1.1
 

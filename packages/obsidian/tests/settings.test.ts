@@ -44,9 +44,11 @@ describe("settings, descriptors and themes", () => {
   });
 
   it("preserves the current palettes and examples as language defaults", () => {
-    const settings = loadSettings(undefined);
+    const settings = loadSettings({ schemaVersion: 7, languages: [{ id: "mud" }] });
     const mud = settings.languages.find(({ id }) => id === "mud");
     const ebnf = settings.languages.find(({ id }) => id === "ebnf");
+
+    expect(loadSettings(undefined).languages.some(({ id }) => id === "mud")).toBe(false);
 
     expect(mud?.categoryColors.mud?.["declaration-keyword"]).toEqual({
       light: "#8839ef",
@@ -77,7 +79,7 @@ describe("settings, descriptors and themes", () => {
   });
 
   it("emits separate light and dark rules for real categories", () => {
-    const settings = structuredClone(DEFAULT_SETTINGS);
+    const settings = loadSettings({ schemaVersion: 7, languages: [{ id: "mud" }] });
     const css = buildThemeCss(settings);
 
     expect(css).toContain(
@@ -123,12 +125,13 @@ describe("settings, descriptors and themes", () => {
     };
     const loaded = loadSettings(stored);
 
-    expect(loaded.languages[0].themePreset).toBe("catppuccin");
+    const mud = loaded.languages.find(({ id }) => id === "mud")!;
+    expect(mud.themePreset).toBe("catppuccin");
     expect(
-      loaded.languages[0].categoryColors.mud?.["reserved-word"]?.dark,
+      mud.categoryColors.mud?.["reserved-word"]?.dark,
     ).toBe("#654321");
     expect(
-      loaded.languages[0].categoryColors.mud?.["declaration-modifier"]?.dark,
+      mud.categoryColors.mud?.["declaration-modifier"]?.dark,
     ).toBe("#654321");
   });
 
@@ -170,7 +173,7 @@ describe("settings, descriptors and themes", () => {
           },
         },
       }],
-    }).languages[0];
+    }).languages.find(({ id }) => id === "mud")!;
     expect(migrated.palette.light.keyword).toBe("#8839ef");
     expect(migrated.palette.dark.keyword).toBe("#f5c2e7");
     expect(migrated.categoryColors.mud?.["control-flow"]).toEqual({
@@ -187,7 +190,7 @@ describe("settings, descriptors and themes", () => {
           mud: { "reserved-word": { light: "#123456", dark: "#654321" } },
         },
       }],
-    }).languages[0];
+    }).languages.find(({ id }) => id === "mud")!;
     expect(customized.categoryColors.mud?.["effect-keyword"]).toEqual({
       light: "#123456",
       dark: "#654321",
@@ -240,7 +243,7 @@ describe("settings, descriptors and themes", () => {
 
     const personal = structuredClone(storedProfile);
     personal.embeddedDescriptor.previewSource = "# personalized";
-    const preserved = loadSettings({ schemaVersion: 6, languages: [personal] }).languages[0];
+    const preserved = loadSettings({ schemaVersion: 6, languages: [personal] }).languages.find(({ id }) => id === "mud")!;
     expect(preserved.descriptorOrigin).toBe("personal");
     expect(preserved.embeddedDescriptor?.previewSource).toBe("# personalized");
   });
@@ -319,7 +322,7 @@ describe("settings, descriptors and themes", () => {
 describe("language registry", () => {
   it("keeps the last valid MUD configuration when reloading fails", async () => {
     const registry = new LanguageRegistry(
-      structuredClone(DEFAULT_SETTINGS),
+      loadSettings({ schemaVersion: 7, languages: [{ id: "mud", enabled: true }] }),
       () => Promise.reject(new Error("broken source")),
     );
 
@@ -336,7 +339,7 @@ describe("language registry", () => {
 
   it("loads an external descriptor and applies its aliases without recompiling", async () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
-    const profile = settings.languages[1];
+    const profile = settings.languages.find(({ id }) => id === "ebnf")!;
     profile.descriptorPath = "languages/ebnf.json";
     profile.descriptorOrigin = "external";
     const descriptor = structuredClone(BUILTIN_DESCRIPTORS.ebnf);
@@ -359,7 +362,8 @@ describe("language registry", () => {
 
   it("uses the bundled descriptor when an external path is cleared", async () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
-    settings.languages[1].descriptorPath = "";
+    const ebnf = settings.languages.find(({ id }) => id === "ebnf")!;
+    ebnf.descriptorPath = "";
     const registry = new LanguageRegistry(settings, () =>
       Promise.reject(new Error("no file should be read")),
     );
@@ -371,8 +375,9 @@ describe("language registry", () => {
   });
 
   it("resolves source file extensions through loaded descriptors", () => {
+    const settings = loadSettings({ schemaVersion: 7, languages: [{ id: "mud", enabled: true }] });
     const registry = new LanguageRegistry(
-      structuredClone(DEFAULT_SETTINGS),
+      settings,
       () => Promise.resolve(""),
     );
 
@@ -396,12 +401,11 @@ describe("language registry", () => {
   });
 
   it("reports active collisions as configuration errors", async () => {
-    const settings = structuredClone(DEFAULT_SETTINGS);
-    settings.languages[1].embeddedDescriptor = structuredClone(
-      BUILTIN_DESCRIPTORS.ebnf,
-    );
-    settings.languages[1].embeddedDescriptor.fences = ["mud"];
-    settings.languages[1].descriptorOrigin = "personal";
+    const settings = loadSettings({ schemaVersion: 7, languages: [{ id: "mud", enabled: true }] });
+    const ebnf = settings.languages.find(({ id }) => id === "ebnf")!;
+    ebnf.embeddedDescriptor = structuredClone(BUILTIN_DESCRIPTORS.ebnf);
+    ebnf.embeddedDescriptor.fences = ["mud"];
+    ebnf.descriptorOrigin = "personal";
     const registry = new LanguageRegistry(settings, () => Promise.resolve(""));
     const report = await registry.validateAll();
     expect(report.valid).toBe(false);

@@ -44,7 +44,7 @@ import {
 } from "./settings";
 
 export class SyntaxSettingTab extends PluginSettingTab {
-  private selectedThemeLanguage = "mud";
+  private selectedThemeLanguage = "";
   private lastReport = "";
   private jsonEditors: Array<{ destroy(): void }> = [];
   constructor(private readonly plugin: SyntaxHighlightPlugin) {
@@ -163,6 +163,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
       );
 
     const themes = this.section(containerEl, tr("Themes", "Temas"), false);
+    if (!this.plugin.pluginSettings.languages.some(({ id }) => id === this.selectedThemeLanguage)) {
+      this.selectedThemeLanguage = this.plugin.pluginSettings.languages[0]?.id ?? "";
+    }
     new Setting(themes)
       .setName(tr("Language to customize", "Lenguaje que personalizar"))
       .addDropdown((dropdown) => {
