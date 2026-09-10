@@ -47,6 +47,25 @@ function sourceLines(source: string): SourceLine[] {
   return result.length > 0 ? result : [{ from: 0, to: 0 }];
 }
 
+function appendPlainSource(
+  source: string,
+  content: HTMLElement,
+  from: number,
+  to: number,
+  plainClass?: string,
+): void {
+  if (from >= to) return;
+  const text = source.slice(from, to);
+  if (plainClass === undefined) {
+    content.append(document.createTextNode(text));
+    return;
+  }
+  const plain = document.createElement("span");
+  plain.className = plainClass;
+  plain.textContent = text;
+  content.append(plain);
+}
+
 function appendLine(
   source: string,
   code: HTMLElement,
@@ -54,6 +73,7 @@ function appendLine(
   lineNumber: number,
   ranges: readonly RenderedRange[],
   showLineNumbers: boolean,
+  plainClass?: string,
 ): void {
   const element = document.createElement("span");
   element.className = "syntax-code-line";
@@ -64,20 +84,17 @@ function appendLine(
   let cursor = line.from;
   for (const range of ranges) {
     if (range.to <= line.from || range.from >= line.to) continue;
-    const from = Math.max(range.from, line.from);
+    const from = Math.max(range.from, line.from, cursor);
     const to = Math.min(range.to, line.to);
-    if (from > cursor) {
-      content.append(document.createTextNode(source.slice(cursor, from)));
-    }
+    if (from >= to) continue;
+    appendPlainSource(source, content, cursor, from, plainClass);
     const token = document.createElement("span");
     token.className = range.classes;
     token.textContent = source.slice(from, to);
     content.append(token);
     cursor = to;
   }
-  if (cursor < line.to) {
-    content.append(document.createTextNode(source.slice(cursor, line.to)));
-  }
+  appendPlainSource(source, content, cursor, line.to, plainClass);
   element.append(content);
   code.append(element);
 }
@@ -117,6 +134,7 @@ function renderRanges(
   ranges: readonly RenderedRange[],
   showLineNumbers: boolean,
   badge: LanguageBadge,
+  plainClass?: string,
 ): void {
   container.replaceChildren();
   const frame = document.createElement("div");
@@ -132,7 +150,15 @@ function renderRanges(
     (left, right) => left.from - right.from || left.to - right.to,
   );
   sourceLines(source).forEach((line, index) => {
-    appendLine(source, code, line, index + 1, sorted, showLineNumbers);
+    appendLine(
+      source,
+      code,
+      line,
+      index + 1,
+      sorted,
+      showLineNumbers,
+      plainClass,
+    );
   });
   pre.append(code);
   frame.append(pre);
@@ -187,6 +213,7 @@ export function renderCommonCode(
     ranges,
     showLineNumbers,
     { label: language.name },
+    "syntax-common-plain",
   );
 }
 

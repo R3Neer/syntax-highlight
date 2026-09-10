@@ -8,6 +8,13 @@
   classes in Editing view so existing theme syntax rules apply automatically.
 - Fall back to Obsidian's semantic `--code-*` variables and keep
   `--syntax-common-*` as vault-level override hooks.
+- Keep parser-unclassified common-language source visible in Reading view by
+  rendering the untouched gaps explicitly with the active theme's normal text
+  color. This covers commands, sigils, paths, and other source fragments that a
+  language grammar does not assign a highlight tag.
+- Keep Reading-view callable tokens legible when a community theme's direct
+  Prism `token function` rule depends on native renderer context, falling back
+  through Obsidian's semantic `--code-function` color instead.
 - Scope configured syntax-preset colors to settings previews so they no longer
   leak into ordinary Bash, Nushell, or other common-language code blocks.
 - Remove MUD from the default configured language list. The built-in MUD profile
