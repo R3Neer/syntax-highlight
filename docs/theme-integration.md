@@ -32,15 +32,47 @@ legacy-mode package. The `powershell`, `pwsh`, and `ps1` fences and the `.ps1`,
 active-theme cascade, and automatic contrast policy as Bash, Nushell, and the
 other common languages.
 
-The `text`, `plaintext`, and `txt` Markdown fences are deliberately parserless.
-The whole body stays `syntax-common-plain`, and Editing view marks each non-empty
-plain-text line with that same semantic class, so a Text block does not acquire
-fake syntax categories merely to participate in theming. Their presentation is
-also intentionally quieter than code: they do not show a language badge or
-line-number furniture, even when line numbers are enabled globally. They remain
-preformatted, theme-aware, contrast-normalized, and clickable for editing. These
-aliases are block-only and do not claim `.txt` files from Obsidian's normal file
-handling.
+## Text and Markdown presentation families
+
+Text and Markdown fences share the theme/contrast infrastructure but deliberately
+opt out of code-only furniture. `text`, `plaintext`, and `txt` are parserless, so
+their whole body stays `syntax-common-plain`; `md` and `markdown` keep their
+Markdown parser and syntax colors. Neither family shows a language badge or
+plugin line numbers in Reading view or Markdown editing. Text remains block-only
+and does not claim `.txt` files, while `.md` continues to use Obsidian's native
+Markdown editor.
+
+Each family has independent vault defaults for two presentation dimensions:
+
+- alignment: `left`, `center`, or `right`;
+- flow: `ragged` or `justified`.
+
+Ragged uses the selected alignment directly. Justified stretches visually wrapped
+lines and uses the selected alignment for the final visual line of each source
+line. Presentational bodies use wrapping without changing their stored source or
+explicit line breaks.
+
+A fence without modifiers inherits both vault defaults. Hyphen modifiers can
+override either dimension or both for one block. The accepted canonical grammar
+is `base[-alignment][-flow]`, with alignment before flow whenever both are
+present. Examples include `text-center`, `text-ragged`,
+`text-right-justified`, `markdown-center-ragged`, and `md-justified`. The aliases
+remain aliases of the same Text or Markdown family rather than becoming separate
+languages.
+
+The DOM/CodeMirror representation stores only the family and explicit local
+overrides. Vault defaults are emitted as dynamic CSS variables by `ThemeManager`,
+so changing a default updates already rendered blocks without requiring a plugin
+restart. Explicit modifiers win over the family defaults.
+
+When a Text or Markdown default changes, the settings UI first scans the vault for
+blocks whose resolved appearance would actually change. If none are affected,
+the new default is saved directly. Otherwise the user can apply the new default,
+cancel, or preserve the current appearance. Preserving appearance rewrites only
+affected opening fence labels to the fully explicit canonical form using the old
+resolved alignment and flow, while preserving the original base alias, fence
+characters and length, indentation, body, closing fence, and any extra info on
+the opening line. The default is not committed if scanning or rewriting fails.
 
 ## Automatic contrast normalization
 
