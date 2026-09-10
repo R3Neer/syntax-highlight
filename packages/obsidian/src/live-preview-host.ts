@@ -55,7 +55,12 @@ export class LivePreviewRenderedBlockBridge {
   start(): void {
     if (this.observer !== undefined) return;
     this.observer = new MutationObserver(() => this.scheduleScan());
-    this.observer.observe(this.root, { childList: true, subtree: true });
+    this.observer.observe(this.root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
     this.scan();
   }
 
