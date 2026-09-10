@@ -24,10 +24,10 @@ La primera captura expuso un crash de PowerShell anterior al problema de callout
 
 La captura posterior demuestra que el processor especializado sí reclama y termina PowerShell dentro de `.cm-embed-block.cm-callout`. Tras `rendered`, Obsidian vuelve a ejecutar su highlighter nativo: añade `is-loaded` al CODE y propaga `language-powershell` al PRE. En Nier esa clase tardía activa el fondo negro y degrada el layout de líneas.
 
-- [ ] Añadir una regresión adversarial que modele el segundo pase observado: un host solo re-clasifica `PRE` si el `CODE.language-*` no está ya marcado `is-loaded`.
-- [ ] Hacer que todo output renderizado por Syntax Highlight conserve `language-*` en CODE para compatibilidad temática pero salga ya marcado `is-loaded`; PRE debe seguir sin `language-*`.
-- [ ] Verificar Text, Markdown, common parser-backed, perfiles configurados y MUD para evitar un fix exclusivo de PowerShell.
-- [ ] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
+- [x] Añadir una regresión adversarial que modele el segundo pase observado: un host solo re-clasifica `PRE` si el `CODE.language-*` no está ya marcado `is-loaded`.
+- [x] Hacer que todo output renderizado por Syntax Highlight conserve `language-*` en CODE para compatibilidad temática pero salga ya marcado `is-loaded`; PRE debe seguir sin `language-*`.
+- [x] Verificar Text, Markdown, common parser-backed, perfiles configurados y MUD para evitar un fix exclusivo de PowerShell.
+- [x] Ejecutar CI completa y revisión TM hasta dos revisiones consecutivas sin cambios.
 - [ ] Reinstalar en Obsidian real y comprobar top-level/callout con cursor fuera/dentro. Si PRE sigue recibiendo `language-*`, descartar esta hipótesis y volver a análisis.
 
 ### Captura host
