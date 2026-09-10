@@ -135,12 +135,23 @@ export function createReadingFallbackPostProcessor(
     for (const candidate of candidates) {
       if (candidate.pre.parentNode === null) continue;
       const host = document.createElement("div");
-      const handled = handleFence(
-        candidate.source,
-        host,
-        context,
-        candidate.fence,
-      );
+      let handled = false;
+      try {
+        handled = handleFence(
+          candidate.source,
+          host,
+          context,
+          candidate.fence,
+        );
+      } catch (error) {
+        // Keep the original code and continue with later blocks. One broken
+        // language runtime must not take down the entire preview section.
+        console.error(
+          `[Syntax Highlight] Reading fallback failed for ${candidate.fence}.`,
+          error,
+        );
+        continue;
+      }
       if (!handled) continue;
       host.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
       candidate.pre.replaceWith(host);
@@ -148,12 +159,19 @@ export function createReadingFallbackPostProcessor(
   };
 }
 
+export type MarkdownPostProcessorRegistrar = (
+  processor: MarkdownPostProcessor,
+  sortOrder?: number,
+) => MarkdownPostProcessor;
+
 export function registerReadingFallbackPostProcessor(
-  register: (processor: MarkdownPostProcessor) => MarkdownPostProcessor,
+  register: MarkdownPostProcessorRegistrar,
   handleFence: ReadingFenceHandler,
 ): MarkdownPostProcessor {
   const processor = createReadingFallbackPostProcessor(handleFence);
-  const registered = register(processor);
-  registered.sortOrder = READING_FALLBACK_SORT_ORDER;
-  return registered;
+  // Keep the metadata and, critically, pass the documented sort-order argument
+  // to Obsidian. Setting the property only after registration is too late to be
+  // a reliable host-ordering contract.
+  processor.sortOrder = READING_FALLBACK_SORT_ORDER;
+  return register(processor, READING_FALLBACK_SORT_ORDER);
 }
