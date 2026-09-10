@@ -48,14 +48,16 @@ export function renderReadingFence(
   context: MarkdownPostProcessorContext,
   fence: string,
   enableEditing: EnableReadingBlockEditing,
+  claimUnknown = false,
 ): boolean {
   const normalizedFence = fence.toLocaleLowerCase();
   const runtime = registry.byFence(normalizedFence);
   const common = runtime === undefined ? commonFenceMatch(normalizedFence) : undefined;
-  if (runtime === undefined && common === undefined) return false;
+  const recognized = runtime !== undefined || common !== undefined;
+  if (!recognized && !claimUnknown) return false;
 
   element.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
-  if (!settings.markdownReading) {
+  if (!settings.markdownReading || !recognized) {
     renderPlainReadingBlock(source, element);
   } else if (runtime !== undefined) {
     renderSyntaxCode(source, element, runtime, settings.lineNumbers);
