@@ -26,6 +26,14 @@ sit between highlighted ranges. Reading view keeps those fragments verbatim and
 wraps them with `syntax-common-plain`, whose default color is the active theme's
 `--text-normal`.
 
+The `text`, `plaintext`, and `txt` Markdown fences are deliberately parserless.
+They use the same common block renderer, language badge, line-number behavior,
+active-theme bridge, and contrast policy as parser-backed common languages, but
+the whole body stays `syntax-common-plain`. Editing view marks each non-empty
+plain-text line with that same semantic class, so a Text block does not acquire
+fake syntax categories merely to participate in theming. These aliases are
+block-only and do not claim `.txt` files from Obsidian's normal file handling.
+
 ## Automatic contrast normalization
 
 After the theme has resolved the actual color of a common-language token,
