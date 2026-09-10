@@ -57,12 +57,20 @@ images are not raster-sampled, so a theme that exposes a strongly varying image
 through transparent code surfaces is an approximation: the declared color
 layers are used, with the document canvas as the final fallback.
 
-The normalizer watches newly rendered/reclassified syntax spans and the root
-classes/styles used for theme or light/dark changes, then batches recalculation
-to the next animation frame. Settings previews are excluded because they are
-supposed to display the selected semantic preset exactly. Configured language
-profiles such as MUD also remain outside this common-language normalizer and
-keep their explicit semantic palettes.
+Most computed colors arrive from Chromium as `rgb()`/`rgba()`. If a theme uses a
+CSS Color 4 value that remains serialized as `oklab()`, `oklch()`, or `color()`,
+the browser itself converts that resolved value through a one-pixel sRGB canvas
+fallback instead of the plugin maintaining theme- or syntax-specific parsers.
+
+The normalizer watches newly rendered or reclassified syntax spans, root theme
+and light/dark changes, and stylesheet changes in the document head. Ordinary
+editor mutations are processed only for affected subtrees and batched to the
+next animation frame; a full pass is reserved for changes that can alter the
+active theme globally. If CodeMirror reuses a previously adjusted span for a
+different class, the original theme color is restored before reuse. Settings
+previews are excluded because they are supposed to display the selected semantic
+preset exactly. Configured language profiles such as MUD also remain outside
+this common-language normalizer and keep their explicit semantic palettes.
 
 ## Vault-level overrides
 
