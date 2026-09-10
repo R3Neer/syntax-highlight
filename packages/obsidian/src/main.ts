@@ -6,7 +6,7 @@ import {
   type MarkdownPostProcessorContext,
 } from "obsidian";
 
-import { commonFenceMatch, commonFenceNames } from "./block-presentation";
+import { commonFenceNames } from "./block-presentation";
 import { commonLanguages } from "./common-languages";
 import {
   findCodeBlockBodyStartLine,
@@ -14,7 +14,10 @@ import {
 } from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
-import { renderCommonCode, renderSyntaxCode } from "./reading";
+import {
+  registerReadingFallbackPostProcessor,
+  renderReadingFence as renderResolvedReadingFence,
+} from "./reading-host";
 import {
   loadSettings,
   type SyntaxPluginSettings,
@@ -48,6 +51,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     );
     this.registerConfiguredFences();
     this.registerCommonFences();
+    this.registerReadingFallback();
     this.registerConfiguredExtensions();
     this.registerCommonExtensions();
     this.registerEditorExtension(
@@ -125,32 +129,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
         this.registerMarkdownCodeBlockProcessor(
           fence,
           (source, element, context) => {
-            if (!this.pluginSettings.markdownReading) {
-              const pre = document.createElement("pre");
-              const code = document.createElement("code");
-              code.textContent = source;
-              pre.append(code);
-              element.replaceChildren(pre);
-              this.enableReadingBlockEditing(element, context, fence, source);
-              return;
-            }
-            const runtime = this.registry.byFence(fence);
-            if (runtime !== undefined) {
-              renderSyntaxCode(
-                source,
-                element,
-                runtime,
-                this.pluginSettings.lineNumbers,
-              );
-              this.enableReadingBlockEditing(element, context, fence, source);
-              return;
-            }
-            const pre = document.createElement("pre");
-            const code = document.createElement("code");
-            code.textContent = source;
-            pre.append(code);
-            element.replaceChildren(pre);
-            this.enableReadingBlockEditing(element, context, fence, source);
+            this.renderReadingFence(source, element, context, fence, true);
           },
         );
       }
@@ -159,34 +138,49 @@ export default class SyntaxHighlightPlugin extends Plugin {
 
   private registerCommonFences(): void {
     for (const fence of commonFenceNames()) {
-      const match = commonFenceMatch(fence);
-      if (match === undefined) continue;
       if (!isSafeMarkdownProcessorLanguage(fence)) continue;
       if (this.registeredFences.has(fence)) continue;
       this.registeredFences.add(fence);
       this.registerMarkdownCodeBlockProcessor(
         fence,
         (source, element, context) => {
-          if (!this.pluginSettings.markdownReading) {
-            const pre = document.createElement("pre");
-            const code = document.createElement("code");
-            code.textContent = source;
-            pre.append(code);
-            element.replaceChildren(pre);
-            this.enableReadingBlockEditing(element, context, fence, source);
-            return;
-          }
-          renderCommonCode(
-            source,
-            element,
-            match.language,
-            this.pluginSettings.lineNumbers,
-            fence,
-          );
-          this.enableReadingBlockEditing(element, context, fence, source);
+          this.renderReadingFence(source, element, context, fence, true);
         },
       );
     }
+  }
+
+  private registerReadingFallback(): void {
+    registerReadingFallbackPostProcessor(
+      (processor) => this.registerMarkdownPostProcessor(processor),
+      (source, element, context, fence) =>
+        this.renderReadingFence(source, element, context, fence, false),
+    );
+  }
+
+  private renderReadingFence(
+    source: string,
+    element: HTMLElement,
+    context: MarkdownPostProcessorContext,
+    fence: string,
+    claimUnknown: boolean,
+  ): boolean {
+    return renderResolvedReadingFence(
+      this.registry,
+      this.pluginSettings,
+      source,
+      element,
+      context,
+      fence,
+      (target, targetContext, targetFence, renderedSource) =>
+        this.enableReadingBlockEditing(
+          target,
+          targetContext,
+          targetFence,
+          renderedSource,
+        ),
+      claimUnknown,
+    );
   }
 
   private enableReadingBlockEditing(
