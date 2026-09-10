@@ -166,6 +166,13 @@ export class CommonContrastManager {
   }
 
   normalize(root: ParentNode): void {
+    if (
+      root instanceof HTMLElement &&
+      root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
+      !root.matches(COMMON_TOKEN_SELECTOR)
+    ) {
+      this.restoreThemeColor(root);
+    }
     for (const element of commonTokens(root)) this.normalizeElement(element);
   }
 
@@ -182,7 +189,11 @@ export class CommonContrastManager {
     this.pendingRoots.clear();
     this.fullRefreshPending = false;
     this.scheduled = false;
-    for (const element of commonTokens(document)) this.restoreThemeColor(element);
+    for (const element of document.querySelectorAll<HTMLElement>(
+      `[${ADJUSTED_ATTRIBUTE}]`,
+    )) {
+      this.restoreThemeColor(element);
+    }
   }
 
   private normalizeElement(element: HTMLElement): void {
