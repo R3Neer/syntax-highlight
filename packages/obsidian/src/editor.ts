@@ -9,7 +9,13 @@ import {
   WidgetType,
 } from "@codemirror/view";
 
-import { findCodeBlocks, findMudCodeBlocks } from "./blocks";
+import {
+  findCodeBlocks,
+  findMudCodeBlocks,
+  isCodeBlockContentPosition,
+  mapCodeBlockRange,
+  type MudCodeBlock,
+} from "./blocks";
 import {
   commonFenceMatch,
   commonFenceNames,
@@ -31,88 +37,76 @@ import {
   type MudToken,
 } from "./tokenizer";
 
+function addMappedMark(
+  ranges: Range<Decoration>[],
+  block: MudCodeBlock,
+  from: number,
+  to: number,
+  className: string,
+): void {
+  for (const mapped of mapCodeBlockRange(block, from, to)) {
+    ranges.push(Decoration.mark({ class: className }).range(mapped.from, mapped.to));
+  }
+}
+
 function addTokenRanges(
   ranges: Range<Decoration>[],
   token: MudToken,
-  base: number,
+  block: MudCodeBlock,
   languageId = "mud",
 ): void {
-  let segmentStart = token.from;
-  for (let index = token.from; index <= token.to; index += 1) {
-    const character = index < token.to ? token.text[index - token.from] : "\n";
-    if (character !== "\n" && character !== "\r") continue;
-    if (index > segmentStart) {
-      ranges.push(
-        Decoration.mark({
-          class: `${tokenClass(token.categoryId)} ${tokenColorClass(languageId, token.categoryId)}`,
-        }).range(base + segmentStart, base + index),
-      );
-    }
-    if (character === "\r" && token.text[index - token.from + 1] === "\n") {
-      index += 1;
-    }
-    segmentStart = index + 1;
-  }
+  addMappedMark(
+    ranges,
+    block,
+    token.from,
+    token.to,
+    `${tokenClass(token.categoryId)} ${tokenColorClass(languageId, token.categoryId)}`,
+  );
 }
 
 function addPlainCommonRanges(
   ranges: Range<Decoration>[],
-  source: string,
-  base: number,
+  block: MudCodeBlock,
 ): void {
-  let segmentStart = 0;
-  for (let index = 0; index <= source.length; index += 1) {
-    const character = index < source.length ? source[index] : "\n";
-    if (character !== "\n" && character !== "\r") continue;
-    if (index > segmentStart) {
-      ranges.push(
-        Decoration.mark({ class: "syntax-common-plain" }).range(
-          base + segmentStart,
-          base + index,
-        ),
-      );
-    }
-    if (character === "\r" && source[index + 1] === "\n") index += 1;
-    segmentStart = index + 1;
+  for (const line of block.bodyLines) {
+    if (line.sourceFrom >= line.sourceTo) continue;
+    ranges.push(
+      Decoration.mark({ class: "syntax-common-plain" }).range(
+        line.sourceFrom,
+        line.sourceTo,
+      ),
+    );
   }
 }
 
 function addCommonLanguageRanges(
   ranges: Range<Decoration>[],
-  source: string,
-  base: number,
+  block: MudCodeBlock,
   language: CommonLanguage,
 ): void {
   const support = language.support?.();
   if (support === undefined) {
-    addPlainCommonRanges(ranges, source, base);
+    addPlainCommonRanges(ranges, block);
     return;
   }
-  const tree = support.language.parser.parse(source);
+  const tree = support.language.parser.parse(block.body);
   highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, classes) => {
     if (from >= to) return;
-    ranges.push(
-      Decoration.mark({ class: classes }).range(base + from, base + to),
-    );
+    addMappedMark(ranges, block, from, to, classes);
   });
 }
 
 function addPresentationLineRanges(
   ranges: Range<Decoration>[],
-  view: EditorView,
-  from: number,
-  to: number,
+  block: MudCodeBlock,
   match: CommonFenceMatch,
 ): void {
   const classes = presentationClassNames(match).join(" ");
-  if (!classes || from >= to) return;
-  let line = view.state.doc.lineAt(from);
-  while (line.from < to) {
+  if (!classes) return;
+  for (const line of block.bodyLines) {
     ranges.push(
-      Decoration.line({ attributes: { class: classes } }).range(line.from),
+      Decoration.line({ attributes: { class: classes } }).range(line.lineFrom),
     );
-    if (line.number >= view.state.doc.lines) break;
-    line = view.state.doc.line(line.number + 1);
   }
 }
 
@@ -132,34 +126,28 @@ export function buildSyntaxDecorations(
     ].map((fence) => fence.toLocaleLowerCase()),
   );
   for (const block of findCodeBlocks(source, fences)) {
-    const body = source.slice(block.from, block.to);
     const runtime = registry.byFence(block.language);
     const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
     if (runtime !== undefined) {
-      for (const token of runtime.tokenize(body)) {
-        addTokenRanges(ranges, token, block.from, runtime.settings.id);
+      for (const token of runtime.tokenize(block.body)) {
+        addTokenRanges(ranges, token, block, runtime.settings.id);
       }
     } else if (common !== undefined) {
-      addCommonLanguageRanges(ranges, body, block.from, common.language);
-      addPresentationLineRanges(ranges, view, block.from, block.to, common);
+      addCommonLanguageRanges(ranges, block, common.language);
+      addPresentationLineRanges(ranges, block, common);
     }
     if (
       lineNumbers &&
       (runtime !== undefined || common?.language.presentation?.lineNumbers !== false)
     ) {
-      let line = view.state.doc.lineAt(block.from);
-      let number = 1;
-      while (line.from < block.to || (number === 1 && line.from === block.to)) {
+      block.bodyLines.forEach((line, index) => {
         ranges.push(
           Decoration.widget({
-            widget: new CodeLineNumberWidget(number),
+            widget: new CodeLineNumberWidget(index + 1),
             side: -1,
-          }).range(line.from),
+          }).range(line.sourceFrom),
         );
-        if (line.to >= block.to || line.number >= view.state.doc.lines) break;
-        line = view.state.doc.line(line.number + 1);
-        number += 1;
-      }
+      });
     }
   }
   ranges.sort((left, right) => left.from - right.from || left.to - right.to);
@@ -192,9 +180,8 @@ export function buildMudDecorations(
   const ranges: Range<Decoration>[] = [];
 
   for (const block of findMudCodeBlocks(source)) {
-    const body = source.slice(block.from, block.to);
-    for (const token of tokenizeMud(body, config)) {
-      addTokenRanges(ranges, token, block.from);
+    for (const token of tokenizeMud(block.body, config)) {
+      addTokenRanges(ranges, token, block);
     }
   }
 
@@ -292,7 +279,7 @@ export function createMarkdownEditorExtensions(
     ...createSmartEditingExtensions(
       (state, position) => {
         const block = findCodeBlocks(state.doc.toString(), accepted()).find(
-          ({ from, to }) => position >= from && position <= to,
+          (candidate) => isCodeBlockContentPosition(candidate, position),
         );
         if (block === undefined) return undefined;
         const languageId =
@@ -300,7 +287,14 @@ export function createMarkdownEditorExtensions(
           commonFenceMatch(block.language)?.language.id;
         return languageId === undefined
           ? undefined
-          : { from: block.from, to: block.to, languageId };
+          : {
+              from: block.bodyLines[0]?.sourceFrom ?? block.from,
+              to: block.bodyLines.at(-1)?.sourceTo ?? block.to,
+              languageId,
+              // Let Obsidian/CodeMirror preserve the Markdown quote container
+              // when Enter is pressed inside a blockquote or callout.
+              nativeIndentation: block.quoteDepth > 0,
+            };
       },
       getSettings,
     ),

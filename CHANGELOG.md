@@ -22,6 +22,11 @@
   Ragged/Justified flow; canonical hyphen modifiers override individual blocks,
   and changing a default can preserve affected blocks by making their opening
   fences explicit.
+- Apply the same fenced-block pipeline inside Markdown blockquotes and Obsidian
+  callouts. Editing view strips only container quote markers before parsing and
+  maps token ranges back to the physical document, so quoted code, Text/Markdown
+  presentation, line numbers, MUD/configured languages, and preservation rewrites
+  behave like their top-level equivalents without coloring `>` markers as code.
 - Add PowerShell as a parser-backed common language with `powershell`, `pwsh`,
   and `ps1` fences plus `.ps1`, `.psm1`, and `.psd1` source extensions through
   CodeMirror's PowerShell stream mode.
