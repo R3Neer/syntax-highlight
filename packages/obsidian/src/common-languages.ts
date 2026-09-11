@@ -1,4 +1,3 @@
-import { EditorState } from "@codemirror/state";
 import { nushell } from "@codincod/codemirror-lang-nushell";
 import { shell } from "@codincod/codemirror-lang-shell";
 import { cpp } from "@codemirror/lang-cpp";
@@ -12,11 +11,9 @@ import { python } from "@codemirror/lang-python";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { yaml } from "@codemirror/lang-yaml";
 import {
-  ensureSyntaxTree,
   HighlightStyle,
   LanguageSupport,
   StreamLanguage,
-  syntaxTree,
   type StreamParser,
 } from "@codemirror/language";
 import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
@@ -283,29 +280,6 @@ export function commonLanguageSupport(
   }
 }
 
-/**
- * Transitional tree adapter retained while the manual Reading/editor consumers
- * migrate to commonSemanticRanges(). Stream languages intentionally still use
- * the old host path here until those consumers are switched in Phase 2.
- */
-export function parseCommonLanguageTree(
-  language: CommonLanguage,
-  source: string,
-) {
-  const support = commonLanguageSupport(language);
-  if (support === undefined) return undefined;
-
-  if (language.engine.kind === "tree") {
-    return support.language.parser.parse(source);
-  }
-
-  const state = EditorState.create({ doc: source, extensions: [support] });
-  return (
-    ensureSyntaxTree(state, state.doc.length, Number.POSITIVE_INFINITY) ??
-    syntaxTree(state)
-  );
-}
-
 function semanticCommonHighlightStyle(): HighlightStyle {
   return HighlightStyle.define([
     { tag: tags.comment, class: "syntax-common-comment" },
@@ -372,99 +346,3 @@ function semanticCommonHighlightStyle(): HighlightStyle {
 }
 
 export const COMMON_SEMANTIC_HIGHLIGHT_STYLE = semanticCommonHighlightStyle();
-
-type CommonHighlightHost = "reading" | "editor";
-
-function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
-  const classes = (
-    semantic: string,
-    reading: string,
-    editor: string,
-  ): string => `${semantic} ${host === "reading" ? reading : editor}`;
-
-  return HighlightStyle.define([
-    {
-      tag: tags.comment,
-      class: classes("syntax-common-comment", "token comment", "cm-comment"),
-    },
-    {
-      tag: [
-        tags.keyword,
-        tags.controlKeyword,
-        tags.moduleKeyword,
-        tags.operatorKeyword,
-      ],
-      class: classes("syntax-common-keyword", "token keyword", "cm-keyword"),
-    },
-    {
-      tag: tags.definitionKeyword,
-      class: classes("syntax-common-declaration", "token keyword", "cm-keyword"),
-    },
-    {
-      tag: [tags.typeName, tags.className, tags.namespace],
-      class: classes("syntax-common-type", "token class-name", "cm-variable-2"),
-    },
-    {
-      tag: tags.standard(tags.variableName),
-      class: classes("syntax-common-callable", "token builtin", "cm-builtin"),
-    },
-    {
-      tag: tags.variableName,
-      class: classes("syntax-common-variable", "token variable", "cm-variable"),
-    },
-    {
-      tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-      class: classes("syntax-common-callable", "token function", "cm-def"),
-    },
-    {
-      tag: tags.definition(tags.variableName),
-      class: classes("syntax-common-declaration", "token variable", "cm-def"),
-    },
-    {
-      tag: tags.propertyName,
-      class: classes("syntax-common-property", "token property", "cm-property"),
-    },
-    {
-      tag: [tags.string, tags.special(tags.string)],
-      class: classes("syntax-common-string", "token string", "cm-string"),
-    },
-    {
-      tag: tags.regexp,
-      class: classes("syntax-common-regex", "token regex", "cm-string-2"),
-    },
-    {
-      tag: [tags.number, tags.integer, tags.float],
-      class: classes("syntax-common-number", "token number", "cm-number"),
-    },
-    {
-      tag: [tags.bool, tags.null, tags.atom],
-      class: classes("syntax-common-number", "token boolean", "cm-atom"),
-    },
-    {
-      tag: [
-        tags.operator,
-        tags.compareOperator,
-        tags.logicOperator,
-        tags.arithmeticOperator,
-      ],
-      class: classes("syntax-common-operator", "token operator", "cm-operator"),
-    },
-    {
-      tag: [tags.bracket, tags.paren, tags.squareBracket, tags.brace],
-      class: classes("syntax-common-delimiter", "token punctuation", "cm-bracket"),
-    },
-    {
-      tag: [tags.punctuation, tags.separator],
-      class: classes("syntax-common-punctuation", "token punctuation", "cm-bracket"),
-    },
-    {
-      tag: [tags.meta, tags.processingInstruction, tags.annotation],
-      class: classes("syntax-common-meta", "token tag", "cm-meta"),
-    },
-  ]);
-}
-
-/** @deprecated Transitional export; remove after all manual consumers migrate. */
-export const COMMON_READING_HIGHLIGHT_STYLE = createCommonHighlightStyle("reading");
-/** @deprecated Transitional export; remove after all manual consumers migrate. */
-export const COMMON_EDITOR_HIGHLIGHT_STYLE = createCommonHighlightStyle("editor");
