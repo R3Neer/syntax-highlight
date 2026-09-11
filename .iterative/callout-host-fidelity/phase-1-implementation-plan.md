@@ -11,24 +11,31 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
 - [ ] Mantener un pequeño ledger dentro de este plan de tests/garantías antiguas retiradas durante la refactorización, indicando en qué tarea de la Fase 9 se sustituyen.
 
-## 1. Runtime único CodeMirror/Lezer
+## 1. Frontera oficial de runtime
 
 ### Producción
 
-- [ ] Crear helper de build con la lista oficial de externals CodeMirror/Lezer de Obsidian.
-- [ ] Hacer que `packages/obsidian/esbuild.config.mjs` consuma esa lista.
-- [ ] Activar `metafile` en el build y añadir una aserción que falle si un runtime host prohibido aparece empaquetado como input.
+- [ ] Crear helper de build con la frontera completa del sample oficial actual:
+  - [ ] `obsidian`;
+  - [ ] `electron`;
+  - [ ] `@codemirror/autocomplete`, `collab`, `commands`, `language`, `lint`, `search`, `state`, `view`;
+  - [ ] `@lezer/common`, `highlight`, `lr`;
+  - [ ] `builtinModules` de Node.
+- [ ] Hacer que `packages/obsidian/esbuild.config.mjs` consuma esa lista centralizada.
+- [ ] Mantener `electron`/built-ins como externals de bundle sin convertirlos en peers npm si no existe import runtime que lo justifique.
+- [ ] Activar `metafile` en el build y añadir una aserción que falle si un paquete host prohibido se empaqueta como input en vez de quedar external.
 - [ ] Mantener empaquetados los language packages no proporcionados por Obsidian.
-- [ ] Añadir peerDependencies explícitas del paquete Obsidian para runtime imports/Lezer necesarios, con rangos compatibles con `obsidian`.
+- [ ] Añadir/ajustar peerDependencies explícitas del paquete Obsidian únicamente para los módulos host que el paquete publicado deja como runtime imports y los módulos Lezer cuya identidad debe compartirse, con rangos compatibles con `obsidian`.
 - [ ] Actualizar lockfile de forma coherente.
 - [ ] Ejecutar CI existente; no añadir todavía tests nuevos de Fase 1.
 
 ### Resultado esperado
 
-- El artifact conserva `require()`/external imports de CodeMirror/Lezer host.
-- Ninguna copia privada de `@lezer/common`, `@lezer/highlight` o `@lezer/lr` queda embebida.
+- El artifact conserva imports externos de la frontera host oficial.
+- Ninguna copia privada de CodeMirror core/Lezer host queda embebida.
+- Los language packages sí siguen dentro del artifact.
 
-## 2. Reading fallback estructural desacoplado
+## 2. Fallback estructural de Markdown rendered desacoplado
 
 ### Producción
 
@@ -41,7 +48,9 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
   - [ ] conflicto/varios valores -> fail closed.
 - [ ] Mantener un único CODE directo como requisito.
 - [ ] Adaptar `reading-host.ts` al detector nuevo.
-- [ ] Mantener `registerMarkdownPostProcessor` como Reading-only fallback.
+- [ ] Mantener `registerMarkdownPostProcessor` como fallback cuya **garantía contractual es Reading View**.
+- [ ] No añadir lógica para impedir que un renderer Markdown interno lo invoque en otro contexto; garantizar idempotencia/fail-closed si ocurre.
+- [ ] No usar ese postprocessor como requisito para la corrección de Live Preview.
 - [ ] Ejecutar CI existente.
 
 ## 3. Eliminar bridge DOM de rendered Live Preview
@@ -52,8 +61,8 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Retirar `LivePreviewRenderedBlockBridge` y sus helpers de scanning/replacement del EditorView.
 - [ ] Retirar cualquier producción que dependa de `.cm-embed-block` o `.cm-callout`.
 - [ ] Retirar `LIVE_PREVIEW_HOST_ATTRIBUTE` si deja de tener consumidores legítimos.
-- [ ] Dejar rendered Live Preview exclusivamente en `registerMarkdownCodeBlockProcessor`.
-- [ ] Conservar el fallback estructural solo en Reading.
+- [ ] Dejar la **garantía** de rendered Live Preview exclusivamente en `registerMarkdownCodeBlockProcessor`.
+- [ ] No depender del generic Markdown postprocessor para Live Preview, aunque pueda ejecutarse incidentalmente en un subtree rendered.
 - [ ] Reubicar temporalmente `registerLivePreviewDiagnosticView()` dentro de la extensión source existente para no perder el gate 0D.
 - [ ] Eliminar `live-preview-host.ts` si tras la reubicación no conserva responsabilidad production.
 - [ ] Ajustar/eliminar tests antiguos únicamente cuando su contrato production haya desaparecido; cada garantía útil retirada debe quedar enlazada a una tarea concreta de Fase 9.
@@ -138,8 +147,9 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 - [ ] Revisar diff completo contra plan arquitectónico.
 - [ ] Revisar especialmente que no quede mutación DOM de CodeMirror.
-- [ ] Revisar imports/bundle runtime.
+- [ ] Revisar imports/bundle runtime contra el sample oficial completo.
 - [ ] Revisar que no queden selectores privados como dependencia funcional.
+- [ ] Revisar que LP rendered no dependa del generic postprocessor.
 - [ ] Revisar ownership de contraste.
 - [ ] Revisar performance/invalidation del ViewPlugin.
 - [ ] Revisar el ledger de garantías retiradas y comprobar que todas tienen sustituto planificado en Fase 9.
@@ -153,11 +163,12 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 ### Runtime/build
 
-- [ ] Test/helper de lista de externals oficial.
+- [ ] Test de la lista completa de externals frente a la frontera oficial adoptada (`obsidian`, `electron`, CM, Lezer, built-ins).
 - [ ] Verificación de metafile: host runtime no bundled.
+- [ ] Verificar que language packages permanecen bundled.
 - [ ] Verificar packaging final.
 
-### Reading
+### Reading/fallback
 
 - [ ] PRE-only.
 - [ ] CODE-only.
@@ -165,6 +176,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] PRE/CODE conflict fail-closed.
 - [ ] furniture identity/preservation.
 - [ ] idempotence/processed marker.
+- [ ] El fallback no contiene dependencias de clases de Live Preview.
 
 ### Editor model/materialization
 
@@ -199,6 +211,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] mientras exista el gate 0D, la única excepción permitida a esa búsqueda es `_tmp-host-diagnostics.ts` y sus tests temporales.
 - [ ] tras limpieza final, la búsqueda no admite ninguna excepción.
 - [ ] no existe MutationObserver de bridge rendered Live Preview.
+- [ ] no hay test que pretenda simular el contrato de `registerMarkdownCodeBlockProcessor` en LP mediante DOM inventado; esa garantía es gate real.
 
 ### Ledger de garantías migradas
 
@@ -223,7 +236,8 @@ No limpiar diagnostics todavía.
 - [ ] Validar Text presentacional quoted source/rendered.
 - [ ] Validar cambio de cursor source <-> rendered.
 - [ ] Validar tema activo y ausencia de crash.
-- [ ] Validar específicamente que nested rendered sigue pasando por el processor oficial tras retirar el bridge DOM.
+- [ ] Validar específicamente que nested rendered sigue pasando por `registerMarkdownCodeBlockProcessor` tras retirar el bridge DOM.
+- [ ] No considerar como requisito que el generic Markdown postprocessor se ejecute en LP.
 - [ ] Capturar diagnostics únicamente si existe discrepancia.
 - [ ] Si falla, volver a análisis/plan según TM antes de un nuevo fix.
 
