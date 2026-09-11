@@ -2,55 +2,53 @@
 
 ## Unreleased
 
-- Harden nested Obsidian block integration against real host DOM: Reading View
-  now accepts and preserves copy/auxiliary controls beside fenced code, while Live
-  Preview also processes recognized code inside CodeMirror `.cm-embed-block`
-  widgets through an EditorView-scoped, mutation-driven bridge.
-- Make common-language syntax colors follow the active Obsidian theme instead
-  of knowing about any specific community theme.
-- Emit Prism-compatible token classes in Reading view and CodeMirror-compatible
-  classes in Editing view so existing theme syntax rules apply automatically.
-- Fall back to Obsidian's semantic `--code-*` variables and keep
-  `--syntax-common-*` as vault-level override hooks.
-- Keep parser-unclassified common-language source visible in Reading view by
-  rendering the untouched gaps explicitly with the active theme's normal text
-  color. This covers commands, sigils, paths, and other source fragments that a
-  language grammar does not assign a highlight tag.
-- Treat `text`, `plaintext`, and `txt` Markdown fences as parserless common
-  blocks that follow the active-vault theme and contrast policy without
-  code-specific badge or line-number furniture; they still do not claim `.txt`
-  files from Obsidian's normal file handling.
-- Treat Text and Markdown fences as configurable presentation families: both
-  omit code-only badge and line-number furniture, while Markdown retains syntax
-  highlighting. Per-vault defaults choose left/center/right alignment and
-  Ragged/Justified flow; canonical hyphen modifiers override individual blocks,
-  and changing a default can preserve affected blocks by making their opening
-  fences explicit.
-- Apply the same fenced-block pipeline inside Markdown blockquotes and Obsidian
-  callouts. Editing view strips only container quote markers before parsing and
-  maps token ranges back to the physical document, so quoted code, Text/Markdown
-  presentation, line numbers, MUD/configured languages, and preservation rewrites
-  behave like their top-level equivalents without coloring `>` markers as code.
-- Add a late Reading View HTML fallback for recognized fenced blocks that
-  Obsidian does not deliver to the specialized code-block processor, including
-  nested blockquotes/callouts. It reuses the same renderer, leaves unknown or
-  ambiguous third-party blocks untouched, and is idempotent across repeated
-  post-processing passes.
-- Add PowerShell as a parser-backed common language with `powershell`, `pwsh`,
-  and `ps1` fences plus `.ps1`, `.psm1`, and `.psd1` source extensions through
-  CodeMirror's PowerShell stream mode.
-- Normalize low-contrast common-language foreground colors automatically to a
-  `4.5:1` target against their effective CSS background. Passing theme colors
-  remain untouched; failing colors move by the smallest viable OKLab-lightness
-  adjustment, searching both lighter and darker directions and gamut-mapping by
-  reducing chroma when necessary. Background colors are never changed.
-- Scope configured syntax-preset colors to settings previews so they no longer
-  leak into ordinary Bash, Nushell, or other common-language code blocks.
-- Remove MUD from the default configured language list. The built-in MUD profile
-  is now added only when a vault explicitly opts into it.
-- Add `common` and `mud` local-install profiles so one plugin build can serve
-  multiple vaults: `common` removes stored MUD configuration, while `mud` adds
-  or enables MUD and preserves that vault's existing MUD settings.
+## 1.2.0
+
+- Rebuilt the Obsidian Markdown integration around supported host boundaries:
+  Live Preview source uses CodeMirror decorations only, rendered Markdown uses
+  Obsidian code-block processors, and Reading View keeps a fail-closed structural
+  fallback for recognized native `<pre><code>` blocks.
+- Added quote-aware fenced-block handling for normal blockquotes and Obsidian
+  callouts. Language parsers see the logical body without container `>` markers,
+  semantic ranges map back to physical Markdown offsets, nested quote depth is
+  preserved, and line numbers/presentation anchor at real source content.
+- Added a shared common-language semantic engine for tree-backed, stream-backed,
+  and plain languages. All manual paths use stable `syntax-common-*` roles rather
+  than depending on private host token classes.
+- Added PowerShell as a common language with `powershell`, `pwsh`, and `ps1`
+  fences plus `.ps1`, `.psm1`, and `.psd1` source extensions. Its stream tokens
+  are mapped explicitly onto the same public Lezer-tag taxonomy used by the
+  source editor and rendered Markdown.
+- Added parserless Text fences and configurable Text/Markdown presentation
+  families. Per-vault defaults control left/center/right alignment and
+  Ragged/Justified flow; hyphen modifiers override individual blocks and default
+  changes can preserve affected fences by rewriting only their opening labels.
+- Added a continuous dark editing surface for quoted fenced source, including
+  semantic colors and line numbers. The surface integrates with Obsidian through
+  the documented `--blockquote-background-color` variable instead of private
+  Live Preview selectors or `!important` rules.
+- Reworked common-language theme integration around plugin semantic classes and
+  public Obsidian CSS variables. Community themes are not hardcoded; vault
+  snippets can override `--syntax-common-*` and `--syntax-editor-code-*` hooks.
+- Restricted automatic contrast normalization to rendered DOM owned by Syntax
+  Highlight. Common-language foregrounds that already satisfy WCAG AA `4.5:1`
+  remain unchanged; failing colors receive the smallest viable OKLab-lightness
+  adjustment and backgrounds are never modified.
+- Externalized the Obsidian/CodeMirror/Lezer runtime boundary in the plugin build
+  and added build-time guards against accidentally bundling host runtime modules.
+- Made common-language highlighting viewport-aware in Markdown source and cached
+  semantic spans until the document or language revision changes.
+- Preserved host copy/auxiliary controls when the Reading fallback replaces a
+  native recognized code block; unknown and ambiguous structures remain native
+  and repeated postprocessing is idempotent.
+- Scoped configured syntax-preset colors to settings previews so they no longer
+  leak into Bash, Nushell, PowerShell, or other common-language blocks.
+- Removed MUD from the default configured-language list. The built-in MUD profile
+  is added only when a vault opts into it.
+- Added `common` and `mud` local-install profiles so one plugin build can serve
+  multiple vaults without sharing language configuration. `common` removes a
+  stored MUD profile from that vault, while `mud` adds/enables MUD and preserves
+  existing MUD settings.
 
 ## 1.1.1
 
