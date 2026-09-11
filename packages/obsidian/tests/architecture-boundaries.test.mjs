@@ -11,8 +11,7 @@ const removedBridgePath = resolve(sourceRoot, "live-preview-host.ts");
 async function productionSources() {
   const names = await readdir(sourceRoot);
   const files = names
-    .filter((name) => name.endsWith(".ts"))
-    .filter((name) => name !== "_tmp-host-diagnostics.ts");
+    .filter((name) => name.endsWith(".ts"));
   const entries = await Promise.all(
     files.map(async (name) => [
       name,
@@ -52,13 +51,4 @@ describe("Obsidian public host boundaries", () => {
     expect(editor).not.toContain("querySelector(\".cm-");
   });
 
-  it("keeps private-selector diagnostics explicitly temporary", async () => {
-    const diagnostics = await readFile(
-      resolve(sourceRoot, "_tmp-host-diagnostics.ts"),
-      "utf8",
-    );
-    expect(diagnostics).toContain(".cm-embed-block");
-    expect(diagnostics).toContain("HyperMD-codeblock");
-    expect(diagnostics).toContain("SyntaxHighlightHostDiagnostics");
-  });
 });

@@ -9,10 +9,6 @@ import {
 } from "@codemirror/view";
 
 import {
-  registerLivePreviewDiagnosticView,
-  traceHostDiagnostic,
-} from "./_tmp-host-diagnostics";
-import {
   findCodeBlocks,
   findMudCodeBlocks,
   isCodeBlockContentPosition,
@@ -65,30 +61,6 @@ function blockIntersectsVisible(
   );
 }
 
-function traceVisibleBlock(view: EditorView, resolved: ResolvedEditorBlock): void {
-  const { block } = resolved;
-  traceHostDiagnostic(
-    "live-preview-source",
-    block.language,
-    block.body,
-    view.dom,
-    {
-      openingLine: block.openingLine,
-      quoteDepth: block.quoteDepth,
-      from: block.from,
-      to: block.to,
-      bodyLines: block.bodyLines.map(
-        ({ lineFrom, lineTo, sourceFrom, sourceTo }) => ({
-          lineFrom,
-          lineTo,
-          sourceFrom,
-          sourceTo,
-        }),
-      ),
-    },
-  );
-}
-
 function semanticSpans(
   resolved: ResolvedEditorBlock,
   cache: Map<string, readonly EditorHighlightSpan[]>,
@@ -111,8 +83,6 @@ function materializeSyntaxDecorations(
   for (const resolved of model.blocks) {
     const { block } = resolved;
     if (!blockIntersectsVisible(block, visible)) continue;
-
-    traceVisibleBlock(view, resolved);
 
     for (const line of resolved.lineSemantics) {
       if (!positionIsVisible(line.from, visible)) continue;
@@ -253,7 +223,6 @@ export function createEditorHighlighter(
     class {
       decorations: DecorationSet;
       private readonly unsubscribe: () => void;
-      private readonly unregisterDiagnostics: () => void;
       private readonly semanticCache = new Map<
         string,
         readonly EditorHighlightSpan[]
@@ -275,10 +244,6 @@ export function createEditorHighlighter(
         this.unsubscribe = registry.subscribe(() => {
           this.view.dispatch({});
         });
-        this.unregisterDiagnostics = registerLivePreviewDiagnosticView(
-          view,
-          () => acceptedEditorFenceNames(registry),
-        );
       }
 
       update(update: ViewUpdate): void {
@@ -311,7 +276,6 @@ export function createEditorHighlighter(
       }
 
       destroy(): void {
-        this.unregisterDiagnostics();
         this.unsubscribe();
         this.semanticCache.clear();
       }

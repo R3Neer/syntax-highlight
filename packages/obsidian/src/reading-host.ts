@@ -3,10 +3,6 @@ import type {
   MarkdownPostProcessorContext,
 } from "obsidian";
 
-import {
-  traceHostDiagnostic,
-  traceRenderedHostObservations,
-} from "./_tmp-host-diagnostics";
 import { commonFenceMatch } from "./block-presentation";
 import type { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
@@ -91,15 +87,6 @@ export function renderReadingFence(
     commonFenceMatch(normalizedFence) !== undefined;
   if (!recognized && !claimUnknown) return false;
 
-  const diagnosticPath = claimUnknown ? "reading-specialized" : "reading-fallback";
-  if (claimUnknown) {
-    traceHostDiagnostic(
-      diagnosticPath,
-      normalizedFence,
-      source,
-      element,
-    );
-  }
 
   element.setAttribute(RENDERED_PROCESSED_ATTRIBUTE, "true");
   if (!highlightEnabled || !recognized) {
@@ -108,14 +95,6 @@ export function renderReadingFence(
     renderResolvedFence(registry, settings, source, element, normalizedFence);
   }
   enableEditing(element, context, normalizedFence, source);
-  traceHostDiagnostic(
-    diagnosticPath,
-    normalizedFence,
-    source,
-    element,
-    undefined,
-    "rendered",
-  );
   return true;
 }
 
@@ -123,7 +102,6 @@ export function createReadingFallbackPostProcessor(
   handleFence: ReadingFenceHandler,
 ): MarkdownPostProcessor {
   return (root, context) => {
-    traceRenderedHostObservations("reading-fallback", root);
     // Snapshot before any replacement. Mutating a live DOM collection here can
     // otherwise make later sibling blocks disappear from the iteration.
     const candidates = collectUnprocessedRenderedCodeBlocks(root);
@@ -147,12 +125,6 @@ export function createReadingFallbackPostProcessor(
         continue;
       }
       if (!handled) continue;
-      traceHostDiagnostic(
-        "reading-fallback",
-        candidate.fence,
-        candidate.source,
-        candidate.pre,
-      );
       host.setAttribute(RENDERED_PROCESSED_ATTRIBUTE, "true");
       replaceRenderedCodeBlockCandidate(candidate, host);
     }
