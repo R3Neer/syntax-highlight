@@ -140,9 +140,17 @@ Debe preservar:
 - LF, CRLF y última línea sin terminador;
 - `StringStream` recibe solo el contenido de la línea;
 - ranges desplazados por el offset real de la línea;
-- `blankLine(state, indentUnit)` en líneas vacías;
+- `blankLine(state, indentUnit)` únicamente para líneas vacías físicas reales;
 - defaults deterministas sin EditorState: `tabSize=4`, `indentUnit=2` para `StringStream`, y un indent unit explícito/documentado para `startState`;
 - opciones explícitas cuando un caller tenga state.
+
+Semántica de terminadores:
+
+- `a\nb` → dos líneas;
+- `a\nb\n` → dos líneas terminadas; no se sintetiza una tercera línea vacía;
+- `a\n\nb` → sí existe una línea vacía intermedia y se llama `blankLine`;
+- source vacío → no inventa token ni `blankLine`;
+- `\r\n` se trata como un terminador único, pero el siguiente offset físico avanza dos caracteres.
 
 Como `token()` puede hacer pasos de longitud cero si cambia estado, habrá un guard finito propio contra loops sin avance, sin copiar helpers internos.
 
@@ -160,6 +168,19 @@ Se eliminan nuestras clases manuales `cm-*` y `token *`, porque Obsidian documen
 
 CSS propio integra themes mediante variables públicas `--code-*`/`--color-*`; configured profiles no cambian.
 
+### 7.1 Límite deliberado de equivalencia visual
+
+La garantía de Syntax Highlight es que **sus** caminos manuales (quoted source y rendered/Reading) asignan la misma categoría `syntax-common-*` a la misma semántica.
+
+No se garantiza identidad pixel-perfect con highlighting nativo top-level que Obsidian o un theme añadan por su cuenta. Un theme puede aplicar reglas propias —incluso `!important`— a las clases nativas del host. La documentación oficial ya advierte que Editing y Reading pueden no coincidir.
+
+Por tanto:
+
+- no se elimina el highlighting nativo del host;
+- no se detectan sus clases privadas;
+- no se usa `!important` para ganarle una guerra de especificidad;
+- el gate exige semántica propia correcta y legible donde somos responsables, no igualdad visual exacta entre dos motores ajenos distintos.
+
 ## 8. Markdown Live Preview source
 
 `commonSemanticRanges()` produce semántica y `mapCodeBlockRange()` mantiene mapping físico.
@@ -167,6 +188,8 @@ CSS propio integra themes mediante variables públicas `--code-*`/`--color-*`; c
 El modelo/caché por bloque visible de Fase 1 se conserva.
 
 No se desactiva la garantía manual en top-level: Obsidian no garantiza soporte nativo para todos nuestros common languages. Nuestros marks `syntax-common-*` coexisten con los del host sin detectar internals.
+
+En top-level, si el host aporta simultáneamente su propio highlighting, ambos sistemas pueden coexistir. Las pruebas lógicas verifican nuestros ranges/clases; el gate visual no interpreta diferencias de color causadas exclusivamente por reglas nativas del host como fallo de nuestra taxonomía.
 
 ## 9. SyntaxSourceView
 
@@ -284,12 +307,13 @@ No tocar salvo imports/tipos inevitables:
 - `commonLanguageSupport(PowerShell)` comparte parser/tabla efectiva;
 - parser tokenTable gana sobre engine tokenTags;
 - nombres/modificadores públicos y múltiples styles;
-- multiline state, blankLine, LF/CRLF, última línea, guard zero-length;
+- multiline state, blankLine, LF/CRLF, terminador final sin blank fantasma, última línea sin terminador, source vacío y guard zero-length;
 - Bash tree sigue funcionando; Text plain;
 - highlighter único creado con `tagHighlighter` funciona en `highlightTree`, stream `.style()` y `syntaxHighlighting()`;
 - rendered manual sin `token *`; editor manual sin `cm-*`;
 - source view conserva support + syntaxHighlighting con highlighter único;
 - quoted source negro, foreground/caret legibles y `--code-background` neutralizado sin selector privado/`!important`;
+- gate lógico distingue nuestras categorías de cualquier color nativo adicional del host;
 - gate real con creación fresca para routing rendered.
 
 ## 15. Criterios de aceptación arquitectónica
@@ -304,11 +328,12 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 6. manual paths convergen en `syntax-common-*`;
 7. `cm-*`/`token *` salen de nuestra taxonomía manual;
 8. no se sacrifica highlighting top-level common;
-9. SourceView conserva camino nativo CodeMirror;
-10. quoted black es plugin-owned y sobrescribible;
-11. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
-12. scanner stream preserva estado/offsets sin loops;
-13. ownership DOM de Fase 1 permanece intacto;
-14. rendered routing no cambia sin evidencia fresca;
-15. alcance no se expande a piezas no incriminadas;
-16. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
+9. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
+10. SourceView conserva camino nativo CodeMirror;
+11. quoted black es plugin-owned y sobrescribible;
+12. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
+13. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
+14. ownership DOM de Fase 1 permanece intacto;
+15. rendered routing no cambia sin evidencia fresca;
+16. alcance no se expande a piezas no incriminadas;
+17. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
