@@ -49,8 +49,8 @@
  * without depending on private HyperMD or callout DOM classes.
  */
 .cm-line.syntax-editor-code-source {
-  background: var(--syntax-editor-code-background, var(--code-background));
-  color: var(--syntax-editor-code-color, var(--code-normal, var(--text-normal)));
+  background-color: var(--syntax-editor-code-background, var(--code-background));
+  color: var(--syntax-editor-code-color, var(--text-normal));
 }
 
 .cm-line.syntax-editor-code-source-opening {
@@ -144,7 +144,7 @@
 .syntax-common-comment { color: var(--syntax-common-comment, var(--code-comment, var(--text-muted))); font-style: italic; }
 .syntax-common-keyword { color: var(--syntax-common-keyword, var(--code-keyword, var(--color-pink))); font-weight: 600; }
 .syntax-common-type { color: var(--syntax-common-type, var(--code-tag, var(--color-red))); }
-.syntax-common-variable { color: var(--syntax-common-variable, var(--code-normal, var(--text-normal))); }
+.syntax-common-variable { color: var(--syntax-common-variable, var(--text-normal)); }
 .syntax-common-callable { color: var(--syntax-common-callable, var(--code-function, var(--color-yellow))); }
 .syntax-common-declaration { color: var(--syntax-common-declaration, var(--code-function, var(--color-yellow))); }
 .syntax-common-property { color: var(--syntax-common-property, var(--code-property, var(--color-cyan))); }
