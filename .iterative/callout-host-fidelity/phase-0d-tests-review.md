@@ -27,3 +27,18 @@ Corrección requerida:
 - retirar el conteo exacto de frames del test de wiring real;
 - mantener en ese test las garantías de registro del ViewPlugin, fences top-level/quoted, roles, descendants semánticos, no-mutación, clear y unregister al destruir el EditorView;
 - añadir un test aislado con un view diagnóstico mínimo registrado manualmente, sin otras extensiones que usen RAF, para demostrar que `captureLivePreview()` por sí sola espera exactamente dos animation frames.
+
+## Revisión 3
+
+Resultado: CAMBIOS NECESARIOS.
+
+Tras separar el contrato temporal del wiring, la suite completa quedó verde. La revisión de cobertura contra las correcciones introducidas durante el TM de implementación detectó dos huecos:
+
+1. se prueba aislamiento por `EditorView`, pero no el aislamiento **por nodo** añadido en la Revisión 5 de implementación. Una `.cm-line` que falle durante snapshot debe producir `snapshotError:true` y no impedir capturar otra línea sana del mismo view;
+2. `registerLivePreviewDiagnosticView()` recibe `acceptedFences` como callback para reflejar cambios del registry/settings sin recrear el view, pero ningún test demuestra que el provider se evalúe de nuevo en capturas sucesivas.
+
+Corrección requerida:
+
+- añadir una regresión con dos `.cm-line` donde la primera falle al inspeccionar `classList` y la segunda siga apareciendo sana;
+- añadir una regresión que cambie el conjunto devuelto por `acceptedFences` entre dos capturas del mismo view y compruebe que los fences lógicos se recalculan;
+- no tocar producción para satisfacer estas pruebas.
