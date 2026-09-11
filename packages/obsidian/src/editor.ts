@@ -1,5 +1,4 @@
 import type { Extension, Range } from "@codemirror/state";
-import { highlightTree } from "@lezer/highlight";
 import {
   Decoration,
   type DecorationSet,
@@ -20,18 +19,20 @@ import {
   mapCodeBlockRange,
   type MudCodeBlock,
 } from "./blocks";
-import {
-  commonFenceMatch,
-  commonFenceNames,
-  presentationClassNames,
-  type CommonFenceMatch,
-} from "./block-presentation";
-import {
-  COMMON_EDITOR_HIGHLIGHT_STYLE,
-  parseCommonLanguageTree,
-  type CommonLanguage,
-} from "./common-languages";
+import { commonFenceMatch } from "./block-presentation";
 import type { MudHighlightConfig } from "./config";
+import {
+  acceptedEditorFenceNames,
+  blockBodyIntersectsVisible,
+  buildEditorBlockModel,
+  buildEditorBlockSemantics,
+  positionIsVisible,
+  rangeIntersectsVisible,
+  type EditorBlockModel,
+  type EditorHighlightSpan,
+  type EditorVisibleRange,
+  type ResolvedEditorBlock,
+} from "./editor-block-model";
 import type { LanguageRegistry } from "./languages";
 import type { SyntaxPluginSettings } from "./settings";
 import { createSmartEditingExtensions } from "./smart-edit";
@@ -42,173 +43,96 @@ import {
   type MudToken,
 } from "./tokenizer";
 
-function acceptedFenceNames(registry: LanguageRegistry): Set<string> {
-  return new Set(
-    [
-      ...registry.enabled().flatMap(({ descriptor }) => descriptor.fences),
-      ...commonFenceNames(),
-    ].map((fence) => fence.toLocaleLowerCase()),
-  );
+function visibleRanges(view: EditorView): readonly EditorVisibleRange[] {
+  return view.visibleRanges;
 }
 
-function addMappedMark(
-  ranges: Range<Decoration>[],
-  block: MudCodeBlock,
-  from: number,
-  to: number,
-  className: string,
-): void {
-  for (const mapped of mapCodeBlockRange(block, from, to)) {
-    ranges.push(Decoration.mark({ class: className }).range(mapped.from, mapped.to));
-  }
+function blockPhysicalTo(block: MudCodeBlock): number {
+  return block.closingLineTo ?? block.to;
 }
 
-function addTokenRanges(
-  ranges: Range<Decoration>[],
-  token: MudToken,
+function blockIntersectsVisible(
   block: MudCodeBlock,
-  languageId = "mud",
-): void {
-  addMappedMark(
+  ranges: readonly EditorVisibleRange[],
+): boolean {
+  return rangeIntersectsVisible(
+    block.openingLineFrom,
+    blockPhysicalTo(block),
     ranges,
-    block,
-    token.from,
-    token.to,
-    `${tokenClass(token.categoryId)} ${tokenColorClass(languageId, token.categoryId)}`,
   );
 }
 
-function addPlainCommonRanges(
-  ranges: Range<Decoration>[],
-  block: MudCodeBlock,
-): void {
-  for (const line of block.bodyLines) {
-    if (line.sourceFrom >= line.sourceTo) continue;
-    ranges.push(
-      Decoration.mark({ class: "syntax-common-plain" }).range(
-        line.sourceFrom,
-        line.sourceTo,
+function traceVisibleBlock(view: EditorView, resolved: ResolvedEditorBlock): void {
+  const { block } = resolved;
+  traceHostDiagnostic(
+    "live-preview-source",
+    block.language,
+    block.body,
+    view.dom,
+    {
+      openingLine: block.openingLine,
+      quoteDepth: block.quoteDepth,
+      from: block.from,
+      to: block.to,
+      bodyLines: block.bodyLines.map(
+        ({ lineFrom, lineTo, sourceFrom, sourceTo }) => ({
+          lineFrom,
+          lineTo,
+          sourceFrom,
+          sourceTo,
+        }),
       ),
-    );
-  }
-}
-
-function addCommonLanguageRanges(
-  ranges: Range<Decoration>[],
-  block: MudCodeBlock,
-  language: CommonLanguage,
-): void {
-  const tree = parseCommonLanguageTree(language, block.body);
-  if (tree === undefined) {
-    addPlainCommonRanges(ranges, block);
-    return;
-  }
-  highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, classes) => {
-    if (from >= to) return;
-    addMappedMark(ranges, block, from, to, classes);
-  });
-}
-
-function addPresentationLineRanges(
-  ranges: Range<Decoration>[],
-  block: MudCodeBlock,
-  match: CommonFenceMatch,
-): void {
-  const classes = presentationClassNames(match).join(" ");
-  if (!classes) return;
-  for (const line of block.bodyLines) {
-    ranges.push(
-      Decoration.line({ attributes: { class: classes } }).range(line.lineFrom),
-    );
-  }
-}
-
-const QUOTED_CODE_SOURCE_CLASS = "syntax-quoted-code-source HyperMD-codeblock";
-
-function addQuotedCodeSurfaceRanges(
-  ranges: Range<Decoration>[],
-  block: MudCodeBlock,
-): void {
-  if (block.quoteDepth === 0) return;
-
-  ranges.push(
-    Decoration.line({
-      attributes: {
-        class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-begin-bg`,
-      },
-    }).range(block.openingLineFrom),
+    },
   );
-
-  for (const line of block.bodyLines) {
-    ranges.push(
-      Decoration.line({
-        attributes: {
-          class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-bg`,
-        },
-      }).range(line.lineFrom),
-    );
-  }
-
-  if (block.closingLineFrom !== undefined) {
-    ranges.push(
-      Decoration.line({
-        attributes: {
-          class: `${QUOTED_CODE_SOURCE_CLASS} HyperMD-codeblock-end-bg`,
-        },
-      }).range(block.closingLineFrom),
-    );
-  }
 }
 
-export function buildSyntaxDecorations(
+function semanticSpans(
+  resolved: ResolvedEditorBlock,
+  cache: Map<string, readonly EditorHighlightSpan[]>,
+): readonly EditorHighlightSpan[] {
+  const cached = cache.get(resolved.semanticKey);
+  if (cached !== undefined) return cached;
+  const spans = buildEditorBlockSemantics(resolved);
+  cache.set(resolved.semanticKey, spans);
+  return spans;
+}
+
+function materializeSyntaxDecorations(
   view: EditorView,
-  registry: LanguageRegistry,
-  lineNumbers = false,
+  model: EditorBlockModel,
+  semanticCache: Map<string, readonly EditorHighlightSpan[]>,
 ): DecorationSet {
-  const source = view.state.doc.toString();
   const ranges: Range<Decoration>[] = [];
-  const fences = acceptedFenceNames(registry);
-  for (const block of findCodeBlocks(source, fences)) {
-    const runtime = registry.byFence(block.language);
-    const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
-    if (runtime === undefined && common === undefined) continue;
+  const visible = visibleRanges(view);
 
-    traceHostDiagnostic(
-      "live-preview-source",
-      block.language,
-      block.body,
-      view.dom,
-      {
-        openingLine: block.openingLine,
-        quoteDepth: block.quoteDepth,
-        from: block.from,
-        to: block.to,
-        bodyLines: block.bodyLines.map(
-          ({ lineFrom, lineTo, sourceFrom, sourceTo }) => ({
-            lineFrom,
-            lineTo,
-            sourceFrom,
-            sourceTo,
-          }),
-        ),
-      },
-    );
+  for (const resolved of model.blocks) {
+    const { block } = resolved;
+    if (!blockIntersectsVisible(block, visible)) continue;
 
-    addQuotedCodeSurfaceRanges(ranges, block);
+    traceVisibleBlock(view, resolved);
 
-    if (runtime !== undefined) {
-      for (const token of runtime.tokenize(block.body)) {
-        addTokenRanges(ranges, token, block, runtime.settings.id);
-      }
-    } else {
-      addCommonLanguageRanges(ranges, block, common!.language);
-      addPresentationLineRanges(ranges, block, common!);
+    for (const line of resolved.lineSemantics) {
+      if (!positionIsVisible(line.from, visible)) continue;
+      if (line.classes.length === 0) continue;
+      ranges.push(
+        Decoration.line({
+          attributes: { class: line.classes.join(" ") },
+        }).range(line.from),
+      );
     }
-    if (
-      lineNumbers &&
-      (runtime !== undefined || common?.language.presentation?.lineNumbers !== false)
-    ) {
+
+    if (!blockBodyIntersectsVisible(block, visible)) continue;
+
+    for (const span of semanticSpans(resolved, semanticCache)) {
+      if (!rangeIntersectsVisible(span.from, span.to, visible)) continue;
+      ranges.push(
+        Decoration.mark({ class: span.className }).range(span.from, span.to),
+      );
+    }
+
+    if (resolved.showLineNumbers) {
       block.bodyLines.forEach((line, index) => {
+        if (!positionIsVisible(line.sourceFrom, visible)) return;
         ranges.push(
           Decoration.widget({
             widget: new CodeLineNumberWidget(index + 1),
@@ -218,8 +142,22 @@ export function buildSyntaxDecorations(
       });
     }
   }
+
   ranges.sort((left, right) => left.from - right.from || left.to - right.to);
   return Decoration.set(ranges, true);
+}
+
+export function buildSyntaxDecorations(
+  view: EditorView,
+  registry: LanguageRegistry,
+  lineNumbers = false,
+): DecorationSet {
+  const model = buildEditorBlockModel(
+    view.state.doc.toString(),
+    registry,
+    lineNumbers,
+  );
+  return materializeSyntaxDecorations(view, model, new Map());
 }
 
 class CodeLineNumberWidget extends WidgetType {
@@ -240,6 +178,33 @@ class CodeLineNumberWidget extends WidgetType {
   }
 }
 
+function addMappedMudMark(
+  ranges: Range<Decoration>[],
+  block: MudCodeBlock,
+  from: number,
+  to: number,
+  className: string,
+): void {
+  for (const mapped of mapCodeBlockRange(block, from, to)) {
+    ranges.push(Decoration.mark({ class: className }).range(mapped.from, mapped.to));
+  }
+}
+
+function addMudTokenRanges(
+  ranges: Range<Decoration>[],
+  token: MudToken,
+  block: MudCodeBlock,
+  languageId = "mud",
+): void {
+  addMappedMudMark(
+    ranges,
+    block,
+    token.from,
+    token.to,
+    `${tokenClass(token.categoryId)} ${tokenColorClass(languageId, token.categoryId)}`,
+  );
+}
+
 export function buildMudDecorations(
   view: EditorView,
   config?: MudHighlightConfig,
@@ -249,7 +214,7 @@ export function buildMudDecorations(
 
   for (const block of findMudCodeBlocks(source)) {
     for (const token of tokenizeMud(block.body, config)) {
-      addTokenRanges(ranges, token, block);
+      addMudTokenRanges(ranges, token, block);
     }
   }
 
@@ -286,34 +251,58 @@ export function createEditorHighlighter(
       decorations: DecorationSet;
       private readonly unsubscribe: () => void;
       private readonly unregisterDiagnostics: () => void;
+      private readonly semanticCache = new Map<
+        string,
+        readonly EditorHighlightSpan[]
+      >();
+      private model: EditorBlockModel;
       private revision = "";
 
       constructor(private readonly view: EditorView) {
-        this.revision = this.currentRevision();
         const settings = getSettings();
+        this.revision = this.currentRevision();
+        this.model = buildEditorBlockModel(
+          view.state.doc.toString(),
+          registry,
+          settings.lineNumbers,
+        );
         this.decorations = settings.markdownEditor
-          ? buildSyntaxDecorations(view, registry, settings.lineNumbers)
+          ? materializeSyntaxDecorations(view, this.model, this.semanticCache)
           : Decoration.none;
         this.unsubscribe = registry.subscribe(() => {
           this.view.dispatch({});
         });
         this.unregisterDiagnostics = registerLivePreviewDiagnosticView(
           view,
-          () => acceptedFenceNames(registry),
+          () => acceptedEditorFenceNames(registry),
         );
       }
 
       update(update: ViewUpdate): void {
-        const revision = this.currentRevision();
+        const nextRevision = this.currentRevision();
         const settings = getSettings();
-        if (!settings.markdownEditor) {
-          this.decorations = Decoration.none;
-        } else if (update.docChanged || revision !== this.revision) {
-          this.revision = revision;
-          this.decorations = buildSyntaxDecorations(
-            update.view,
+        const modelChanged = update.docChanged || nextRevision !== this.revision;
+
+        if (modelChanged) {
+          this.revision = nextRevision;
+          this.semanticCache.clear();
+          this.model = buildEditorBlockModel(
+            update.state.doc.toString(),
             registry,
             settings.lineNumbers,
+          );
+        }
+
+        if (!settings.markdownEditor) {
+          this.decorations = Decoration.none;
+          return;
+        }
+
+        if (modelChanged || update.viewportChanged || update.selectionSet) {
+          this.decorations = materializeSyntaxDecorations(
+            update.view,
+            this.model,
+            this.semanticCache,
           );
         }
       }
@@ -321,6 +310,7 @@ export function createEditorHighlighter(
       destroy(): void {
         this.unregisterDiagnostics();
         this.unsubscribe();
+        this.semanticCache.clear();
       }
 
       private currentRevision(): string {
@@ -347,7 +337,7 @@ export function createMarkdownEditorExtensions(
       (state, position) => {
         const block = findCodeBlocks(
           state.doc.toString(),
-          acceptedFenceNames(registry),
+          acceptedEditorFenceNames(registry),
         ).find((candidate) => isCodeBlockContentPosition(candidate, position));
         if (block === undefined) return undefined;
         const languageId =
