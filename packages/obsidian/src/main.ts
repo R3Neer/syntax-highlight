@@ -129,7 +129,14 @@ export default class SyntaxHighlightPlugin extends Plugin {
         this.registerMarkdownCodeBlockProcessor(
           fence,
           (source, element, context) => {
-            this.renderReadingFence(source, element, context, fence, true);
+            this.renderReadingFence(
+              source,
+              element,
+              context,
+              fence,
+              true,
+              this.markdownHighlightEnabled(element, context),
+            );
           },
         );
       }
@@ -144,7 +151,14 @@ export default class SyntaxHighlightPlugin extends Plugin {
       this.registerMarkdownCodeBlockProcessor(
         fence,
         (source, element, context) => {
-          this.renderReadingFence(source, element, context, fence, true);
+          this.renderReadingFence(
+            source,
+            element,
+            context,
+            fence,
+            true,
+            this.markdownHighlightEnabled(element, context),
+          );
         },
       );
     }
@@ -154,9 +168,35 @@ export default class SyntaxHighlightPlugin extends Plugin {
     registerReadingFallbackPostProcessor(
       (processor, sortOrder) =>
         this.registerMarkdownPostProcessor(processor, sortOrder),
-      (source, element, context, fence) =>
-        this.renderReadingFence(source, element, context, fence, false),
+      (source, element, context, fence, sourceElement) =>
+        this.renderReadingFence(
+          source,
+          element,
+          context,
+          fence,
+          false,
+          this.markdownHighlightEnabled(sourceElement ?? element, context),
+        ),
     );
+  }
+
+  private markdownHighlightEnabled(
+    element: HTMLElement,
+    context: MarkdownPostProcessorContext,
+  ): boolean {
+    const views = this.app.workspace
+      .getLeavesOfType("markdown")
+      .flatMap(({ view }) =>
+        view instanceof MarkdownView && view.file?.path === context.sourcePath
+          ? [view]
+          : [],
+      );
+    const owner =
+      views.find((view) => view.containerEl.contains(element)) ??
+      (views.length === 1 ? views[0] : undefined);
+    return owner?.getMode() === "source"
+      ? this.pluginSettings.markdownEditor
+      : this.pluginSettings.markdownReading;
   }
 
   private renderReadingFence(
@@ -165,6 +205,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     context: MarkdownPostProcessorContext,
     fence: string,
     claimUnknown: boolean,
+    highlightEnabled: boolean,
   ): boolean {
     return renderResolvedReadingFence(
       this.registry,
@@ -181,6 +222,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
           renderedSource,
         ),
       claimUnknown,
+      highlightEnabled,
     );
   }
 
