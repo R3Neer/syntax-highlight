@@ -78,4 +78,22 @@ Comprobaciones:
 - el wrapper stream conserva todo el contrato del parser y adapta solo la frontera de style names;
 - no se requieren cambios en scanner Markdown, cache, Smart Editing, contrast manager ni routing rendered.
 
-No se encontró modificación necesaria. Esta es la primera revisión limpia del estado actual.
+No se encontró modificación necesaria.
+
+## Revisión 11
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión limpia, centrada en layering, packaging y portabilidad:
+
+- `common-languages.ts` puede ser autoridad de catálogo/engines/support/highlighter;
+- `common-semantic-ranges.ts` depende de esa autoridad sin crear ciclo inverso;
+- `reading.ts` y `editor-block-model.ts` quedan como consumidores de semantic ranges;
+- `source-view.ts` consume support + highlighter nativos, no el scanner manual;
+- common languages son estáticos durante el bundle y no requieren una nueva revision cache;
+- `StringStream`, `StreamParser`, `tagHighlighter` pertenecen a la frontera host ya externalizada/declarada como peer;
+- no se introducen APIs Node/Electron ni dependencia desktop-only.
+
+No se encontró modificación necesaria.
+
+Revisiones **10 y 11 son consecutivas sin cambios**: el plan arquitectónico de Fase 2 queda estabilizado según TM y se autoriza crear el plan de implementación con checkboxes.
