@@ -64,4 +64,19 @@ Se contrastó la arquitectura con las APIs documentadas de Obsidian/CodeMirror:
 
 No se identificó ninguna corrección adicional.
 
-Falta una segunda revisión limpia consecutiva.
+## Revisión 5
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión limpia, centrada en lifecycle y estados límite:
+
+- `selectionSet` ya fuerza rematerialización cuando Live Preview cambia source/rendered por movimiento del cursor;
+- `viewportChanged` cubre scroll/reflow;
+- semantic cache e invalidación de Fase 1/2 permanecen intactos;
+- opening/body/closing siguen en un único modelo puro;
+- blank quoted body queda representado por un visibility probe puntual;
+- source completamente replaced carece de visibility probe materializado y no debe recibir surface;
+- top-level permanece fuera del contrato quoted;
+- no aparece ninguna nueva dependencia de internals de Obsidian/CodeMirror.
+
+Revisiones 4 y 5 consecutivas sin cambios: el plan arquitectónico de Fase 3 queda ESTABLE según TM.
