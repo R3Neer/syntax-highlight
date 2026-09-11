@@ -124,15 +124,15 @@ export interface LivePreviewEmbeddedSnapshot {
 export interface LivePreviewPostFrameCapture {
   timestamp: number;
   viewId: number;
-  hasFocus: boolean;
-  connected: boolean;
-  selection: { anchor: number; head: number };
-  viewport: { from: number; to: number };
-  documentLength: number;
-  fences: LivePreviewFenceSnapshot[];
-  lines: LivePreviewLineSnapshot[];
-  linesTruncated: boolean;
-  embeddedHosts: LivePreviewEmbeddedSnapshot[];
+  hasFocus?: boolean;
+  connected?: boolean;
+  selection?: { anchor: number; head: number };
+  viewport?: { from: number; to: number };
+  documentLength?: number;
+  fences?: LivePreviewFenceSnapshot[];
+  lines?: LivePreviewLineSnapshot[];
+  linesTruncated?: boolean;
+  embeddedHosts?: LivePreviewEmbeddedSnapshot[];
   captureError?: true;
 }
 
@@ -477,20 +477,30 @@ function captureLivePreviewView(
   registration: RegisteredLivePreviewView,
 ): LivePreviewPostFrameCapture {
   const { id, view } = registration;
-  const selection = view.state.selection.main;
-  const base: LivePreviewPostFrameCapture = {
-    timestamp: Date.now(),
-    viewId: id,
-    hasFocus: view.hasFocus,
-    connected: view.dom.isConnected,
-    selection: { anchor: selection.anchor, head: selection.head },
-    viewport: { from: view.viewport.from, to: view.viewport.to },
-    documentLength: view.state.doc.length,
-    fences: [],
-    lines: [],
-    linesTruncated: false,
-    embeddedHosts: [],
-  };
+  let base: LivePreviewPostFrameCapture;
+
+  try {
+    const selection = view.state.selection.main;
+    base = {
+      timestamp: Date.now(),
+      viewId: id,
+      hasFocus: view.hasFocus,
+      connected: view.dom.isConnected,
+      selection: { anchor: selection.anchor, head: selection.head },
+      viewport: { from: view.viewport.from, to: view.viewport.to },
+      documentLength: view.state.doc.length,
+      fences: [],
+      lines: [],
+      linesTruncated: false,
+      embeddedHosts: [],
+    };
+  } catch {
+    return {
+      timestamp: Date.now(),
+      viewId: id,
+      captureError: true,
+    };
+  }
 
   try {
     const source = view.state.doc.toString();
@@ -568,9 +578,18 @@ function createController(): HostDiagnosticsController {
       if (!this.enabled || typeof window === "undefined") return [];
       await nextAnimationFrame();
       await nextAnimationFrame();
-      const captures = [...registeredLivePreviewViews.values()].map((registration) =>
-        captureLivePreviewView(registration),
-      );
+      const captures: LivePreviewPostFrameCapture[] = [];
+      for (const registration of registeredLivePreviewViews.values()) {
+        try {
+          captures.push(captureLivePreviewView(registration));
+        } catch {
+          captures.push({
+            timestamp: Date.now(),
+            viewId: registration.id,
+            captureError: true,
+          });
+        }
+      }
       postFrameCaptures.push(...captures);
       if (postFrameCaptures.length > MAX_POST_FRAME_CAPTURES) {
         postFrameCaptures.splice(
