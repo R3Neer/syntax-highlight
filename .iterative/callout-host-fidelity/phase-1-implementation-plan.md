@@ -1,0 +1,222 @@
+# Plan de implementación temporal · Fase 1
+
+Estado: TEMPORAL. Eliminar tras implementación, tests, validación real y limpieza final.
+
+Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fuente de verdad del progreso. No marcar una tarea hasta que el cambio correspondiente exista y haya pasado las comprobaciones aplicables.
+
+## 0. Baseline y guardrails
+
+- [ ] Confirmar head de `plan/obsidian-callout-host-fidelity` y CI verde antes de producción.
+- [ ] Confirmar que ningún archivo temporal anterior se elimina todavía: diagnostics y planes siguen siendo necesarios hasta el gate real.
+- [ ] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
+
+## 1. Runtime único CodeMirror/Lezer
+
+### Producción
+
+- [ ] Crear helper de build con la lista oficial de externals CodeMirror/Lezer de Obsidian.
+- [ ] Hacer que `packages/obsidian/esbuild.config.mjs` consuma esa lista.
+- [ ] Activar `metafile` en el build y añadir una aserción que falle si un runtime host prohibido aparece empaquetado como input.
+- [ ] Mantener empaquetados los language packages no proporcionados por Obsidian.
+- [ ] Añadir peerDependencies explícitas del paquete Obsidian para runtime imports/Lezer necesarios, con rangos compatibles con `obsidian`.
+- [ ] Actualizar lockfile de forma coherente.
+- [ ] Ejecutar CI existente; no añadir todavía tests nuevos de Fase 1.
+
+### Resultado esperado
+
+- El artifact conserva `require()`/external imports de CodeMirror/Lezer host.
+- Ninguna copia privada de `@lezer/common`, `@lezer/highlight` o `@lezer/lr` queda embebida.
+
+## 2. Reading fallback estructural desacoplado
+
+### Producción
+
+- [ ] Crear `rendered-code-candidate.ts` (nombre final sujeto a código) sin dependencias de Live Preview.
+- [ ] Mover allí detección de PRE/CODE, processed guard y preservación de furniture.
+- [ ] Resolver `language-*` desde PRE y CODE:
+  - [ ] PRE-only válido;
+  - [ ] CODE-only válido;
+  - [ ] ambos iguales válido;
+  - [ ] conflicto/varios valores -> fail closed.
+- [ ] Mantener un único CODE directo como requisito.
+- [ ] Adaptar `reading-host.ts` al detector nuevo.
+- [ ] Mantener `registerMarkdownPostProcessor` como Reading-only fallback.
+- [ ] Ejecutar CI existente.
+
+## 3. Eliminar bridge DOM de rendered Live Preview
+
+### Producción
+
+- [ ] Retirar `LivePreviewRenderedBlockBridge` y sus helpers de scanning/replacement del EditorView.
+- [ ] Retirar cualquier producción que dependa de `.cm-embed-block` o `.cm-callout`.
+- [ ] Retirar `LIVE_PREVIEW_HOST_ATTRIBUTE` si deja de tener consumidores legítimos.
+- [ ] Dejar rendered Live Preview exclusivamente en `registerMarkdownCodeBlockProcessor`.
+- [ ] Conservar el fallback estructural solo en Reading.
+- [ ] Reubicar temporalmente `registerLivePreviewDiagnosticView()` dentro de la extensión source existente para no perder el gate 0D.
+- [ ] Eliminar `live-preview-host.ts` si tras la reubicación no conserva responsabilidad production.
+- [ ] Ejecutar CI existente y ajustar únicamente tests existentes que dejen de compilar por símbolos eliminados; la nueva cobertura se reserva para la fase de tests.
+
+## 4. Modelo source y caché por viewport
+
+### Producción · modelo
+
+- [ ] Crear `editor-block-model.ts` o nombre equivalente sin DOM/CodeMirror View ownership.
+- [ ] Definir modelo estructural/resuelto de bloque.
+- [ ] Resolver configured/common una sola vez por reconstrucción del modelo.
+- [ ] Definir helper de intersección bloque <-> `visibleRanges`.
+- [ ] Definir clave/invalidation de caché semántica por bloque + runtime revision.
+- [ ] No tokenizar bloques no visibles.
+
+### Producción · semántica
+
+- [ ] Para bloque visible configurado, tokenizar cuerpo lógico completo y mapear a offsets físicos.
+- [ ] Para common parser-backed, parsear cuerpo lógico completo y mapear highlights físicos.
+- [ ] Para Text parserless, producir plain spans sin parser.
+- [ ] Construir line semantics propias por opening/body/closing.
+- [ ] Fusionar surface + presentation en una sola especificación de línea por posición.
+- [ ] Mantener line-number policy separada.
+
+### Producción · adapter CodeMirror
+
+- [ ] Refactorizar `createEditorHighlighter` para conservar:
+  - [ ] modelo estructural cacheado;
+  - [ ] caché semántica visible;
+  - [ ] DecorationSet materializado.
+- [ ] Reconstruir modelo solo en doc/revision/fence-resolution change.
+- [ ] Reconstruir materialización en model change / `viewportChanged` / `selectionSet` / settings visuales relevantes.
+- [ ] Generar marks/lines/widgets solo donde intersecten visible ranges.
+- [ ] Mantener suscripción del registry y cleanup de `destroy()`.
+- [ ] Mantener Smart Editing usando `findCodeBlocks()`/modelo sin acoplarlo a DOM.
+- [ ] Ejecutar CI existente.
+
+## 5. Surface/presentation source con clases propias
+
+### Producción
+
+- [ ] Eliminar `QUOTED_CODE_SOURCE_CLASS` y toda emisión `HyperMD-codeblock*`.
+- [ ] Emitir únicamente clases `syntax-editor-code-source*` y presentation propias.
+- [ ] Añadir en `styles.css` surface source basada en `--syntax-editor-code-background` -> `--code-background`.
+- [ ] Añadir color base source `--syntax-editor-code-color` -> `--code-normal`/`--text-normal` solo donde sea necesario.
+- [ ] No usar selector `.cm-embed-block`, `.cm-callout` o `HyperMD-*` en funcionalidad nueva.
+- [ ] No introducir margins verticales; usar únicamente propiedades seguras de línea/surface.
+- [ ] Mantener alignment/flow en body presentacional.
+- [ ] Confirmar que top-level no recibe una segunda surface propia si Obsidian ya lo representa nativamente.
+- [ ] Ejecutar CI existente.
+
+## 6. Contraste respetando ownership
+
+### Producción
+
+- [ ] Cambiar `CommonContrastManager` para considerar normalizables solo tokens dentro de `.syntax-highlight-frame` plugin-owned.
+- [ ] Impedir que source CodeMirror reciba `style.color` o `data-syntax-contrast-adjusted` del manager.
+- [ ] Mantener exclusión de settings preview.
+- [ ] Mantener configured profile semantics fuera del manager común.
+- [ ] Reducir pending roots/normalización al subtree plugin-owned cuando sea posible sin reescribir el algoritmo perceptual.
+- [ ] Confirmar restore/dispose correcto únicamente sobre nodos que el manager pudo modificar.
+- [ ] Ejecutar CI existente.
+
+## 7. Common highlighting tras unificar runtime
+
+### Producción
+
+- [ ] Revisar `parseCommonLanguageTree()` y eliminar únicamente workaround que resulte redundante; mantener `EditorState + ensureSyntaxTree` para StreamLanguage salvo evidencia contraria.
+- [ ] No añadir ramas específicas PowerShell al renderer.
+- [ ] Mantener `createCommonHighlightStyle()` como taxonomía única.
+- [ ] Mantener `source-view.ts` usando `common.support()` + `syntaxHighlighting(COMMON_EDITOR_HIGHLIGHT_STYLE)`.
+- [ ] Ejecutar build/CI existente con el runtime externo.
+
+## 8. Revisión TM de implementación
+
+- [ ] Revisar diff completo contra plan arquitectónico.
+- [ ] Revisar especialmente que no quede mutación DOM de CodeMirror.
+- [ ] Revisar imports/bundle runtime.
+- [ ] Revisar que no queden selectores privados como dependencia funcional.
+- [ ] Revisar ownership de contraste.
+- [ ] Revisar performance/invalidation del ViewPlugin.
+- [ ] Aplicar correcciones encontradas.
+- [ ] Repetir hasta obtener dos revisiones consecutivas sin cambios.
+- [ ] Solo entonces pasar a la fase de tests nuevos.
+
+## 9. Tests de Fase 1
+
+> Esta sección se ejecuta **después** de estabilizar implementación. Los tests existentes pueden ajustarse antes únicamente para mantener compilación al eliminar APIs production.
+
+### Runtime/build
+
+- [ ] Test/helper de lista de externals oficial.
+- [ ] Verificación de metafile: host runtime no bundled.
+- [ ] Verificar packaging final.
+
+### Reading
+
+- [ ] PRE-only.
+- [ ] CODE-only.
+- [ ] PRE/CODE agreement.
+- [ ] PRE/CODE conflict fail-closed.
+- [ ] furniture identity/preservation.
+- [ ] idempotence/processed marker.
+
+### Editor model/materialization
+
+- [ ] modelo detecta top-level y quoted sin DOM.
+- [ ] bloques fuera del viewport no se tokenizan.
+- [ ] bloque visible se tokeniza sobre cuerpo completo aunque viewport corte el bloque.
+- [ ] caché se reutiliza en scroll y se invalida en doc/revision.
+- [ ] máximo una line decoration propia por línea.
+- [ ] presentation y surface conviven en la misma line semantics.
+- [ ] marks conservan mapping tras `>`/quote depth.
+- [ ] line numbers se anclan tras quote prefix.
+
+### Theme/contrast
+
+- [ ] no se emiten `HyperMD-codeblock*`.
+- [ ] source usa clases propias y variables `--code-*`.
+- [ ] CommonContrastManager no modifica tokens source de CodeMirror.
+- [ ] CommonContrastManager sí puede normalizar rendered DOM propio.
+- [ ] restore/dispose preserva color original.
+
+### PowerShell/common
+
+- [ ] Reading manual highlights produce variable/operator/number/builtin/comment/string.
+- [ ] editor manual ranges producen las categorías equivalentes.
+- [ ] Text sigue parserless.
+- [ ] Markdown mantiene parser.
+
+### Prohibiciones arquitectónicas
+
+- [ ] test estático o búsqueda CI: production no contiene `.cm-embed-block`, `.cm-callout`, `HyperMD-codeblock` como dependencia funcional.
+- [ ] no existe MutationObserver de bridge rendered Live Preview.
+
+## 10. Revisión TM de tests
+
+- [ ] Revisar cobertura frente a cada invariante arquitectónico.
+- [ ] Distinguir tests lógicos de host-real; no llamar `real` a fixtures inventados.
+- [ ] Corregir tests frágiles que midan incidental DOM de happy-dom.
+- [ ] Repetir hasta dos revisiones consecutivas sin cambios.
+- [ ] CI completa (`lint`, `typecheck`, tests, build, `pack:all`) verde.
+
+## 11. Gate manual Obsidian real
+
+No limpiar diagnostics todavía.
+
+- [ ] Instalar artifact exacto del head validado.
+- [ ] Validar PowerShell top-level source/rendered.
+- [ ] Validar PowerShell quoted source/rendered.
+- [ ] Validar Text presentacional quoted source/rendered.
+- [ ] Validar cambio de cursor source <-> rendered.
+- [ ] Validar tema activo y ausencia de crash.
+- [ ] Capturar diagnostics únicamente si existe discrepancia.
+- [ ] Si falla, volver a análisis/plan según TM antes de un nuevo fix.
+
+## 12. Limpieza final
+
+Solo tras gate manual satisfactorio:
+
+- [ ] Eliminar `_tmp-host-diagnostics.ts` y tests de diagnostics.
+- [ ] Retirar cualquier wiring temporal de diagnostics.
+- [ ] Migrar/renombrar tests engañosos (`real DOM`, bridge desaparecido, surface antigua).
+- [ ] Actualizar `packages/obsidian/README.md`.
+- [ ] Actualizar `docs/theme-integration.md`.
+- [ ] Eliminar documentos temporales `.iterative/callout-host-fidelity/*` agotados por este objetivo, incluidos los dos planes de Fase 1.
+- [ ] Ejecutar CI final y `pack:all`.
+- [ ] Revisar diff final para confirmar que no quedan artefactos temporales.
