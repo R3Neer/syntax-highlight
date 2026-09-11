@@ -50,6 +50,33 @@ jobs:
           text = text.replace('        this.unregisterDiagnostics();\n', '')
           editor.write_text(text)
 
+          reading = Path('packages/obsidian/src/reading-host.ts')
+          text = reading.read_text()
+          text = text.replace(
+              'import {\n  traceHostDiagnostic,\n  traceRenderedHostObservations,\n} from "./_tmp-host-diagnostics";\n',
+              '',
+          )
+          text = re.sub(
+              r'\n  const diagnosticPath = claimUnknown \? "reading-specialized" : "reading-fallback";\n  if \(claimUnknown\) \{\n    traceHostDiagnostic\(.*?\n  \}\n',
+              '\n',
+              text,
+              flags=re.S,
+          )
+          text = re.sub(
+              r'\n  traceHostDiagnostic\(\n    diagnosticPath,.*?\n  \);',
+              '',
+              text,
+              flags=re.S,
+          )
+          text = text.replace('    traceRenderedHostObservations("reading-fallback", root);\n', '')
+          text = re.sub(
+              r'\n      traceHostDiagnostic\(\n        "reading-fallback",.*?\n      \);',
+              '',
+              text,
+              flags=re.S,
+          )
+          reading.write_text(text)
+
           boundary = Path('packages/obsidian/tests/architecture-boundaries.test.mjs')
           text = boundary.read_text()
           text = text.replace(
