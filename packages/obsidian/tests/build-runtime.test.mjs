@@ -1,6 +1,6 @@
 import { builtinModules } from "node:module";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,7 +27,7 @@ const OFFICIAL_HOST_PACKAGES = [
   "@lezer/lr",
 ];
 
-const packagePath = fileURLToPath(new URL("../package.json", import.meta.url));
+const packagePath = resolve(process.cwd(), "packages/obsidian/package.json");
 
 describe("Obsidian host runtime boundary", () => {
   it("tracks the adopted official sample-plugin package boundary plus Node builtins", () => {
