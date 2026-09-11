@@ -100,3 +100,21 @@ Cambios arquitectónicos:
 - la invalidación de dedup no conoce CodeMirror y se propaga por la misma suscripción de lifecycle.
 
 Este cambio afecta al contrato controller↔ViewPlugin y, por tanto, pertenece a arquitectura.
+
+## Revisión 9
+
+Resultado: SIN CAMBIOS.
+
+Se revisó el controlador como máquina de estados. `enable()` activa lifecycle y captura inicial; `disable()` desconecta/cancela; `clear()` resetea eventos y dedup sin producir captura; `capture()` solicita un nuevo snapshot. El patrón `clear(); capture()` queda determinista incluso si el DOM y la selección no cambiaron desde la captura anterior.
+
+No se encontró una corrección adicional.
+
+## Revisión 10
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión sobre múltiples `EditorView`, fan-out de `capture()`, baselines independientes y cleanup. `clear()` invalida todas las baselines a través del lifecycle global sin introducir referencias de CodeMirror en el controller. El filtro viewport/visibleRanges y los estados no materializados permanecen coherentes.
+
+No se encontró una corrección adicional.
+
+**ESTABLE según TM tras segunda reapertura:** revisiones 9 y 10 consecutivas sin cambios.
