@@ -79,4 +79,20 @@ Se revisó específicamente la nueva frontera `markdown-render-mode.ts` / `main.
 - ausencia/ambigüedad conserva `markdownReading` como decisión conservadora;
 - no cambia ninguna ruta de rendering, solo separa adapter host de política testeable.
 
-No se encontró modificación necesaria. Esta es la primera revisión limpia del nuevo estado de implementación.
+No se encontró modificación necesaria.
+
+## Revisión 10
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente del nuevo estado, centrada en equivalencia de comportamiento y frontera host:
+
+- para owner source, owner preview, owner ausente, `sourcePath` único y `sourcePath` ambiguo, la función pura conserva exactamente la política previamente estabilizada;
+- el adapter transforma objetos `MarkdownView` reales a datos simples y no filtra objetos host hacia la capa pura;
+- no aparece dependencia circular con `settings`/`main`;
+- `main.ts` continúa siendo el único sitio que requiere `instanceof MarkdownView`;
+- la extracción no modifica processors Markdown, decorations, caché, contraste, bundle ni lifecycle;
+- las pruebas nuevas pueden ejercer la política sin simular el runtime privado de Obsidian;
+- CI del estado de código pasa completa, incluidos tests, build y `pack:all`.
+
+No se encontró modificación necesaria. Revisiones 9 y 10 son consecutivas sin cambios: **implementación vuelve a quedar estabilizada según TM** y se reanuda la Fase 9 de tests.
