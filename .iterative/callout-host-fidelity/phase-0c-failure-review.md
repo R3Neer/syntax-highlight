@@ -106,3 +106,9 @@ Resultado: CAMBIOS NECESARIOS.
 Se corrigió una formulación metodológica demasiado fuerte: el TM anterior sí terminó con un gate manual abierto y, por tanto, no certificó la integración real. La validación actual ha falsado la hipótesis de host en ese gate, no el mecanismo de dos revisiones consecutivas sin cambios.
 
 También se añadió H-E: el diagnóstico `live-preview-source` actual ocurre antes de la materialización/reconciliación DOM y no puede demostrar por sí mismo qué decorations sobreviven después de una transición rendered ↔ source. Esta observación cambia el próximo paso: la siguiente evidencia debe capturarse post-frame antes de decidir arquitectura.
+
+## Revisión TM 3
+
+Resultado: SIN CAMBIOS.
+
+Se contrastó de nuevo el documento contra la implementación actual de `editor.ts`, el lifecycle del `CommonContrastManager`, el artifact compilado y las reglas actuales de Nier. No apareció una hipótesis que permita explicar simultáneamente la ausencia de superficie quoted y de color sin observar el DOM post-materialización. Se mantienen las hipótesis H-A..H-E y el requisito de captura post-frame.
