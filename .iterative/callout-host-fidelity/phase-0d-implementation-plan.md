@@ -10,10 +10,11 @@ Objetivo de esta unidad: instrumentar el DOM post-frame real de Live Preview sin
 - [ ] Añadir tipos separados para snapshot post-frame: bloque, línea, ancestry, descendientes/token y estilos computados.
 - [ ] Añadir allowlist de atributos y límites de texto/descendientes/eventos; no serializar `outerHTML` completo.
 - [ ] Añadir `hostDiagnosticsEnabled()` como consulta barata.
-- [ ] Añadir suscripción a enabled/disabled con función de unsubscribe.
+- [ ] Añadir suscripción de lifecycle global con al menos eventos `enabled | disabled | cleared` y función de unsubscribe.
 - [ ] Añadir registro/desregistro de capture targets sin importar CodeMirror en `_tmp-host-diagnostics.ts`.
 - [ ] Añadir `capture()` al controller global para solicitar captura a todos los targets vivos.
-- [ ] `enable()` debe notificar solo en transición false→true; `disable()` solo true→false.
+- [ ] `enable()` debe notificar `enabled` solo en transición false→true; `disable()` `disabled` solo true→false.
+- [ ] `clear()` debe vaciar events, emitir `cleared` siempre y NO disparar captura por sí mismo.
 - [ ] Mantener compatibilidad de `enable/disable/clear/dump/events` usada en capturas anteriores.
 
 Archivo principal: `packages/obsidian/src/_tmp-host-diagnostics.ts`.
@@ -42,16 +43,18 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 ## 3. Lifecycle ViewPlugin temporal
 
 - [ ] Exportar `createLivePreviewPostFrameDiagnosticsExtension(getAcceptedFences)` desde el nuevo módulo.
-- [ ] En constructor registrar listener enabled y capture target.
+- [ ] En constructor registrar listener de lifecycle y capture target.
 - [ ] Si diagnostics ya está enabled al construir, conectar observer y schedule inicial.
-- [ ] Al enable posterior: conectar `MutationObserver` scoped a `view.dom` y schedule.
-- [ ] Al disable: desconectar observer y cancelar rAF pendiente.
+- [ ] Al evento `enabled`: conectar `MutationObserver` scoped a `view.dom` y schedule.
+- [ ] Al evento `disabled`: desconectar observer y cancelar rAF pendiente.
+- [ ] Al evento `cleared`: invalidar `lastSnapshotKey`/baseline de dedup sin schedule automático.
 - [ ] Observer: `childList + subtree + attributes(class/style)` exclusivamente en `view.dom`.
 - [ ] `update()` agenda captura ante `docChanged`, `selectionSet`, `viewportChanged`, `geometryChanged` o `focusChanged`, usando solo flags realmente disponibles en la versión TypeScript instalada.
 - [ ] Scheduler idempotente: máximo un rAF pendiente.
 - [ ] Si aparecen mutaciones durante/después del frame, permitir otro frame posterior sin polling.
 - [ ] Publicar snapshots como eventos `live-preview-post-frame` solo tras el rAF.
 - [ ] Deduplicar snapshots consecutivos idénticos ignorando timestamp, pero no deduplicar cambios de selectionRegion/representation.
+- [ ] Tras `cleared`, la primera captura explícita debe publicarse aunque sea idéntica al último snapshot anterior al clear.
 - [ ] `destroy()` cancela rAF, desconecta observer y desregistra listener/target.
 
 ## 4. Integración temporal
@@ -82,7 +85,8 @@ Los tests específicos nuevos de esta instrumentación pertenecen a la fase 6 y 
 
 Los tests se desarrollarán **después de estabilizar la implementación**, siguiendo el orden solicitado para este ciclo.
 
-- [ ] Controller: enable/disable transitions, unsubscribe, capture-target register/unregister y fan-out.
+- [ ] Controller: enable/disable/cleared transitions, unsubscribe, capture-target register/unregister y fan-out.
+- [ ] Controller: `clear()` no captura, pero `clear(); capture()` permite republicar un snapshot idéntico.
 - [ ] Controller: compatibilidad con API anterior y límites/sanitización.
 - [ ] Probe: `view.viewport` conserva candidatos replaced aunque no estén en `visibleRanges`.
 - [ ] Probe: `visibleRanges` se registra como señal de source directo y no excluye candidatos.
@@ -93,9 +97,10 @@ Los tests se desarrollarán **después de estabilizar la implementación**, sigu
 - [ ] Probe: `getAcceptedFences()` se evalúa en captura y puede reflejar cambios posteriores sin recrear el ViewPlugin.
 - [ ] Lifecycle: enable conecta observer + agenda sin ViewUpdate.
 - [ ] Lifecycle: disable/destroy desconectan observer y cancelan frames.
+- [ ] Lifecycle: cleared invalida dedup sin schedule.
 - [ ] Lifecycle: ViewUpdate y MutationObserver comparten batching rAF.
 - [ ] Lifecycle: style mutation externa puede producir segundo estado; el diagnóstico no se auto-dispara por sus propias lecturas/eventos.
-- [ ] Dedup: elimina snapshots idénticos pero conserva cambios de selección/representación.
+- [ ] Dedup: elimina snapshots idénticos dentro de la misma generación, conserva cambios de selección/representación y se resetea en clear.
 - [ ] Integración `EditorView`: extensión realmente instalada por `createMarkdownEditorExtensions()` y controller `capture()` produce evento post-frame.
 - [ ] Verificar que tests de Fase 0C siguen pasando sin reinterpretarlos como fidelidad de host real.
 - [ ] CI completa (`npm run check`, `pack:all`, artifact).
