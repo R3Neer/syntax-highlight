@@ -74,3 +74,13 @@ Resultado: SIN CAMBIOS.
 Se revisó específicamente la distinción `viewport` vs `visibleRanges`, la conservación de ranges reemplazados, los boundaries devueltos por `domAtPos()` y el scope de coste. El plan puede observar source directo y source reemplazado sin ampliar la inspección fuera del viewport del `EditorView`; la selección sigue siendo la única excepción controlada y existe cap duro.
 
 No se encontró una corrección adicional.
+
+## Revisión 7
+
+Resultado: SIN CAMBIOS.
+
+Se revisó el caso ambiguo en el que un source range no está directamente visible por reemplazo, folding o virtualización. El plan no obliga a etiquetarlo como widget: solo usa `rendered-widget` cuando puede demostrarlo localmente y conserva `unknown/not-materialized` en caso contrario. Esto evita convertir ausencia de `.cm-line` en una conclusión falsa.
+
+No se encontró una corrección adicional.
+
+**ESTABLE según TM tras reapertura:** revisiones 6 y 7 consecutivas sin cambios.
