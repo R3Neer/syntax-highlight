@@ -18,35 +18,44 @@ Cuando un tema dependa de clases privadas de Obsidian, se preferirá el contrato
 
 ## 2. Frontera de runtime
 
-### 2.1 Una sola identidad CodeMirror/Lezer
+### 2.1 Una sola identidad host/runtime
 
-El artifact Obsidian debe resolver desde el host la lista que externaliza el sample oficial:
+El artifact Obsidian seguirá la frontera de externals del sample oficial actual. Deben quedar fuera del bundle:
 
-- `@codemirror/autocomplete`
-- `@codemirror/collab`
-- `@codemirror/commands`
-- `@codemirror/language`
-- `@codemirror/lint`
-- `@codemirror/search`
-- `@codemirror/state`
-- `@codemirror/view`
-- `@lezer/common`
-- `@lezer/highlight`
-- `@lezer/lr`
+- `obsidian`;
+- `electron`;
+- `@codemirror/autocomplete`;
+- `@codemirror/collab`;
+- `@codemirror/commands`;
+- `@codemirror/language`;
+- `@codemirror/lint`;
+- `@codemirror/search`;
+- `@codemirror/state`;
+- `@codemirror/view`;
+- `@lezer/common`;
+- `@lezer/highlight`;
+- `@lezer/lr`;
+- todos los módulos built-in de Node expuestos por `builtinModules`.
+
+La razón funcional inmediata de esta fase es evitar identidades duplicadas de CodeMirror/Lezer. `electron` y built-ins se incluyen igualmente porque la frontera de build debe seguir el patrón oficial completo y prevenir que una dependencia futura los arrastre al artifact por accidente.
 
 Los paquetes de lenguaje que Obsidian no proporciona siguen empaquetados, pero sus imports CodeMirror/Lezer deben resolver a esos externals.
 
 ### 2.2 Declaración npm
 
-`@r3nner/syntax-highlight-obsidian` declarará como peers los módulos host que importa directamente y los módulos Lezer cuya identidad forma parte del contrato, además de `obsidian`. Los rangos deben ser compatibles con los peers declarados por `obsidian` y con `minAppVersion`.
+El sample oficial es una app-plugin y mantiene sus toolchain dependencies como `devDependencies`; nuestro paquete Obsidian, en cambio, también se distribuye como workspace/npm package. Por eso la frontera de **bundle** sigue exactamente el sample oficial, mientras que la declaración npm se decide por contrato de consumo:
 
-No se convertirán en peers paquetes de lenguaje que Obsidian no proporciona.
+- `obsidian` permanece peer del adapter;
+- los módulos host que nuestro código importado deja como `require(...)` externos y los módulos Lezer cuya identidad es parte del contrato deben declararse como peerDependencies cuando sean necesarios para consumidores npm del adapter;
+- rangos compatibles con los peers declarados por la versión de `obsidian` usada para desarrollar y con `minAppVersion`;
+- no convertir en peers los paquetes de lenguaje que Obsidian no proporciona;
+- `electron` y built-ins de Node son externals de bundling, no peerDependencies npm del adapter salvo que en el futuro exista un import runtime explícito que lo justifique.
 
 ### 2.3 Guardrail de build
 
-Centralizar externals en un módulo importable por esbuild/tests.
+Centralizar externals en un módulo importable por esbuild/tests, construyendo la lista completa a partir de los externals explícitos más `builtinModules`.
 
-El build usará `metafile` y fallará si empaqueta cualquiera de los runtime packages prohibidos. No basta con comprobar strings del config.
+El build usará `metafile` y fallará si empaqueta cualquiera de los runtime packages prohibidos. No basta con comprobar strings del config. El guardrail distinguirá paquetes host prohibidos de language packages que sí deben empaquetarse.
 
 ## 3. Ownership por modo
 
@@ -326,7 +335,7 @@ Reading fallback cuelga solo del lado rendered mediante postprocessor oficial.
 
 El plan solo pasa a implementación cuando dos revisiones consecutivas confirmen sin cambios que:
 
-1. coincide con el sample oficial en frontera CodeMirror/Lezer;
+1. coincide con el sample oficial en la frontera completa de externals (`obsidian`, `electron`, CodeMirror, Lezer y built-ins de Node);
 2. ningún componente de producción muta DOM gestionado por CodeMirror;
 3. Markdown APIs resuelven rendered y editor extensions resuelven source;
 4. funcionalidad no depende de `.cm-embed-block`, `.cm-callout` ni `HyperMD-codeblock*`;
