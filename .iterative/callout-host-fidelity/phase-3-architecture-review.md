@@ -48,4 +48,20 @@ Cambio requerido:
 - el helper de materialización comprueba viewport contra el extent físico y `visibleRanges` contra el visibility probe;
 - un visibility probe vacío usa point containment explícito.
 
-Aún no existe una revisión limpia para el plan actual.
+## Revisión 4
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del plan actual.
+
+Se contrastó la arquitectura con las APIs documentadas de Obsidian/CodeMirror:
+
+- `Decoration.line` es una decoration puntual de línea apropiada para un ViewPlugin cuando no cambia layout vertical;
+- `viewport` y `visibleRanges` tienen responsabilidades distintas y el plan ya las separa;
+- el StateField aparece únicamente en el test adversarial para construir una sustitución directa que afecte `visibleRanges`;
+- producción continúa usando ViewPlugin y decorations, sin DOM mutation;
+- `visibilityFrom/To` procede exclusivamente del modelo Markdown y no introduce selectores o conocimiento del DOM.
+
+No se identificó ninguna corrección adicional.
+
+Falta una segunda revisión limpia consecutiva.
