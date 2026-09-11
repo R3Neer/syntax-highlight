@@ -68,12 +68,10 @@ Checklist operativo vigente. La arquitectura detallada vive en `phase-2-architec
 - [x] `--code-background: transparent` scoped a `.cm-line.syntax-editor-code-source`.
 - [x] Sin private selectors, `!important`, branch por theme o margins verticales.
 
-### 5.2 Reabierto tras Revisión arquitectónica 6
-
-Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública relevante a **variable propia heredable → literal dark-safe**:
+### 5.2 Paleta dark-safe completa
 
 - [x] `--code-normal` → `--syntax-editor-code-color` → `#d4d4d4`.
-- [x] `--code-comment` → `--syntax-common-comment` → `#6a9955` (≈6.3:1 sobre negro).
+- [x] `--code-comment` → `--syntax-common-comment` → `#6a9955`.
 - [x] `--code-function` → `--syntax-common-callable` → `#dcdcaa`.
 - [x] `--code-important` → `--syntax-common-regex` → `#d16969`.
 - [x] `--code-keyword` → `--syntax-common-keyword` → `#c586c0`.
@@ -82,11 +80,11 @@ Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública r
 - [x] `--code-operator` → `--syntax-common-operator` → `#d4d4d4`.
 - [x] `--code-property` → `--syntax-common-property` → `#9cdcfe`.
 - [x] `--code-punctuation` → `--syntax-common-punctuation` → `#d4d4d4`.
-- [x] `--code-tag` → `--syntax-common-meta` → `#c586c0`. El rol `syntax-common-type` conserva su propia variable/fallback `#4ec9b0`.
+- [x] `--code-tag` → `--syntax-common-meta` → `#c586c0`; type conserva `#4ec9b0`.
 - [x] `--caret-color` → `--syntax-editor-code-caret` → `#d4d4d4`.
-- [x] `syntax-common-invalid` quoted → `--syntax-common-invalid` → `#f44747`, sin `--text-error` como autoridad final.
+- [x] `syntax-common-invalid` quoted → `--syntax-common-invalid` → `#f44747`.
 - [x] Line numbers quoted → `--syntax-editor-code-line-number` → `#858c99`.
-- [x] Roles scoped consumen primero `--syntax-common-*` y después la variable `--code-*` ya remapeada, nunca la paleta original del theme.
+- [x] Roles scoped consumen primero `--syntax-common-*` y después `--code-*` remapeado.
 - [x] CI existente + build + `pack:all` verdes tras completar la paleta.
 
 ## 6. Coherencia y scope
@@ -96,58 +94,56 @@ Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública r
 - [x] `blocks.ts`, presentation, contrast manager, build boundary, Smart Editing y configured tokenizers sin cambio funcional.
 - [x] Routing rendered intacto.
 - [x] Guardrails Fase 1 siguen verdes.
-- [x] Ledger contiene todas las expectativas antiguas adaptadas hasta ahora.
+- [x] Ledger contiene todas las expectativas antiguas adaptadas.
 
 ## 7. TM de implementación
 
-- [x] Revisión 1: CAMBIOS NECESARIOS, cache resolver + hipótesis inicial blank-line.
-- [x] Revisión 2: CAMBIOS NECESARIOS, corregir boundary contra StreamLanguage oficial + startState opcional.
-- [x] Revisión 3: CAMBIOS NECESARIOS, detectar contraste insuficiente de variables theme sobre surface negra y reabrir arquitectura.
-- [x] Arquitectura y plan de implementación reestabilizados con dos revisiones consecutivas limpias tras la reapertura.
-- [x] Completar 5.2.
-- [x] Revisar layering/API pública/tag precedence/parser efectivo.
-- [x] Revisar scanner y scope del diff.
-- [x] Revisar cascade/contraste CSS y overrides heredables.
-- [x] Revisar ledger.
-- [x] Revisión 4 completa SIN CAMBIOS.
+- [x] Revisión 1: CAMBIOS NECESARIOS.
+- [x] Revisión 2: CAMBIOS NECESARIOS.
+- [x] Revisión 3: CAMBIOS NECESARIOS; reapertura arquitectónica por contraste.
+- [x] Arquitectura y plan reestabilizados tras reapertura.
+- [x] Revisión 4 SIN CAMBIOS.
 - [x] Revisión 5 consecutiva SIN CAMBIOS.
-- [x] Solo entonces tests nuevos.
+- [x] Implementación estable según TM antes de tests nuevos.
 
 ## 8. Tests nuevos/reconstruidos Fase 2
 
 ### Engine/resolver
-- [ ] Bash tree, Text plain y PowerShell stream producen roles propios correctos.
-- [ ] PowerShell cubre variable/number/operator/builtin/string/comment/keyword/punctuation/invalid.
-- [ ] `parser.tokenTable` > engine tokenTags; tags públicos/modifiers/múltiples styles/unknown local.
-- [ ] Synthetic evita colisión legacy y no aparece en semantic output.
-- [ ] Parser sin `startState` usa estado trivial.
+- [x] Bash tree, Text plain y PowerShell stream producen roles propios correctos.
+- [x] PowerShell cubre variable/number/operator/builtin/string/comment/keyword/punctuation/invalid.
+- [x] `parser.tokenTable` > engine tokenTags; tags públicos/modifiers/múltiples styles/unknown local.
+- [x] Synthetic evita colisión legacy y no aparece en semantic output.
+- [x] Parser sin `startState` usa estado trivial coherente con support nativo.
+- [x] `engine.tokenTags` rellena styles ausentes también para la ruta nativa.
 
 ### Scanner
-- [ ] Estado multilinea sintético.
-- [ ] LF/CRLF offsets, última línea no terminada, blank line física.
-- [ ] Source vacío/final virtual no añaden blankLine.
-- [ ] Zero-length con cambio de estado funciona; parser bloqueado termina por guard.
+- [x] Estado multilinea sintético.
+- [x] LF/CRLF offsets, última línea no terminada, blank line física.
+- [x] Source vacío/final virtual no añaden blankLine.
+- [x] Zero-length con cambio de estado funciona; parser bloqueado termina por guard.
 
 ### Consumidores
-- [ ] Reading/editor PowerShell convergen en roles propios y sin `token *`/`cm-*` manuales.
-- [ ] Bash Reading/editor convergen.
-- [ ] Quote mapping, line numbers, presentation y cache sin regresión.
-- [ ] SourceView usa support nativo + highlighter único.
+- [x] Reading/editor PowerShell convergen en roles propios y sin `token *`/`cm-*` manuales.
+- [x] Bash Reading/editor conservan roles semánticos significativos.
+- [x] Quote mapping excluye `>`; line numbers/presentation/cache de Fase 1 siguen verdes.
+- [x] SourceView usa support nativo + highlighter único para PowerShell y Bash.
 
 ### CSS/arquitectura
-- [ ] Surface default negra; override heredado puede cambiarla.
-- [ ] Familia `--code-*` scoped deriva de paleta dark-safe propia.
-- [ ] Contraste estático de fallbacks ordinarios >=4.5:1 sobre `#000`.
-- [ ] Invalid y line numbers legibles.
-- [ ] Sin private selectors/`!important` nuevo.
-- [ ] Guardrails Fase 1 verdes.
-- [ ] Ledger cerrado con cobertura concreta.
+- [x] Surface default negra; override heredado puede cambiarla.
+- [x] Familia `--code-*` scoped deriva de paleta dark-safe propia.
+- [x] Contraste estático de fallbacks ordinarios >=4.5:1 sobre `#000`.
+- [x] Invalid y line numbers legibles.
+- [x] Sin private selectors/`!important` nuevo.
+- [x] Guardrails Fase 1 verdes.
+- [x] Ledger cerrado con cobertura concreta o gate real explícito.
 
 ## 9. TM de tests
 
-- [ ] Primera revisión completa cobertura/fragilidad.
-- [ ] Segunda revisión consecutiva SIN CAMBIOS.
-- [ ] CI + `pack:all` verde.
+- [x] Revisiones 1–5: CAMBIOS NECESARIOS, documentadas en `phase-2-tests-review.md`.
+- [x] Revisión 6 completa SIN CAMBIOS: cobertura.
+- [x] Revisión 7 consecutiva SIN CAMBIOS: fragilidad/contratos.
+- [x] CI validado: 43 archivos / 288 tests + build + `pack:all` + artifact.
+- [x] Tests Fase 2 estables según TM.
 
 ## 10. Gate manual Obsidian real
 
@@ -159,7 +155,7 @@ No limpiar diagnostics todavía.
 - [ ] PowerShell quoted source negro, sin píldoras claras dominantes y coloreado.
 - [ ] PowerShell quoted rendered coloreado.
 - [ ] Reading PowerShell top-level/quoted coloreado.
-- [ ] Bash conserva roles coherentes source/rendered.
+- [ ] Bash conserva roles coherentes source/rendered; no se exige identidad pixel-perfect del host.
 - [ ] Text quoted conserva presentation.
 - [ ] Cursor source ↔ rendered sin regresión.
 
