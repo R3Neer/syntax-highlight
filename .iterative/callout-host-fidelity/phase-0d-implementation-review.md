@@ -91,3 +91,13 @@ Resultado: SIN CAMBIOS.
 Se revisó la implementación ya corregida contra el plan estabilizado: controller nuevo por carga, registro/desregistro en el ViewPlugin existente, captura manual tras dos animation frames, fail-soft por view y por nodo, ancestry limitado al EditorView, atributos filtrados, URLs redaccionadas por valor completo, límites de tamaño, mapeo `posAtDOM`, anotación contra fences lógicos y snapshot adicional de `.cm-embed-block`.
 
 No se encontró una corrección adicional dentro del alcance diagnóstico de Fase 0D. La implementación sigue sin tocar CSS, parser, presentation, Reading View ni normalización de contraste.
+
+## Revisión 8
+
+Resultado: SIN CAMBIOS.
+
+Revisión independiente centrada en lifecycle y composición: múltiples panes registrados, destrucción de un view entre frames, reconciliación de nodos durante el snapshot, coexistencia de source/rendered, quoted embedded host y comportamiento con diagnostics desactivado. La implementación sigue siendo fail-soft, manual e inerte respecto al comportamiento funcional del plugin.
+
+El CI del código corregido completó con éxito lint, typecheck, suite existente, build, `pack:all` y artifact. No se identificó una modificación adicional.
+
+**ESTABLE según TM:** revisiones 7 y 8 consecutivas sin cambios.
