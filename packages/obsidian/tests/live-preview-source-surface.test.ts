@@ -69,7 +69,7 @@ function sourceLineAt(view: EditorView, lineNumber: number): HTMLElement {
 }
 
 describe("Live Preview quoted source surface", () => {
-  it("adds the host code-block surface contract to quoted opening, body and closing lines", () => {
+  it("adds the plugin-owned surface contract to quoted opening, body and closing lines", () => {
     const source = [
       "> [!task] PowerShell",
       "> ```powershell",
@@ -85,22 +85,22 @@ describe("Live Preview quoted source surface", () => {
     const body2 = joinedAt(classes, state.doc.line(4).from);
     const closing = joinedAt(classes, state.doc.line(5).from);
 
-    expect(opening).toContain("syntax-quoted-code-source");
-    expect(opening).toContain("HyperMD-codeblock");
-    expect(opening).toContain("HyperMD-codeblock-begin-bg");
+    expect(opening).toContain("syntax-editor-code-source");
+    expect(opening).toContain("syntax-editor-code-source-opening");
 
     for (const body of [body1, body2]) {
-      expect(body).toContain("syntax-quoted-code-source");
-      expect(body).toContain("HyperMD-codeblock");
-      expect(body).toContain("HyperMD-codeblock-bg");
+      expect(body).toContain("syntax-editor-code-source");
+      expect(body).toContain("syntax-editor-code-source-body");
     }
 
-    expect(closing).toContain("syntax-quoted-code-source");
-    expect(closing).toContain("HyperMD-codeblock");
-    expect(closing).toContain("HyperMD-codeblock-end-bg");
+    expect(closing).toContain("syntax-editor-code-source");
+    expect(closing).toContain("syntax-editor-code-source-closing");
+
+    const all = [...classes.values()].flat().join(" ");
+    expect(all).not.toContain("HyperMD-codeblock");
   });
 
-  it("does not duplicate host surface decorations on top-level fences", () => {
+  it("does not duplicate a plugin surface on top-level fences", () => {
     const source = [
       "```powershell",
       "$foo = 42",
@@ -109,8 +109,8 @@ describe("Live Preview quoted source surface", () => {
     ].join("\n");
     const classes = [...lineClasses(source).values()].flat().join(" ");
 
-    expect(classes).not.toContain("syntax-quoted-code-source");
-    expect(classes).not.toContain("HyperMD-codeblock-bg");
+    expect(classes).not.toContain("syntax-editor-code-source");
+    expect(classes).not.toContain("HyperMD-codeblock");
   });
 
   it("materializes quoted PowerShell surface classes on actual EditorView lines", () => {
@@ -126,14 +126,15 @@ describe("Live Preview quoted source surface", () => {
     const body = sourceLineAt(view, 3);
     const closing = sourceLineAt(view, 5);
 
-    expect(opening.classList.contains("syntax-quoted-code-source")).toBe(true);
-    expect(opening.classList.contains("HyperMD-codeblock-begin-bg")).toBe(true);
-    expect(body.classList.contains("HyperMD-codeblock")).toBe(true);
-    expect(body.classList.contains("HyperMD-codeblock-bg")).toBe(true);
-    expect(closing.classList.contains("HyperMD-codeblock-end-bg")).toBe(true);
+    expect(opening.classList.contains("syntax-editor-code-source")).toBe(true);
+    expect(opening.classList.contains("syntax-editor-code-source-opening")).toBe(true);
+    expect(body.classList.contains("syntax-editor-code-source")).toBe(true);
+    expect(body.classList.contains("syntax-editor-code-source-body")).toBe(true);
+    expect(closing.classList.contains("syntax-editor-code-source-closing")).toBe(true);
+    expect(view.dom.querySelector('[class*="HyperMD-codeblock"]')).toBeNull();
   });
 
-  it("merges Text presentation and quoted host surface classes on the same DOM lines", () => {
+  it("merges Text presentation and plugin-owned surface classes on the same DOM line", () => {
     const view = mountedEditor([
       "> [!task] Text",
       "> ```text-center-justified",
@@ -142,8 +143,8 @@ describe("Live Preview quoted source surface", () => {
     ].join("\n"));
 
     const body = sourceLineAt(view, 3);
-    expect(body.classList.contains("syntax-quoted-code-source")).toBe(true);
-    expect(body.classList.contains("HyperMD-codeblock-bg")).toBe(true);
+    expect(body.classList.contains("syntax-editor-code-source")).toBe(true);
+    expect(body.classList.contains("syntax-editor-code-source-body")).toBe(true);
     expect(body.classList.contains("syntax-presentational")).toBe(true);
     expect(body.classList.contains("syntax-presentation-align-center")).toBe(true);
     expect(body.classList.contains("syntax-presentation-flow-justified")).toBe(true);
