@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   commonLanguageByExtension,
   commonLanguageByFence,
   commonLanguages,
-  parseCommonLanguageTree,
+  commonLanguageSupport,
 } from "../src/common-languages";
 
 describe("common language catalog", () => {
@@ -40,10 +40,11 @@ describe("common language catalog", () => {
     );
   });
 
-  it("models Text as parserless and without code furniture", () => {
+  it("models Text as a plain engine without code furniture", () => {
     const text = commonLanguageByFence("text");
     expect(text?.name).toBe("Text");
-    expect(text?.support).toBeUndefined();
+    expect(text?.engine.kind).toBe("plain");
+    expect(commonLanguageSupport(text!)).toBeUndefined();
     expect(text?.extensions).toEqual([]);
     expect(text?.presentation).toEqual({
       badge: false,
@@ -52,9 +53,10 @@ describe("common language catalog", () => {
     });
   });
 
-  it("marks Markdown as a syntax-highlighted presentational family", () => {
+  it("models Markdown as a tree-backed presentational family", () => {
     const markdown = commonLanguageByFence("markdown");
-    expect(markdown?.support).toBeDefined();
+    expect(markdown?.engine.kind).toBe("tree");
+    expect(commonLanguageSupport(markdown!)).toBeDefined();
     expect(markdown?.presentation).toEqual({
       badge: false,
       lineNumbers: false,
@@ -62,29 +64,11 @@ describe("common language catalog", () => {
     });
   });
 
-  it("uses CodeMirror's PowerShell mode as a parser-backed common language", () => {
+  it("models PowerShell as a stream-backed CodeMirror language", () => {
     const powerShell = commonLanguageByFence("powershell");
     expect(powerShell?.name).toBe("PowerShell");
-    expect(powerShell?.support?.().language).toBeDefined();
+    expect(powerShell?.engine.kind).toBe("stream");
+    expect(commonLanguageSupport(powerShell!)?.language).toBeDefined();
     expect(powerShell?.presentation).toBeUndefined();
-  });
-
-  it("parses StreamLanguage through EditorState instead of parser.parse directly", () => {
-    const powerShell = commonLanguageByFence("powershell");
-    expect(powerShell?.support).toBeDefined();
-    const support = powerShell!.support!();
-    const directParse = vi
-      .spyOn(support.language.parser, "parse")
-      .mockImplementation(() => {
-        throw new Error("direct StreamLanguage parser.parse must not be used");
-      });
-    const source = "$foo = 42\nWrite-Host $foo\n";
-    const tree = parseCommonLanguageTree(
-      { ...powerShell!, support: () => support },
-      source,
-    );
-
-    expect(directParse).not.toHaveBeenCalled();
-    expect(tree?.length).toBe(source.length);
   });
 });
