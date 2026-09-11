@@ -66,3 +66,11 @@ Cambios arquitectónicos:
 - excepciones de resolución por posición no abortan la captura del resto.
 
 Este cambio es arquitectónico, no un detalle de implementación, porque redefine qué estados del host forman parte de la unidad de observación.
+
+## Revisión 6
+
+Resultado: SIN CAMBIOS.
+
+Se revisó específicamente la distinción `viewport` vs `visibleRanges`, la conservación de ranges reemplazados, los boundaries devueltos por `domAtPos()` y el scope de coste. El plan puede observar source directo y source reemplazado sin ampliar la inspección fuera del viewport del `EditorView`; la selección sigue siendo la única excepción controlada y existe cap duro.
+
+No se encontró una corrección adicional.
