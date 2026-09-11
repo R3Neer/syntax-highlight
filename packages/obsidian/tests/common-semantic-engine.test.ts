@@ -1,5 +1,5 @@
 import type { StreamParser } from "@codemirror/language";
-import { tags, type Tag } from "@lezer/highlight";
+import { tags } from "@lezer/highlight";
 import { describe, expect, it, vi } from "vitest";
 
 import {
