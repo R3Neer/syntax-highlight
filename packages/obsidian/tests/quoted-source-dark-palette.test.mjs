@@ -67,6 +67,16 @@ describe("quoted source dark palette", () => {
     expect(body).not.toMatch(/--syntax-editor-code-caret\s*:/);
   });
 
+  it("hands the surface to Obsidian's public blockquote variable without widening scope", () => {
+    const body = selectorBody(".cm-line.syntax-editor-code-source");
+
+    expect(body).toContain(
+      "--blockquote-background-color: var(--syntax-editor-code-background, #000);",
+    );
+    expect(body).not.toMatch(/--blockquote-color\s*:/);
+    expect(styles.match(/--blockquote-background-color\s*:/g) ?? []).toHaveLength(1);
+  });
+
   it("remaps every public code variable used by host furniture to the plugin palette", () => {
     const body = selectorBody(".cm-line.syntax-editor-code-source");
     const expected = [
