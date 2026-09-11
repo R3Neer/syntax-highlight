@@ -19,6 +19,9 @@ En `editor-block-model.ts`:
 - [ ] Opening: extent/probe = opening physical line.
 - [ ] Body: extent = physical line; probe = `sourceFrom/sourceTo`.
 - [ ] Closing: extent/probe = closing physical line.
+- [ ] Refactorizar el acumulador interno de `lineSemantics()` para almacenar una única estructura completa por `from`, no solo `Set<string>`.
+- [ ] La primera aportación a una línea fija `to`, `visibilityFrom`, `visibilityTo` y clases.
+- [ ] Aportaciones posteriores al mismo `from` (p. ej. presentation) solo fusionan clases y conservan exactamente los mismos bounds/probe.
 - [ ] Presentation continúa fusionándose en la misma body semantic.
 - [ ] Añadir helper puro para overlap half-open y point containment de probe vacío.
 - [ ] Añadir `lineSemanticIsMaterialized(line, viewport, visibleRanges)`.
@@ -50,7 +53,7 @@ Antes de TM de implementación:
 - [ ] suite existente verde sin crear todavía los tests adversariales nuevos de Fase 3.
 - [ ] `npm run build`.
 - [ ] `npm run pack:all`.
-- [ ] Si una expectation antigua falla únicamente por el shape ampliado de `EditorLineSemantic`, adaptar solo esa expectativa y registrar el cambio; no añadir aún nueva cobertura conductual.
+- [ ] Si una expectation antigua falla únicamente por el shape ampliado de `EditorLineSemantic`, adaptar solo esa expectation y registrar el cambio; no añadir aún nueva cobertura conductual.
 
 ## 4. TM de implementación
 
@@ -59,6 +62,7 @@ Revisar producción completa, no solo CI:
 - [ ] Revisión de layering/API pública/ownership.
 - [ ] Revisión de viewport vs visibleRanges y boundaries half-open.
 - [ ] Revisión de blank quoted body y fully replaced source.
+- [ ] Revisión de consolidación de surface + presentation sobre un único line semantic.
 - [ ] Revisión de performance/cache/lifecycle.
 - [ ] Revisión de scope: ningún cambio funcional fuera de Fase 3.
 - [ ] Primera revisión completa SIN CAMBIOS.
@@ -74,6 +78,7 @@ Revisar producción completa, no solo CI:
 - [ ] physical line solo toca el borde de visibleRange sin overlap → false.
 - [ ] visibility probe vacío dentro de visibleRange → true.
 - [ ] visibility probe vacío fuera → false.
+- [ ] surface + presentation de una misma body line conservan un único extent/probe coherente.
 
 ### 5.2 Composición CodeMirror adversarial
 
