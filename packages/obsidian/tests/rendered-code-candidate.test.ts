@@ -107,7 +107,9 @@ describe("rendered code candidate contract", () => {
     const root = document.createElement("div");
     root.append(pre);
     const before = root.innerHTML;
-    const handler = vi.fn((_candidate: RenderedCodeBlockCandidate) => false);
+    const handler = vi
+      .fn<(candidate: RenderedCodeBlockCandidate) => boolean>()
+      .mockReturnValue(false);
 
     const found = collectUnprocessedRenderedCodeBlocks(root);
     for (const item of found) handler(item);
