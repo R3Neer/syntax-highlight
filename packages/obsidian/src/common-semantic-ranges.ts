@@ -100,7 +100,10 @@ function streamSemanticRanges(
   const ranges: CommonSemanticRange[] = [];
   let lineFrom = 0;
 
-  while (lineFrom < source.length) {
+  // A text document always has at least one logical line. Using <= here also
+  // preserves the final blank line after a trailing LF/CRLF so stream parsers
+  // receive the same blankLine transition they get from CodeMirror.
+  while (lineFrom <= source.length) {
     let lineTo = lineFrom;
     while (
       lineTo < source.length &&
