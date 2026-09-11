@@ -38,17 +38,26 @@ function editorMarks(source: string): Map<string, string[]> {
   return marks;
 }
 
+const BODY = [
+  "$foo = 42",
+  '$message = "hello"',
+  "Write-Host $foo",
+  "# comment",
+].join("\n");
+
 describe("PowerShell semantic bridge", () => {
-  it("maps PowerShell variables, numbers, operators and builtins to distinct Reading classes", () => {
+  it("maps PowerShell semantic categories to distinct Reading classes", () => {
     const language = commonLanguageByFence("powershell");
     expect(language).toBeDefined();
     const container = document.createElement("div");
 
-    renderCommonCode("$foo = 42\nWrite-Host $foo", container, language!);
+    renderCommonCode(BODY, container, language!);
 
     expect(classForRenderedText(container, "$foo")).toContain("token variable");
     expect(classForRenderedText(container, "42")).toContain("token number");
     expect(classForRenderedText(container, "=")).toContain("token operator");
+    expect(classForRenderedText(container, '"hello"')).toContain("token string");
+    expect(classForRenderedText(container, "# comment")).toContain("token comment");
     expect(classForRenderedText(container, "Write-Host")).toContain("token builtin");
     expect(classForRenderedText(container, "Write-Host")).toContain("syntax-common-callable");
   });
@@ -57,8 +66,7 @@ describe("PowerShell semantic bridge", () => {
     const source = [
       "> [!task] PowerShell",
       "> ```powershell",
-      "> $foo = 42",
-      "> Write-Host $foo",
+      ...BODY.split("\n").map((line) => `> ${line}`),
       "> ```",
     ].join("\n");
     const marks = editorMarks(source);
@@ -66,6 +74,8 @@ describe("PowerShell semantic bridge", () => {
     expect(marks.get("$foo")?.some((value) => value.includes("cm-variable"))).toBe(true);
     expect(marks.get("42")?.some((value) => value.includes("cm-number"))).toBe(true);
     expect(marks.get("=")?.some((value) => value.includes("cm-operator"))).toBe(true);
+    expect(marks.get('"hello"')?.some((value) => value.includes("cm-string"))).toBe(true);
+    expect(marks.get("# comment")?.some((value) => value.includes("cm-comment"))).toBe(true);
     expect(marks.get("Write-Host")?.some((value) => value.includes("cm-builtin"))).toBe(true);
     expect(marks.get("Write-Host")?.some((value) => value.includes("syntax-common-callable"))).toBe(true);
   });
