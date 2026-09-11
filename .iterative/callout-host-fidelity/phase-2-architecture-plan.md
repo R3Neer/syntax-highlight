@@ -28,10 +28,17 @@ La documentación oficial de variables CSS de Obsidian confirma además `--code-
 `CommonLanguage` tendrá un engine discriminado o equivalente:
 
 1. **tree-backed**: factory de `LanguageSupport`/lenguaje Lezer;
-2. **stream-backed**: `StreamParser` público + tabla declarativa style → `Tag | Tag[]`;
+2. **stream-backed**: `StreamParser` público con estado inicial explícito + tabla declarativa style → `Tag | Tag[]`;
 3. **plain**: sin parser.
 
 No habrá un `support()` paralelo capaz de divergir del engine.
+
+Para que el scanner manual no dependa del valor interno que `StreamLanguage` usa cuando `StreamParser.startState` falta, el engine stream exige una de estas dos formas equivalentes a nivel de tipos:
+
+- parser cuyo `startState(indentUnit)` esté presente; o
+- wrapper declarativo del engine que aporte una factoría de estado inicial explícita.
+
+PowerShell ya expone `startState`, así que no necesita excepción. Un futuro parser stateless sin `startState` deberá declararse mediante un wrapper explícito en el catálogo; no se inventará un estado genérico dentro del scanner.
 
 Un helper único `commonLanguageSupport(language)` devuelve:
 
@@ -157,8 +164,9 @@ Debe preservar:
 - `StringStream` recibe solo el contenido de la línea;
 - ranges desplazados por el offset real de la línea;
 - `blankLine(state, indentUnit)` únicamente para líneas vacías físicas reales;
-- defaults deterministas sin EditorState: `tabSize=4`, `indentUnit=2` para `StringStream`, y un indent unit explícito/documentado para `startState`;
-- opciones explícitas cuando un caller tenga state.
+- defaults deterministas sin EditorState: `tabSize=4`, `indentUnit=2`;
+- el mismo `indentUnit` se pasa tanto a la factoría de estado inicial como a `StringStream`;
+- opciones explícitas cuando un caller tenga state/configuración propia.
 
 Semántica de terminadores:
 
@@ -320,10 +328,12 @@ No tocar salvo imports/tipos inevitables:
 
 - PowerShell stream: variable/number/operator/builtin/string/comment;
 - no rama renderer PowerShell;
+- stream-backed exige estado inicial explícito; no existe fallback mágico para parser sin `startState`;
 - `commonLanguageSupport(PowerShell)` y scanner manual usan el mismo resolver efectivo;
 - parser tokenTable gana sobre engine tokenTags incluso si el nombre original coincide con vocabulario legacy, gracias a la reescritura sintética;
 - nombres/modificadores públicos y múltiples styles;
 - multiline state, blankLine, LF/CRLF, terminador final sin blank fantasma, última línea sin terminador, source vacío y guard zero-length;
+- `startState` y `StringStream` reciben el mismo `indentUnit` explícito;
 - Bash tree sigue funcionando; Text plain;
 - highlighter único creado con `tagHighlighter` funciona en `highlightTree`, stream `.style()` y `syntaxHighlighting()`;
 - rendered manual sin `token *`; editor manual sin `cm-*`;
@@ -339,17 +349,18 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 1. PowerShell se corrige por engine stream genérico, no renderer especial;
 2. engine y support comparten una sola metadata y un mismo resolver efectivo;
 3. solo API pública StreamParser/StringStream/token/tokenTable/tags/Highlighter/tagHighlighter;
-4. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
-5. tree languages conservan parser actual;
-6. manual paths convergen en `syntax-common-*`;
-7. `cm-*`/`token *` salen de nuestra taxonomía manual;
-8. no se sacrifica highlighting top-level common;
-9. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
-10. SourceView conserva camino nativo CodeMirror;
-11. quoted black es plugin-owned y sobrescribible;
-12. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
-13. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
-14. ownership DOM de Fase 1 permanece intacto;
-15. rendered routing no cambia sin evidencia fresca;
-16. alcance no se expande a piezas no incriminadas;
-17. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
+4. ningún scanner inventa el estado de un StreamParser sin `startState`; el engine exige estado inicial explícito;
+5. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
+6. tree languages conservan parser actual;
+7. manual paths convergen en `syntax-common-*`;
+8. `cm-*`/`token *` salen de nuestra taxonomía manual;
+9. no se sacrifica highlighting top-level common;
+10. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
+11. SourceView conserva camino nativo CodeMirror;
+12. quoted black es plugin-owned y sobrescribible;
+13. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
+14. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
+15. ownership DOM de Fase 1 permanece intacto;
+16. rendered routing no cambia sin evidencia fresca;
+17. alcance no se expande a piezas no incriminadas;
+18. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
