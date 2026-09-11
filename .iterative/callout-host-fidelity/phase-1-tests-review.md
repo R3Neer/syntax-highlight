@@ -72,4 +72,24 @@ Se cruzó cada invariante del plan y del ledger con cobertura concreta:
 - arquitectura: tests estáticos impiden reintroducir bridge/selectores privados en producción;
 - recreación rendered de Live Preview permanece deliberadamente en gate real.
 
-No se encontró garantía faltante ni test que requiera cambio. Esta es la primera revisión limpia.
+No se encontró garantía faltante ni test que requiera cambio.
+
+## Revisión 8
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente, centrada en fragilidad y en no convertir fixtures en falsa evidencia del host.
+
+Comprobaciones:
+
+- no queda ningún test denominado “real” que use happy-dom o DOM construido por nosotros;
+- ningún test de producto fabrica `.cm-embed-block` para afirmar el comportamiento de rendered Live Preview;
+- las clases privadas de Obsidian solo aparecen en diagnostics temporales y en el test que verifica expresamente esa excepción;
+- la suite source usa un `EditorView` real de CodeMirror del entorno de test, pero no lo presenta como Obsidian real;
+- mode/settings se prueba como política pura y la traducción desde `MarkdownView` queda para adapter review + gate real;
+- la lista de externals fija la frontera oficial adoptada sin consultas de red durante CI;
+- `pack:all` y artifact CI complementan las invariantes de packaging que no se deben reinventar en happy-dom;
+- la reutilización de caché se prueba en rematerialización sin cambio documental y la rama `viewportChanged` comparte el mismo cache sin invalidación, además de estar revisada estáticamente en implementación;
+- las únicas garantías no automatizadas son las que requieren de verdad a Obsidian: processor rendered y recreación de widget.
+
+No se encontró cambio justificable. Revisiones 7 y 8 son consecutivas sin cambios: **tests estabilizados según TM**. La siguiente fase es el gate manual en Obsidian real.
