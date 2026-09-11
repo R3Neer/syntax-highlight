@@ -27,14 +27,25 @@ Resultado: CAMBIOS NECESARIOS.
 
 La revisión de rendimiento/ownership del ViewPlugin detectó una incoherencia: el plan proponía materializar decorations solo para `visibleRanges`, pero el modelo documental ya contenía todos los token spans, lo que obligaba a parsear/tokenizar todos los bloques del documento en cada cambio de documento.
 
-Eso no aprovecha la razón por la que Obsidian recomienda ViewPlugin para decorations ligadas al viewport.
-
 Corrección incorporada:
 
 - el modelo documental pasa a ser estructural/resuelto, sin tokenizar todos los bloques;
 - solo bloques que intersectan `view.visibleRanges` se parsean/tokenizan;
-- cada bloque visible se procesa sobre su cuerpo lógico completo para conservar estado multilinea de parsers/StreamLanguage;
+- cada bloque visible se procesa sobre su cuerpo lógico completo para conservar estado multilinea;
 - la semántica se cachea por bloque + revisión y se reutiliza al hacer scroll;
-- la materialización se recalcula ante viewport/model/revision y, cuando sea necesario para el cambio source/rendered del host, selección.
+- la materialización se recalcula ante viewport/model/revision y, cuando sea necesario, selección.
 
-Así el ViewPlugin queda alineado con el patrón recomendado por Obsidian/CodeMirror sin sacrificar corrección multilinea.
+## Revisión 3
+
+Resultado: SIN CAMBIOS.
+
+Se revisó el plan contra la documentación oficial de decorations, la frontera de runtime del sample oficial y la ruta soportada de code-block processors en Live Preview.
+
+Comprobaciones:
+
+- marks, line decorations y widgets inline pueden seguir siendo proporcionados por ViewPlugin; no se introducen block widgets/replacements que obliguen a StateField directo;
+- el sample oficial externaliza CodeMirror y Lezer conjuntamente, y el paquete `obsidian` declara Lezer como peer;
+- `registerMarkdownCodeBlockProcessor` es la API soportada para rendered code blocks en Reading/Live Preview, por lo que no hay razón arquitectónica para conservar el MutationObserver del DOM de CodeMirror;
+- las variables `--code-background` y `--code-*` forman parte de la superficie temática de código de Obsidian y son una frontera adecuada para styling propio.
+
+No se encontró una modificación necesaria.
