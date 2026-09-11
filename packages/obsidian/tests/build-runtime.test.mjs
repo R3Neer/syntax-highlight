@@ -1,6 +1,7 @@
-import { builtinModules } from "node:module";
 import { readFile } from "node:fs/promises";
+import { builtinModules } from "node:module";
 import { resolve } from "node:path";
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 
 import {
