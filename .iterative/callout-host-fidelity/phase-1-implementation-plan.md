@@ -9,6 +9,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Confirmar head de `plan/obsidian-callout-host-fidelity` y CI verde antes de producción.
 - [ ] Confirmar que ningún archivo temporal anterior se elimina todavía: diagnostics y planes siguen siendo necesarios hasta el gate real.
 - [ ] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
+- [ ] Mantener un pequeño ledger dentro de este plan de tests/garantías antiguas retiradas durante la refactorización, indicando en qué tarea de la Fase 9 se sustituyen.
 
 ## 1. Runtime único CodeMirror/Lezer
 
@@ -47,6 +48,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 ### Producción
 
+- [ ] Inventariar tests existentes que cubren `LivePreviewRenderedBlockBridge` y anotar en el ledger qué garantía útil conserva cada uno antes de borrarlo/adaptarlo.
 - [ ] Retirar `LivePreviewRenderedBlockBridge` y sus helpers de scanning/replacement del EditorView.
 - [ ] Retirar cualquier producción que dependa de `.cm-embed-block` o `.cm-callout`.
 - [ ] Retirar `LIVE_PREVIEW_HOST_ATTRIBUTE` si deja de tener consumidores legítimos.
@@ -54,7 +56,8 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Conservar el fallback estructural solo en Reading.
 - [ ] Reubicar temporalmente `registerLivePreviewDiagnosticView()` dentro de la extensión source existente para no perder el gate 0D.
 - [ ] Eliminar `live-preview-host.ts` si tras la reubicación no conserva responsabilidad production.
-- [ ] Ejecutar CI existente y ajustar únicamente tests existentes que dejen de compilar por símbolos eliminados; la nueva cobertura se reserva para la fase de tests.
+- [ ] Ajustar/eliminar tests antiguos únicamente cuando su contrato production haya desaparecido; cada garantía útil retirada debe quedar enlazada a una tarea concreta de Fase 9.
+- [ ] Ejecutar CI existente; la nueva cobertura arquitectónica se reserva para la fase de tests.
 
 ## 4. Modelo source y caché por viewport
 
@@ -64,7 +67,12 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Definir modelo estructural/resuelto de bloque.
 - [ ] Resolver configured/common una sola vez por reconstrucción del modelo.
 - [ ] Definir helper de intersección bloque <-> `visibleRanges`.
-- [ ] Definir clave/invalidation de caché semántica por bloque + runtime revision.
+- [ ] Definir clave de caché semántica por bloque + runtime revision.
+- [ ] Usar invalidación conservadora durante esta refactorización:
+  - [ ] cualquier `docChanged` limpia la caché semántica completa del view;
+  - [ ] cualquier cambio de runtime/registry revision relevante limpia la caché;
+  - [ ] viewport/selection sin cambio documental reutiliza entradas válidas.
+- [ ] No introducir reutilización posicional sofisticada entre documentos distintos en este ciclo.
 - [ ] No tokenizar bloques no visibles.
 
 ### Producción · semántica
@@ -83,6 +91,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
   - [ ] caché semántica visible;
   - [ ] DecorationSet materializado.
 - [ ] Reconstruir modelo solo en doc/revision/fence-resolution change.
+- [ ] Aplicar las invalidaciones conservadoras definidas arriba antes de materializar.
 - [ ] Reconstruir materialización en model change / `viewportChanged` / `selectionSet` / settings visuales relevantes.
 - [ ] Generar marks/lines/widgets solo donde intersecten visible ranges.
 - [ ] Mantener suscripción del registry y cleanup de `destroy()`.
@@ -133,13 +142,14 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] Revisar que no queden selectores privados como dependencia funcional.
 - [ ] Revisar ownership de contraste.
 - [ ] Revisar performance/invalidation del ViewPlugin.
+- [ ] Revisar el ledger de garantías retiradas y comprobar que todas tienen sustituto planificado en Fase 9.
 - [ ] Aplicar correcciones encontradas.
 - [ ] Repetir hasta obtener dos revisiones consecutivas sin cambios.
 - [ ] Solo entonces pasar a la fase de tests nuevos.
 
 ## 9. Tests de Fase 1
 
-> Esta sección se ejecuta **después** de estabilizar implementación. Los tests existentes pueden ajustarse antes únicamente para mantener compilación al eliminar APIs production.
+> Esta sección se ejecuta **después** de estabilizar implementación. Tests antiguos pueden ajustarse/eliminarse durante la implementación cuando prueben APIs deliberadamente eliminadas, pero sus garantías útiles deben estar registradas en el ledger y recuperarse aquí.
 
 ### Runtime/build
 
@@ -161,7 +171,8 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 - [ ] modelo detecta top-level y quoted sin DOM.
 - [ ] bloques fuera del viewport no se tokenizan.
 - [ ] bloque visible se tokeniza sobre cuerpo completo aunque viewport corte el bloque.
-- [ ] caché se reutiliza en scroll y se invalida en doc/revision.
+- [ ] caché se reutiliza en scroll/selection sin cambio documental.
+- [ ] caché completa del view se invalida en `docChanged` y runtime revision.
 - [ ] máximo una line decoration propia por línea.
 - [ ] presentation y surface conviven en la misma line semantics.
 - [ ] marks conservan mapping tras `>`/quote depth.
@@ -184,12 +195,19 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 ### Prohibiciones arquitectónicas
 
-- [ ] test estático o búsqueda CI: production no contiene `.cm-embed-block`, `.cm-callout`, `HyperMD-codeblock` como dependencia funcional.
+- [ ] test estático/CI: código production no temporal no contiene `.cm-embed-block`, `.cm-callout` ni `HyperMD-codeblock` como dependencia funcional.
+- [ ] mientras exista el gate 0D, la única excepción permitida a esa búsqueda es `_tmp-host-diagnostics.ts` y sus tests temporales.
+- [ ] tras limpieza final, la búsqueda no admite ninguna excepción.
 - [ ] no existe MutationObserver de bridge rendered Live Preview.
+
+### Ledger de garantías migradas
+
+- [ ] Cada garantía útil anotada al retirar tests del bridge/host antiguo tiene una nueva prueba equivalente o queda explícitamente cubierta por el gate manual si no puede simularse legítimamente.
 
 ## 10. Revisión TM de tests
 
 - [ ] Revisar cobertura frente a cada invariante arquitectónico.
+- [ ] Revisar y cerrar el ledger de garantías migradas.
 - [ ] Distinguir tests lógicos de host-real; no llamar `real` a fixtures inventados.
 - [ ] Corregir tests frágiles que midan incidental DOM de happy-dom.
 - [ ] Repetir hasta dos revisiones consecutivas sin cambios.
@@ -205,6 +223,7 @@ No limpiar diagnostics todavía.
 - [ ] Validar Text presentacional quoted source/rendered.
 - [ ] Validar cambio de cursor source <-> rendered.
 - [ ] Validar tema activo y ausencia de crash.
+- [ ] Validar específicamente que nested rendered sigue pasando por el processor oficial tras retirar el bridge DOM.
 - [ ] Capturar diagnostics únicamente si existe discrepancia.
 - [ ] Si falla, volver a análisis/plan según TM antes de un nuevo fix.
 
@@ -219,4 +238,4 @@ Solo tras gate manual satisfactorio:
 - [ ] Actualizar `docs/theme-integration.md`.
 - [ ] Eliminar documentos temporales `.iterative/callout-host-fidelity/*` agotados por este objetivo, incluidos los dos planes de Fase 1.
 - [ ] Ejecutar CI final y `pack:all`.
-- [ ] Revisar diff final para confirmar que no quedan artefactos temporales.
+- [ ] Revisar diff final para confirmar que no quedan artefactos temporales ni excepciones a la prohibición de selectores privados.
