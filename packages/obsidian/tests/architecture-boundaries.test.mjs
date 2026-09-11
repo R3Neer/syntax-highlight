@@ -1,6 +1,7 @@
-import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
+import { access, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 
 const sourceRoot = resolve(process.cwd(), "packages/obsidian/src");
