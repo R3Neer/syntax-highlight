@@ -73,7 +73,7 @@ Checklist operativo vigente. La arquitectura detallada vive en `phase-2-architec
 Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública relevante a **variable propia heredable → literal dark-safe**:
 
 - [ ] `--code-normal` → `--syntax-editor-code-color` → `#d4d4d4`.
-- [ ] `--code-comment` → `--syntax-common-comment` → `#6a9955` o equivalente >=4.5:1.
+- [ ] `--code-comment` → `--syntax-common-comment` → `#6a9955` (≈6.3:1 sobre negro).
 - [ ] `--code-function` → `--syntax-common-callable` → `#dcdcaa`.
 - [ ] `--code-important` → `--syntax-common-regex` → `#d16969`.
 - [ ] `--code-keyword` → `--syntax-common-keyword` → `#c586c0`.
@@ -82,11 +82,11 @@ Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública r
 - [ ] `--code-operator` → `--syntax-common-operator` → `#d4d4d4`.
 - [ ] `--code-property` → `--syntax-common-property` → `#9cdcfe`.
 - [ ] `--code-punctuation` → `--syntax-common-punctuation` → `#d4d4d4`.
-- [ ] `--code-tag` → `--syntax-common-type/meta` con fallback dark-safe; si un único `--code-tag` no puede expresar ambos roles, escoger una variable propia canónica segura para furniture host y mantener roles propios separados.
-- [ ] `--caret-color` → caret propio → `#d4d4d4`.
-- [ ] `syntax-common-invalid` quoted usa `--syntax-common-invalid` → literal dark-safe, no `--text-error` del theme como autoridad final.
-- [ ] Line numbers quoted usan fallback >=4.5:1 sobre negro.
-- [ ] Roles scoped consumen primero `--syntax-common-*`; no dejan que el palette original del theme vuelva a ganar mediante `--code-*`.
+- [ ] `--code-tag` → `--syntax-common-meta` → `#c586c0`. El rol `syntax-common-type` conserva su propia variable/fallback `#4ec9b0`.
+- [ ] `--caret-color` → `--syntax-editor-code-caret` → `#d4d4d4`.
+- [ ] `syntax-common-invalid` quoted → `--syntax-common-invalid` → `#f44747` (≈5.8:1), sin `--text-error` como autoridad final.
+- [ ] Line numbers quoted → `--syntax-editor-code-line-number` → `#858c99` (≈6.2:1).
+- [ ] Roles scoped consumen primero `--syntax-common-*` y después la variable `--code-*` ya remapeada, nunca el palette original del theme.
 - [ ] CI existente + build + `pack:all` verdes tras completar la paleta.
 
 ## 6. Coherencia y scope
