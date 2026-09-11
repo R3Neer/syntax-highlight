@@ -44,7 +44,10 @@ import {
 } from "./tokenizer";
 
 function visibleRanges(view: EditorView): readonly EditorVisibleRange[] {
-  return view.visibleRanges;
+  const ranges = (
+    view as EditorView & { visibleRanges?: readonly EditorVisibleRange[] }
+  ).visibleRanges;
+  return ranges ?? [{ from: 0, to: view.state.doc.length }];
 }
 
 function blockPhysicalTo(block: MudCodeBlock): number {
