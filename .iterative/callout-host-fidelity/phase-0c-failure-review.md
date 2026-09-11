@@ -112,3 +112,11 @@ También se añadió H-E: el diagnóstico `live-preview-source` actual ocurre an
 Resultado: SIN CAMBIOS.
 
 Se contrastó de nuevo el documento contra la implementación actual de `editor.ts`, el lifecycle del `CommonContrastManager`, el artifact compilado y las reglas actuales de Nier. No apareció una hipótesis que permita explicar simultáneamente la ausencia de superficie quoted y de color sin observar el DOM post-materialización. Se mantienen las hipótesis H-A..H-E y el requisito de captura post-frame.
+
+## Revisión TM 4
+
+Resultado: SIN CAMBIOS.
+
+Revisión focalizada en posibles explicaciones de CSS/contraste. El normalizador de contraste puede modificar colores de tokens, pero no puede explicar por sí solo que `HyperMD-codeblock*-bg` no produzca la superficie esperada. La evidencia sigue exigiendo separar superficie y color y observar el DOM post-frame real antes de escoger otro mecanismo.
+
+**ESTABLE según TM:** revisiones 3 y 4 consecutivas sin cambios.
