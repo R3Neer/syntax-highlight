@@ -46,7 +46,13 @@ Un helper único `commonLanguageSupport(language)` devuelve:
 - para stream, `LanguageSupport(StreamLanguage.define(effectiveStreamParser))`;
 - `undefined` para plain.
 
-`effectiveStreamParser` se crea sin mutar el parser importado. Envuelve únicamente su salida de `token()` y su `tokenTable` mediante APIs públicas para que los styles declarados por el parser/engine tengan una representación inequívoca también dentro de `StreamLanguage`.
+`effectiveStreamParser` se crea sin mutar el parser importado. Conserva/delega todos sus campos públicos relevantes (`name`, `startState`, `copyState`, `blankLine`, `indent`, `languageData`, `mergeTokens` y cualquier otro campo público aplicable) y sustituye únicamente la frontera de styles:
+
+- envuelve `token()` para reescribir nombres cuando lo exige el resolver efectivo;
+- compone `tokenTable` con los nombres sintéticos necesarios;
+- usa la factoría de estado inicial explícita del engine si el parser original no aporta una.
+
+No se reinterpreta ni elimina comportamiento del modo legacy ajeno a syntax highlighting.
 
 PowerShell: stream-backed. Bash y demás gramáticas Lezer: tree-backed. Text: plain.
 
@@ -352,6 +358,7 @@ No tocar salvo imports/tipos inevitables:
 - PowerShell stream: variable/number/operator/builtin/string/comment;
 - no rama renderer PowerShell;
 - stream-backed exige estado inicial explícito; no existe fallback mágico para parser sin `startState`;
+- `effectiveStreamParser` conserva `name`, `languageData`, `indent`, `copyState`, `blankLine`, `mergeTokens` y estado inicial del parser original;
 - `commonLanguageSupport(PowerShell)` y scanner manual usan el mismo resolver efectivo;
 - parser tokenTable gana sobre engine tokenTags incluso si el nombre original coincide con vocabulario legacy, gracias a la reescritura sintética;
 - nombres/modificadores públicos y múltiples styles;
@@ -375,17 +382,18 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 2. engine y support comparten una sola metadata y un mismo resolver efectivo;
 3. solo API pública StreamParser/StringStream/token/tokenTable/tags/Highlighter/tagHighlighter;
 4. ningún scanner inventa el estado de un StreamParser sin `startState`; el engine exige estado inicial explícito;
-5. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
-6. tree languages conservan parser actual;
-7. manual paths convergen en `syntax-common-*`;
-8. `cm-*`/`token *` salen de nuestra taxonomía manual;
-9. no se sacrifica highlighting top-level common;
-10. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
-11. SourceView conserva camino nativo CodeMirror;
-12. quoted black es plugin-owned, sobrescribible y tiene paleta propia legible;
-13. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
-14. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
-15. ownership DOM de Fase 1 permanece intacto;
-16. rendered routing no cambia sin evidencia fresca;
-17. alcance no se expande a piezas no incriminadas;
-18. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
+5. el wrapper efectivo preserva el resto del contrato público del StreamParser y solo adapta styles;
+6. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
+7. tree languages conservan parser actual;
+8. manual paths convergen en `syntax-common-*`;
+9. `cm-*`/`token *` salen de nuestra taxonomía manual;
+10. no se sacrifica highlighting top-level common;
+11. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
+12. SourceView conserva camino nativo CodeMirror;
+13. quoted black es plugin-owned, sobrescribible y tiene paleta propia legible;
+14. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
+15. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
+16. ownership DOM de Fase 1 permanece intacto;
+17. rendered routing no cambia sin evidencia fresca;
+18. alcance no se expande a piezas no incriminadas;
+19. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
