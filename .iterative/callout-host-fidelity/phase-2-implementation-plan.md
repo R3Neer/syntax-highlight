@@ -2,352 +2,169 @@
 
 Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza final.
 
-Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los checkboxes son la fuente de verdad del progreso. No marcar una tarea hasta que el cambio exista y haya pasado las comprobaciones aplicables.
+Este checklist ejecuta el plan arquitectónico de Fase 2 ya estabilizado. Es la fuente de verdad del progreso; la arquitectura detallada vive en `phase-2-architecture-plan.md`.
 
 ## 0. Baseline y guardrails
 
-- [ ] Confirmar branch `plan/obsidian-callout-host-fidelity` y CI verde antes de tocar producción Fase 2.
-- [ ] Mantener diagnostics y todos los documentos temporales Fase 1/2 hasta gate real satisfactorio.
-- [ ] No limpiar ni modificar routing rendered en esta fase salvo que el gate fresco lo falsifique posteriormente.
-- [ ] Mantener tests arquitectónicos Fase 1 que prohíben bridge DOM/private selectors.
-- [ ] Mantener externals/peer boundary Fase 1 sin cambios salvo necesidad demostrada.
-- [ ] Crear/mantener ledger temporal de tests adaptados/retirados por cambio deliberado de contrato.
-- [ ] Reservar cobertura nueva de Fase 2 para la fase de tests, después del TM de implementación; durante implementación solo adaptar tests antiguos cuando bloqueen CI por un contrato que se retira deliberadamente y registrar la garantía.
-- [ ] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
+- [x] Branch `plan/obsidian-callout-host-fidelity` confirmada y baseline CI verde.
+- [x] Mantener diagnostics y documentos temporales Fase 1/2 hasta gate real satisfactorio.
+- [x] Mantener routing rendered de Fase 1 sin modificaciones.
+- [x] Mantener prohibición de bridge DOM/private selectors y frontera runtime CodeMirror/Lezer.
+- [x] Crear ledger temporal para tests antiguos adaptados por contratos retirados.
+- [x] Reservar cobertura nueva para después del TM de implementación.
 
-## 1. Refactor del catálogo common: engines + highlighter único
+## 1. Catálogo common: engine como fuente de verdad
 
-### 1.1 Tipos y autoridad
+- [x] `CommonLanguage` usa engine discriminado `tree | stream | plain`.
+- [x] Tree conserva factories de LanguageSupport existentes.
+- [x] Stream contiene `StreamParser` + `tokenTags` declarativos.
+- [x] `startState` opcional se normaliza como la API pública de CodeMirror: delegar si existe, estado trivial si no.
+- [x] Plain no tiene parser/support.
+- [x] Eliminar `support()` paralelo capaz de divergir.
+- [x] PowerShell es stream-backed con tokenTags públicos para variable/number/operator/builtin/punctuation/string/comment/keyword/error.
+- [x] No existe rama de renderer por id PowerShell.
+- [x] `commonLanguageSupport()` construye tree/stream support desde el mismo engine.
+- [x] `COMMON_SEMANTIC_HIGHLIGHTER` es la única tabla Tag → `syntax-common-*`.
+- [x] Retirar highlighters manuales Reading/Editor host-specific antiguos.
 
-- [ ] Refactorizar `CommonLanguage` a engine discriminado `tree | stream | plain`.
-- [ ] Tree engine conserva la factory actual de `LanguageSupport`.
-- [ ] Stream engine contiene `StreamParser`, estado inicial explícito y `tokenTags` declarativos.
-- [ ] El tipo stream impide llegar al scanner sin una factoría/`startState` explícito.
-- [ ] Plain engine no tiene parser/support.
-- [ ] Eliminar `support()` paralelo capaz de divergir del engine.
+## 2. Resolver stream y parser efectivo
 
-### 1.2 Highlighter semántico
-
-- [ ] Sustituir `COMMON_READING_HIGHLIGHT_STYLE` y `COMMON_EDITOR_HIGHLIGHT_STYLE` por `COMMON_SEMANTIC_HIGHLIGHTER` construido con `tagHighlighter()`.
-- [ ] Mantener una única tabla `Tag | Tag[] -> syntax-common-*`.
-- [ ] Añadir `tags.invalid -> syntax-common-invalid`.
-- [ ] No emitir `cm-*` ni `token *` desde esta tabla.
-- [ ] Mantener temporalmente aliases/exports antiguos únicamente mientras existan consumidores todavía no migrados; eliminarlos al cerrar Fase 4.
-
-### 1.3 PowerShell declarativo
-
-- [ ] Declarar PowerShell como stream-backed usando el `powerShell` oficial de legacy-modes.
-- [ ] Declarar `tokenTags` al menos para `variable`, `number`, `operator`, `builtin`, `punctuation`, `string`, `comment`, `keyword`, `error`.
-- [ ] Mapear `error` a `tags.invalid`.
-- [ ] No introducir ningún `if (language.id === "powershell")` en renderer/materialización.
-
-### 1.4 Helpers stream y support en la capa de catálogo
-
-Para evitar ciclos, `common-languages.ts` es también la capa inferior compartida para metadata/resolución stream. `common-semantic-ranges.ts` puede importarla; nunca al revés.
-
-- [ ] Implementar en `common-languages.ts` (o helpers internos del mismo módulo) la resolución efectiva de style words y la construcción de `effectiveStreamParser`.
-- [ ] Los helpers no importan `common-semantic-ranges.ts`, renderer, DOM ni EditorView.
-- [ ] Crear helper único `commonLanguageSupport(language)`.
-- [ ] Tree devuelve el support de su factory.
-- [ ] Plain devuelve `undefined`.
-- [ ] Stream usa `effectiveStreamParser` sin mutar el parser importado.
-- [ ] Ejecutar typecheck + suite existente + build antes de avanzar a semantic ranges.
-
-## 2. Resolver stream efectivo usando solo API pública
-
-### 2.1 Precedencia de styles
-
-- [ ] Definir resolver común en la capa `common-languages.ts` con precedencia: `parser.tokenTable > engine.tokenTags > vocabulario público tags/modifiers > unknown local`.
-- [ ] Resolver nombres públicos directos (`keyword`, `number`, `variableName`, etc.).
-- [ ] Resolver modificadores públicos con `.` (`variableName.standard`, etc.).
-- [ ] Resolver varios style words separados por espacios.
-- [ ] Unknown style no aborta el bloque; solo deja ese token sin clase semántica.
-
-### 2.2 Nombres sintéticos para `StreamLanguage`
-
-- [ ] Precalcular nombres sintéticos deterministas para cada style cubierto por `parser.tokenTable` o `engine.tokenTags` (orden estable de claves, no dependiente del orden incidental de iteración futura).
-- [ ] Los nombres sintéticos no colisionan con vocabulario público/legacy ni contienen espacios/modificadores.
-- [ ] `effectiveStreamParser.token()` llama al token original y reescribe cada style word cubierto a su nombre sintético.
-- [ ] `effectiveStreamParser.tokenTable` publica los nombres sintéticos con los `Tag | Tag[]` efectivos.
-- [ ] Styles públicos no cubiertos por tablas se dejan intactos.
-- [ ] El scanner manual importará y usará este mismo resolver; no tendrá una segunda tabla.
-
-### 2.3 Preservar contrato completo del parser
-
-- [ ] Preservar/delegar `name`.
-- [ ] Preservar estado inicial original o la factoría explícita del engine.
-- [ ] Preservar `copyState`.
-- [ ] Preservar `blankLine`.
-- [ ] Preservar `indent`.
-- [ ] Preservar `languageData`.
-- [ ] Preservar `mergeTokens`.
-- [ ] Preservar cualquier otro campo público aplicable del `StreamParser` sin reinterpretarlo.
-- [ ] No leer `StreamLanguage.streamParser`, NodeProps, NodeType ids ni TokenTable interno.
+- [x] Precedencia: `parser.tokenTable > engine.tokenTags > tags/modifiers públicos > unknown local`.
+- [x] Varios style words y modificadores `.` soportados.
+- [x] Resolver estático cacheado una vez por engine.
+- [x] Parser efectivo no muta el parser original.
+- [x] Nombres explícitos se reescriben a synthetic deterministas para evitar que aliases legacy internos ganen antes que `tokenTable`.
+- [x] Synthetic names usan únicamente el contrato público de `StreamParser.tokenTable`.
+- [x] Preservar/delegar `name`, `startState`, `copyState`, `blankLine`, `indent`, `languageData`, `mergeTokens`.
+- [x] Sin acceso a `StreamLanguage.streamParser`, NodeProps, NodeType ids o TokenTable interno.
 
 ## 3. `common-semantic-ranges.ts`
 
-### 3.1 Contrato puro y layering
+- [x] Módulo puro sin DOM/EditorView/Obsidian.
+- [x] Tree: parser actual + `highlightTree(..., COMMON_SEMANTIC_HIGHLIGHTER)`.
+- [x] Plain: `syntax-common-plain` sin parser.
+- [x] Stream: `StringStream` + estado mutable desde inicio del source.
+- [x] Defaults sin EditorState: `tabSize=4`, `indentUnit=2`; options explícitas soportadas.
+- [x] LF y CRLF preservan offsets físicos.
+- [x] Última línea no terminada soportada.
+- [x] Líneas vacías físicas intermedias llaman `blankLine` si existe.
+- [x] Source vacío y línea virtual posterior a terminador final siguen el límite actual de `StreamLanguage` y no llaman `blankLine`.
+- [x] Zero-length token tiene guard finito y no puede colgar el scanner.
+- [x] Unknown style omite solo ese token semántico.
 
-- [ ] Crear `CommonSemanticRange { from, to, classes }`.
-- [ ] Crear `commonSemanticRanges(language, source, options?)` dispatcher tree/stream/plain.
-- [ ] Módulo sin DOM, EditorView ni imports de `obsidian`.
-- [ ] Importar catálogo/highlighter/resolver stream desde `common-languages.ts`; `common-languages.ts` nunca importa este módulo.
-- [ ] Ranges siempre expresados en offsets del string de entrada original.
+## 4. Consumidores
 
-### 3.2 Tree-backed
+- [x] `renderCommonCode()` consume `commonSemanticRanges()`.
+- [x] Reading/rendered manual ya no emite `token *`.
+- [x] `buildEditorBlockSemantics()` consume `commonSemanticRanges()` + `mapCodeBlockRange()`.
+- [x] Markdown source manual ya no emite `cm-*`.
+- [x] Mantener model/cache/viewport, line semantics y line numbers de Fase 1.
+- [x] `SyntaxSourceView` usa `commonLanguageSupport()` + `syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)`.
+- [x] No añadir ViewPlugin stream manual a SourceView.
+- [x] Retirar `parseCommonLanguageTree()` al quedar sin consumidores.
+- [x] Adaptar tests antiguos de `support`, Prism y CM únicamente tras registrarlos en ledger.
+- [x] Suite existente + build + `pack:all` verdes tras migración semántica.
 
-- [ ] Obtener parser/lenguaje desde el engine tree.
-- [ ] Parsear como ruta tree actual.
-- [ ] `highlightTree(tree, COMMON_SEMANTIC_HIGHLIGHTER)`.
-- [ ] Emitir solo `syntax-common-*`.
-- [ ] No cambiar parsers modernos que ya funcionan.
+## 5. Quoted source dark surface
 
-### 3.3 Plain
+- [x] Fondo: `var(--syntax-editor-code-background, #000)`.
+- [x] Foreground: `var(--syntax-editor-code-color, #d4d4d4)`.
+- [x] Caret: `var(--syntax-editor-code-caret, #d4d4d4)`.
+- [x] Variables propias no se fijan localmente con literal, de modo que theme/snippet pueda heredarlas desde un ancestro.
+- [x] Dentro de `.cm-line.syntax-editor-code-source`: `--code-background: transparent`.
+- [x] Dentro del mismo scope: `--code-normal` y `--caret-color` apuntan a foreground/caret propios.
+- [x] Roles `syntax-common-*` tienen fallbacks dark-safe scoped; variable PowerShell usa fallback propio y no `--text-normal`.
+- [x] Line numbers tienen fallback legible sobre negro.
+- [x] `syntax-common-invalid` existe con fallback de error.
+- [x] Sin `.cm-inline-code`, `HyperMD-*`, `.cm-embed-block`, `.cm-callout` como dependencia funcional.
+- [x] Sin `!important` nuevo, branch por theme o margins verticales.
+- [x] Suite existente + build + `pack:all` verdes tras CSS y correcciones.
 
-- [ ] Text/plain produce semántica plain sin parser.
-- [ ] Conservar comportamiento actual de Text/presentation.
+## 6. Coherencia y scope
 
-### 3.4 Scanner stream
+- [x] `syntax-common-*` es la única taxonomía semántica manual common.
+- [x] Configured profiles permanecen intactos.
+- [x] `blocks.ts`, presentation, contrast manager, build boundary, Smart Editing y configured tokenizers no cambian funcionalmente.
+- [x] Routing rendered no cambia.
+- [x] Tests Fase 1 de private selectors/runtime continúan verdes.
+- [x] Ledger registra todas las expectativas antiguas adaptadas hasta ahora.
 
-- [ ] Crear estado con factoría explícita y `indentUnit` configurado.
-- [ ] Defaults manuales: `tabSize=4`, `indentUnit=2`.
-- [ ] Pasar el mismo `indentUnit` a estado inicial y `StringStream`.
-- [ ] Permitir options explícitas `tabSize`/`indentUnit`.
-- [ ] Recorrer el source sin normalizarlo.
-- [ ] LF: offsets correctos.
-- [ ] CRLF: un único terminador lógico, avance físico de 2 chars.
-- [ ] Última línea sin terminador.
-- [ ] Terminador final no crea blank line sintética.
-- [ ] Línea vacía física intermedia llama `blankLine` cuando exista.
-- [ ] Source vacío no llama token ni `blankLine`.
-- [ ] `stream.start/pos` se convierten a offsets absolutos reales.
-- [ ] Permitir token zero-length durante un número finito de intentos para respetar el contrato de cambio de estado; resetear el guard cuando el stream avance.
-- [ ] Un parser que nunca avanza falla de forma controlada/local.
-- [ ] Semantic classes salen de `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)`.
+## 7. TM de implementación
 
-### 3.5 Gate de implementación parcial
-
-- [ ] No añadir todavía tests nuevos de Fase 2.
-- [ ] Ejecutar typecheck + suite existente + build.
-- [ ] Si un test antiguo falla porque esperaba `cm-*`/`token *` deliberadamente retirados, registrar la garantía en ledger antes de adaptarlo.
-- [ ] No retirar consumidores antiguos hasta que `commonSemanticRanges()` compile y el baseline siga verde.
-
-## 4. Migrar consumidores manuales y SourceView
-
-### 4.1 Reading/rendered
-
-- [ ] `renderCommonCode()` consume `commonSemanticRanges()`.
-- [ ] Eliminar `highlightTree()` directo de `reading.ts`.
-- [ ] Eliminar clases manuales `token *` del renderer common.
-- [ ] Mantener badge, line numbers, `language-* is-loaded`, presentation y estructura DOM.
-- [ ] Mantener `CommonContrastManager` rendered-only sin cambios funcionales.
-
-### 4.2 Markdown source
-
-- [ ] `buildEditorBlockSemantics()` consume `commonSemanticRanges()`.
-- [ ] Mantener `mapCodeBlockRange()` para quoted/top-level.
-- [ ] Eliminar clases manuales `cm-*`.
-- [ ] Mantener model/cache/viewport de Fase 1 sin rediseñarlo.
-- [ ] Mantener line semantics/furniture separados de semantic ranges.
-
-### 4.3 `SyntaxSourceView`
-
-- [ ] Sustituir `common.support()` por `commonLanguageSupport(common)`.
-- [ ] Usar `syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)`.
-- [ ] No añadir ViewPlugin stream manual.
-- [ ] Conservar language support, indentation, brackets, Smart Editing y lifecycle.
-
-### 4.4 Retirada ruta antigua
-
-- [ ] Eliminar `parseCommonLanguageTree()` si queda sin consumidor o convertirlo en helper estrictamente tree-only donde corresponda.
-- [ ] Eliminar exports host-specific antiguos cuando no queden consumidores.
-- [ ] Confirmar que manual common output ya no genera `cm-*` ni `token *`.
-- [ ] Registrar tests antiguos adaptados en ledger.
-- [ ] CI existente verde.
-
-## 5. Source quoted dark surface + paleta accesible
-
-### 5.1 Surface propia y overrides heredables
-
-- [ ] `background-color: var(--syntax-editor-code-background, #000)`.
-- [ ] `color: var(--syntax-editor-code-color, #d4d4d4)` o fallback final equivalente.
-- [ ] caret usa `var(--syntax-editor-code-caret, #d4d4d4)`.
-- [ ] No declarar las custom props propias con literales en la misma línea de forma que bloquee overrides heredados.
-- [ ] Themes/snippets pueden definir `--syntax-editor-code-*` en scope superior.
-
-### 5.2 Paleta scoped
-
-- [ ] Definir/consumir variables propias al menos para `color`, `comment`, `keyword`, `function`, `string`, `value`, `operator`, `property`, `punctuation`, `tag`, `important`, `invalid`, `caret`.
-- [ ] Elegir defaults dark-safe con contraste >= 4.5:1 sobre `#000` para roles de texto ordinario.
-- [ ] Documentar cualquier excepción puramente decorativa si se decide una.
-- [ ] `syntax-common-invalid` usa variable propia y fallback de error legible.
-
-### 5.3 Reasignación de variables públicas dentro de quoted source
-
-- [ ] `--code-background: transparent`.
-- [ ] `--code-normal` -> paleta propia.
-- [ ] `--code-comment` -> paleta propia.
-- [ ] `--code-function` -> paleta propia.
-- [ ] `--code-important` -> paleta propia.
-- [ ] `--code-keyword` -> paleta propia.
-- [ ] `--code-string` -> paleta propia.
-- [ ] `--code-value` -> paleta propia.
-- [ ] `--code-operator` -> paleta propia.
-- [ ] `--code-property` -> paleta propia.
-- [ ] `--code-punctuation` -> paleta propia.
-- [ ] `--code-tag` -> paleta propia.
-- [ ] `--caret-color` -> caret propio.
-- [ ] La surface de la línea no consume el `--code-background` neutralizado.
-
-### 5.4 Restricciones
-
-- [ ] No `.cm-inline-code`, `HyperMD-*`, `.cm-embed-block`, `.cm-callout` como dependencia funcional.
-- [ ] No `!important` nuevo.
-- [ ] No branch por Nier/tema.
-- [ ] No margins verticales que alteren layout del editor.
-- [ ] Opening/body/closing comparten surface/paleta; alignment/flow solo body.
-- [ ] CI existente verde.
-
-## 6. Coherencia y prohibiciones
-
-- [ ] Buscar producción por `token *` generado por manual common y eliminarlo.
-- [ ] Buscar producción por `cm-*` generado por manual common y eliminarlo.
-- [ ] No confundir clases generadas por CodeMirror/host con clases emitidas por Syntax Highlight.
-- [ ] `syntax-common-*` es la única taxonomía semántica manual common.
-- [ ] Configured profiles permanecen intactos.
-- [ ] Fase 1 private-selector/build/runtime tests siguen verdes.
-- [ ] Routing rendered no cambia.
-- [ ] Ledger tiene destino de Fase 8 para cada garantía adaptada/retirada.
-
-## 7. Revisión TM de implementación
-
-- [ ] Revisar diff completo contra arquitectura Fase 2.
-- [ ] Confirmar layering sin ciclo `common-languages -> common-semantic-ranges`.
-- [ ] Confirmar solo APIs públicas stream.
-- [ ] Confirmar engine/support no duplicados.
-- [ ] Confirmar wrapper preserva contrato completo del parser.
-- [ ] Confirmar nombres sintéticos evitan dependencia de aliases internos.
-- [ ] Confirmar no existe rama renderer PowerShell.
-- [ ] Confirmar tree languages no cambian parser accidentalmente.
-- [ ] Revisar LF/CRLF/blank/final newline/source vacío/zero-length.
-- [ ] Manual ranges sin `cm-*`/`token *`.
-- [ ] `syntax-common-invalid` presente y usable.
-- [ ] Source dark sin private selectors/`!important`, con overrides heredables y paleta completa.
-- [ ] Verificar contraste estático de defaults dark previsto para Fase 8.
-- [ ] SourceView sigue ruta nativa CodeMirror.
-- [ ] Routing rendered intacto.
-- [ ] Scope: `blocks`, presentation, contrast manager, build, smart-edit y configured tokenizers intactos salvo imports/tipos inevitables.
-- [ ] Ledger completo.
-- [ ] Aplicar correcciones encontradas.
-- [ ] Repetir hasta dos revisiones consecutivas sin cambios.
-- [ ] Solo entonces pasar a tests nuevos Fase 8.
+- [x] Revisión 1: CAMBIOS NECESARIOS, cache del resolver + revisión inicial de blank lines.
+- [x] Revisión 2: CAMBIOS NECESARIOS, corregir blank-line boundary contra StreamLanguage oficial + startState opcional.
+- [x] Sincronizar este checklist con la arquitectura estable y el estado real.
+- [ ] Revisar layering/API pública/tag precedence/parser efectivo.
+- [ ] Revisar LF/CRLF/blank/source vacío/zero-length y scope del diff.
+- [ ] Revisar cascade CSS, overrides heredables y ausencia de private selectors/`!important`.
+- [ ] Revisar ledger y confirmar que no se perdió ninguna garantía.
+- [ ] Obtener primera revisión completa SIN CAMBIOS.
+- [ ] Obtener segunda revisión consecutiva SIN CAMBIOS.
+- [ ] Solo entonces pasar a tests nuevos.
 
 ## 8. Tests nuevos/reconstruidos Fase 2
 
-### 8.1 Engine/highlighter
-
-- [ ] Bash tree produce semantic ranges `syntax-common-*`.
-- [ ] Text plain conserva semántica parserless.
+### Engine/resolver
+- [ ] Bash tree produce roles `syntax-common-*`.
+- [ ] Text plain sigue parserless.
 - [ ] PowerShell stream produce variable/number/operator/builtin/string/comment/keyword/punctuation/invalid.
-- [ ] No existe rama renderer por id PowerShell.
-- [ ] `COMMON_SEMANTIC_HIGHLIGHTER` creado con `tagHighlighter` funciona con `highlightTree`.
-- [ ] `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)` funciona para stream.
-- [ ] `syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)` funciona en EditorView propio.
+- [ ] `parser.tokenTable` gana a `engine.tokenTags`; engine rellena ausentes.
+- [ ] Tags públicos, modifiers, múltiples styles y unknown local.
+- [ ] Synthetic evita colisión con alias legacy y no aparece en semantic output.
+- [ ] Parser sin `startState` usa estado trivial igual que el contrato CodeMirror.
 
-### 8.2 Resolver/parser efectivo
+### Scanner
+- [ ] Estado multilinea con parser sintético.
+- [ ] LF y CRLF offsets exactos.
+- [ ] Última línea no terminada.
+- [ ] Blank line física intermedia.
+- [ ] Source vacío y terminador final no inventan `blankLine` adicional.
+- [ ] Zero-length con cambio de estado funciona; parser que nunca avanza termina por guard.
 
-- [ ] `parser.tokenTable` gana a `engine.tokenTags`.
-- [ ] engine tokenTags rellena nombres ausentes.
-- [ ] nombres públicos directos.
-- [ ] modificadores públicos.
-- [ ] múltiples style words.
-- [ ] unknown style falla localmente.
-- [ ] nombre original que colisiona con alias legacy se reescribe a synthetic y mantiene la semántica declarada.
-- [ ] nombres sintéticos son deterministas y no aparecen en semantic classes/DOM.
-- [ ] `effectiveStreamParser` preserva `name`.
-- [ ] preserva `languageData`.
-- [ ] preserva `indent`.
-- [ ] preserva `copyState`.
-- [ ] preserva `blankLine`.
-- [ ] preserva `mergeTokens`.
-- [ ] preserva/usa estado inicial explícito.
+### Consumidores
+- [ ] Reading y quoted editor PowerShell convergen en los mismos roles propios.
+- [ ] Bash Reading/editor convergen en roles propios.
+- [ ] Manual rendered no contiene `token *`; manual editor no contiene `cm-*`.
+- [ ] Quote mapping sigue excluyendo `>`.
+- [ ] Line numbers/presentation/cache sin regresión.
+- [ ] SourceView usa support nativo + highlighter único.
 
-### 8.3 Scanner stream
+### CSS/arquitectura
+- [ ] Fallback quoted es negro y variable heredada puede sobrescribirlo.
+- [ ] `--code-background` queda neutralizado solo en scope propio.
+- [ ] Foreground/caret/line numbers/roles tienen fallbacks legibles sobre negro.
+- [ ] Sin private selectors ni `!important` nuevo.
+- [ ] Fase 1 architectural guardrails siguen verdes.
+- [ ] Cerrar ledger con archivo de prueba concreto por garantía.
 
-- [ ] estado multilinea con parser sintético.
-- [ ] LF offsets.
-- [ ] CRLF offsets.
-- [ ] última línea sin newline.
-- [ ] newline final no crea blank sintética.
-- [ ] blank line intermedia llama `blankLine`.
-- [ ] source vacío no llama token/blankLine.
-- [ ] `startState` y `StringStream` reciben mismo indentUnit.
-- [ ] options tabSize/indentUnit.
-- [ ] zero-length con transición de estado puede avanzar después.
-- [ ] parser que nunca avanza termina por guard controlado.
+## 9. TM de tests
 
-### 8.4 Consumidores
-
-- [ ] Reading PowerShell usa roles `syntax-common-*`, sin `token *` manuales.
-- [ ] Markdown editor PowerShell usa roles equivalentes, sin `cm-*` manuales.
-- [ ] Bash Reading/editor manual convergen en roles propios aunque el host pueda añadir styling nativo adicional.
-- [ ] quoted mapping excluye `>`.
-- [ ] line numbers/presentation sin regresión.
-- [ ] `commonLanguageSupport(PowerShell)` usa el mismo resolver efectivo.
-- [ ] SourceView usa helper + highlighter único y mantiene capabilities del parser.
-
-### 8.5 CSS/arquitectura
-
-- [ ] fallback surface quoted negro.
-- [ ] override heredado de `--syntax-editor-code-background` sustituye negro.
-- [ ] foreground/caret legibles.
-- [ ] paleta semantic dark completa.
-- [ ] contraste >= 4.5:1 sobre negro para roles exigidos, incluido invalid/error.
-- [ ] `--code-background` neutralizado solo dentro de quoted source.
-- [ ] `--code-important` y demás `--code-*` remapeados a paleta propia.
-- [ ] no `!important` nuevo.
-- [ ] no private selectors nuevos.
-- [ ] arquitectura Fase 1 sigue verde.
-
-### 8.6 Ledger
-
-- [ ] Cada garantía de test adaptado/retirado durante implementación tiene sustituto o referencia concreta.
-
-## 9. Revisión TM de tests
-
-- [ ] Cobertura frente a cada invariante arquitectónico Fase 2.
-- [ ] No convertir internals CodeMirror en contrato de tests.
-- [ ] happy-dom nunca etiquetado host real.
-- [ ] Probar roles/variables, no pixel exacto salvo negro explícito y contrastes matemáticos.
-- [ ] Cerrar ledger.
-- [ ] Repetir hasta dos revisiones consecutivas sin cambios.
-- [ ] CI completa (`lint`, `typecheck`, tests, build, `pack:all`) verde.
+- [ ] Primera revisión completa de cobertura/fragilidad.
+- [ ] Segunda revisión consecutiva SIN CAMBIOS.
+- [ ] CI completa + `pack:all` verde.
 
 ## 10. Gate manual Obsidian real Fase 2
 
 No limpiar diagnostics todavía.
 
-### 10.1 Visual
-
-- [ ] PowerShell top-level source sigue coloreado/legible.
-- [ ] PowerShell top-level rendered coloreado por semantic ranges propios.
-- [ ] PowerShell quoted source negro, sin píldoras claras dominantes y con semántica propia visible.
+### Visual
+- [ ] PowerShell top-level source sigue coloreado.
+- [ ] PowerShell top-level rendered coloreado.
+- [ ] PowerShell quoted source negro, sin píldoras claras dominantes y con semántica coloreada.
 - [ ] PowerShell quoted rendered coloreado.
 - [ ] Reading PowerShell top-level/quoted coloreado.
-- [ ] Bash mantiene semántica propia correcta; diferencias puramente nativas de theme entre motores no son criterio de fallo.
+- [ ] Bash mantiene roles coherentes source/rendered sin taxonomía dual nuestra.
 - [ ] Text quoted conserva presentation.
 - [ ] Cursor source ↔ rendered sin regresión estructural.
 
-### 10.2 Routing fresco
-
+### Routing rendered fresco
 - [ ] Enable diagnostics antes de crear/renderizar subtree.
-- [ ] Crear una nota nueva o modificar documento después de enable.
-- [ ] Capturar todos los eventos del nested PowerShell fresco.
+- [ ] Crear/modificar contenido después del enable.
+- [ ] Inspeccionar eventos nested PowerShell.
 - [ ] Confirmar `reading-specialized` si processor oficial es ruta garantizada.
-- [ ] Si solo aparece `reading-fallback`, detener limpieza y volver a análisis/arquitectura TM.
+- [ ] Si solo aparece `reading-fallback`, detener limpieza y volver a análisis TM.
 
-### 10.3 Settings
-
+### Settings
 - [ ] `markdownEditor=false` elimina semantic decorations propias.
 - [ ] `markdownReading=false` mantiene Reading sin renderer semántico propio.
 
@@ -355,11 +172,8 @@ No limpiar diagnostics todavía.
 
 Solo tras gate satisfactorio:
 
-- [ ] Eliminar `_tmp-host-diagnostics.ts` y suites temporales.
-- [ ] Retirar wiring/controller global diagnostics.
-- [ ] Actualizar `packages/obsidian/README.md` al modelo sin bridge y engines tree/stream/plain.
-- [ ] Actualizar `docs/theme-integration.md` a `syntax-common-*` + variables públicas/source dark.
-- [ ] Revisar CHANGELOG si describe bridge retirado como arquitectura vigente.
-- [ ] Eliminar todos los `.iterative/callout-host-fidelity/*` agotados, Fase 1 + 2.
+- [ ] Eliminar diagnostics temporales y controller/wiring global.
+- [ ] Actualizar README, theme integration y documentación/changelog obsoletos.
+- [ ] Eliminar todos los `.iterative/callout-host-fidelity/*` agotados.
 - [ ] CI final + `pack:all`.
 - [ ] Auditar diff final sin temporales ni excepciones private-selector.
