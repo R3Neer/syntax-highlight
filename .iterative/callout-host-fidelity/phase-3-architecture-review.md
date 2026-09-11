@@ -14,7 +14,7 @@ Se detectaron dos precisiones necesarias en la política de materialización de 
 Cambios incorporados al plan:
 
 - overlap half-open para líneas no vacías;
-- point containment explícito para líneas físicas vacías;
+- point containment explícito para líneas vacías;
 - evitar falsos positivos por simple contacto con el borde de un `visibleRange`;
 - conservar el fast path físico actual de bloque y cambiar solo la decisión por línea.
 
@@ -31,5 +31,21 @@ Cambio requerido:
 - el test adversarial debe ocultar el prefijo quoted mediante una decoration **directa**, preferiblemente un `StateField<DecorationSet>` que provea `EditorView.decorations.from(field)`;
 - la decoration de producto sigue siendo indirecta desde `createEditorHighlighter`, que es precisamente el comportamiento a validar;
 - el test debe afirmar primero que el replacement directo ha provocado la separación esperada entre `viewport` y `visibleRanges` antes de comprobar la surface de Syntax Highlight.
+
+## Revisión 3
+
+Resultado: CAMBIOS NECESARIOS.
+
+Se detectó que una línea quoted lógicamente vacía no es necesariamente una línea física vacía. En Markdown suele contener únicamente el prefijo `>` / `> `; Live Preview puede ocultar por completo ese prefijo mientras mantiene una `.cm-line` vacía que todavía debe recibir surface.
+
+Por tanto, el modelo no puede usar únicamente `[lineFrom, lineTo)` como prueba de visibilidad de contenido.
+
+Cambio requerido:
+
+- `EditorLineSemantic` separa **placement/extent físico** (`from`, `to`) de **visibility probe** (`visibilityFrom`, `visibilityTo`);
+- para body lines, `visibilityFrom/To = sourceFrom/sourceTo`, que puede ser un punto cero-longitud tras retirar el prefijo quoted;
+- para opening/closing, el probe puede seguir siendo el rango físico de línea porque existe fence source visible;
+- el helper de materialización comprueba viewport contra el extent físico y `visibleRanges` contra el visibility probe;
+- un visibility probe vacío usa point containment explícito.
 
 Aún no existe una revisión limpia para el plan actual.
