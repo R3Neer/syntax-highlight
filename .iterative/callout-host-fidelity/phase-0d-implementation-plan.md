@@ -18,11 +18,13 @@ Objetivo de esta unidad: instrumentar el DOM post-frame real de Live Preview sin
 
 Archivo principal: `packages/obsidian/src/_tmp-host-diagnostics.ts`.
 
-## 2. Probe post-frame puro
+## 2. Probe post-frame de solo lectura
 
 Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 
-- [ ] Separar una función pura/de lectura que reciba `EditorView`, registry/accepted fences y devuelva snapshots sin publicarlos.
+- [ ] El módulo NO importa ni conoce `LanguageRegistry` ni settings.
+- [ ] Recibir `EditorView` y `getAcceptedFences(): ReadonlySet<string>`; `editor.ts` será quien proporcione esa política desde la misma fuente de verdad que el highlighter existente.
+- [ ] Separar una función de solo lectura que devuelva snapshots sin publicarlos ni mutar controller/DOM.
 - [ ] Obtener bloques con `findCodeBlocks()`; no crear un segundo parser Markdown.
 - [ ] Filtrar primero por intersección con `view.viewport` y conservar además bloques que contengan la selección; aplicar cap duro de bloques.
 - [ ] Registrar por bloque si intersecta uno o varios `view.visibleRanges`; usarlo como señal de source directo, nunca como filtro excluyente.
@@ -39,7 +41,7 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 
 ## 3. Lifecycle ViewPlugin temporal
 
-- [ ] Exportar `createLivePreviewPostFrameDiagnosticsExtension(...)` desde el nuevo módulo.
+- [ ] Exportar `createLivePreviewPostFrameDiagnosticsExtension(getAcceptedFences)` desde el nuevo módulo.
 - [ ] En constructor registrar listener enabled y capture target.
 - [ ] Si diagnostics ya está enabled al construir, conectar observer y schedule inicial.
 - [ ] Al enable posterior: conectar `MutationObserver` scoped a `view.dom` y schedule.
@@ -55,7 +57,7 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 ## 4. Integración temporal
 
 - [ ] Añadir la extensión post-frame a `createMarkdownEditorExtensions()` junto a las extensiones existentes.
-- [ ] Pasarle únicamente registry/accepted fences necesarios; derivar common fences desde la misma fuente que `buildSyntaxDecorations()` y no duplicar una lista manual.
+- [ ] Reutilizar el closure `accepted()` o extraer un único helper local equivalente para proporcionar `getAcceptedFences`; no duplicar listas de fences ni pasar registry/settings al módulo diagnóstico.
 - [ ] La extensión debe existir en builds normales de esta rama pero hacer cero scans/observer mientras diagnostics esté off.
 - [ ] No modificar `live-preview-host.ts`, surface CSS, `CommonContrastManager`, renderer Reading ni semántica de blocks como parte de Fase 0D.
 - [ ] Conservar temporalmente la implementación Fase 0C como estímulo observable.
@@ -88,6 +90,7 @@ Los tests se desarrollarán **después de estabilizar la implementación**, sigu
 - [ ] Probe: domAtPos→cm-line, ancestry y estilos computados.
 - [ ] Probe: boundary vecino/replaced y excepción de `domAtPos()` producen `materialized:false` sin abortar otros bloques.
 - [ ] Probe: offsets repetidos (`$foo`) resueltos por posición, no por primer texto coincidente.
+- [ ] Probe: `getAcceptedFences()` se evalúa en captura y puede reflejar cambios posteriores sin recrear el ViewPlugin.
 - [ ] Lifecycle: enable conecta observer + agenda sin ViewUpdate.
 - [ ] Lifecycle: disable/destroy desconectan observer y cancelan frames.
 - [ ] Lifecycle: ViewUpdate y MutationObserver comparten batching rAF.
