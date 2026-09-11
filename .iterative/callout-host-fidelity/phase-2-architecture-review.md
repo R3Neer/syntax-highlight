@@ -6,49 +6,47 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se estabilizaron previamente:
-
-- engine como fuente única de support + extracción manual;
-- no copiar aliases internos de StreamLanguage;
-- SourceView en ruta nativa CodeMirror;
-- scanner LF/CRLF/blank/zero-length;
-- `parser.tokenTable` sobre engine tokenTags;
-- quoted source como surface propia sin private selectors.
+Se estabilizaron previamente engine/support únicos, stream directo con API pública, SourceView nativo, scanner de offsets/estado y surface quoted propia sin internals.
 
 ## Revisiones 4–5
 
 Resultado: SIN CAMBIOS / SIN CAMBIOS.
 
-Par limpio de la arquitectura anterior, posteriormente invalidado como par final por el cambio de Revisión 6.
+Par limpio del estado anterior, posteriormente invalidado como par final por Revisión 6.
 
 ## Revisión 6
 
 Resultado: CAMBIOS NECESARIOS.
 
-La revisión de implementación cruzó la surface negra con valores reales del theme del gate y demostró que variables públicas válidas para un papel claro pueden ser ilegibles sobre negro (`--code-property` ≈2.95:1; `--code-value` ≈4.33:1).
+El gate/theme real demostró que variables públicas diseñadas para un papel claro pueden tener contraste insuficiente sobre la surface negra propia (`--code-property` ≈2.95:1; `--code-value` ≈4.33:1).
 
-Corrección:
+Corrección arquitectónica:
 
-- dentro de `.cm-line.syntax-editor-code-source`, la familia pública `--code-*` relevante se remapea a una paleta dark-safe propia;
-- cada valor sale de `--syntax-common-*` heredable con literal seguro;
-- `--code-background` queda transparente;
+- dentro de `.cm-line.syntax-editor-code-source`, remapear toda variable `--code-*` relevante hacia nuestra paleta dark-safe (`--syntax-common-*` heredable → literal seguro);
+- mantener `--code-background: transparent`;
 - `--code-normal`, caret, invalid y line numbers reciben fallbacks propios legibles;
 - sin branch por theme, private selectors ni `!important`.
-
-El cambio reabrió TM arquitectónico.
 
 ## Revisión 7
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del nuevo estado.
+Primera revisión limpia del nuevo estado. Se verificó cascada sin ciclos, overrides heredables, ownership restringido a nuestra line decoration y portabilidad mobile.
 
-Se revisó la cascada/jerarquía de variables:
+## Revisión 8
 
-- no hay ciclo CSS: las variables públicas scoped derivan de `--syntax-common-*` o literal dark-safe;
-- nuestros roles pueden consumir esas variables públicas sin depender del palette original del theme;
-- un theme/snippet que defina `--syntax-common-*` o `--syntax-editor-code-*` en un ancestro gobierna tanto nuestra semántica como el furniture que consuma `--code-*`;
-- la line decoration sigue siendo la única frontera de ownership: no se selecciona ni conoce DOM interior del host;
-- no aparecen APIs desktop-only, por lo que el diseño sigue siendo válido en mobile.
+Resultado: SIN CAMBIOS.
 
-No se encontró modificación necesaria. Es la primera revisión limpia tras Revisión 6.
+Segunda revisión limpia, centrada en compatibilidad/failure modes:
+
+- el default del plugin es autoconsistente: surface negra + paleta dark-safe;
+- themes/snippets pueden personalizar fondo y/o roles mediante `--syntax-editor-code-*` y `--syntax-common-*` heredables;
+- el plugin no intenta inferir automáticamente contraste de una personalización externa dentro del EditorView, evitando reintroducir mutación/medición JS del DOM source;
+- el remapeo `--code-*` solo existe dentro de las líneas que nuestra Decoration.line marca como quoted source;
+- Reading/rendered, top-level nativo no quoted y configured languages no reciben esa paleta scoped;
+- mobile usa la misma frontera CM6/CSS y no requiere API desktop-only;
+- ningún selector privado ni `!important` vuelve a ser necesario.
+
+No se encontró modificación necesaria.
+
+Revisiones **7 y 8 son consecutivas sin cambios**: la arquitectura Fase 2 queda nuevamente estabilizada y se autoriza reconciliar el plan de implementación con esta versión.
