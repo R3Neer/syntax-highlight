@@ -47,4 +47,50 @@ Acción:
 
 Producción y assertions no cambiaron.
 
-Aún no existe ninguna revisión limpia en esta fase. El par limpio debe obtenerse después de que el head completo pase CI + `pack:all`.
+## Revisión 5
+
+Resultado: CAMBIOS NECESARIOS.
+
+La revisión de fragilidad detectó que `common-stream-token-tags.test.ts` llamaba a `effectiveStreamParser.token()` con un objeto mínimo `{ next() }` casteado como stream. El parser sintético solo necesitaba `next`, pero eso convertía accidentalmente una maqueta privada del test en contrato.
+
+Acción: sustituirla por un `StringStream` real de la API pública de CodeMirror y comprobar además que el stream avanza. Producción no cambió.
+
+## Revisión 6
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia, centrada en cobertura completa contra el plan y el ledger:
+
+- engines tree/stream/plain y highlighter compartido;
+- PowerShell real con variable/number/operator/builtin/string/comment/keyword/punctuation/invalid;
+- precedencia de tablas, synthetic names, parser sin `startState` y contrato público preservado;
+- scanner multilinea, LF/CRLF, blank física, source vacío/final virtual y guard de zero-length;
+- Bash tree en Reading y quoted source, con mapping sin prefijo `>`;
+- SourceView nativo montado con un `EditorView` para PowerShell y Bash;
+- surface quoted/presentation heredada de Fase 1;
+- paleta dark, remapeo `--code-*`, contraste >= 4.5:1, invalid y line numbers;
+- boundaries arquitectónicos Fase 1;
+- ledger cerrado con archivos concretos;
+- routing rendered real reservado únicamente al gate manual.
+
+No se encontró garantía del plan sin cobertura legítima.
+
+## Revisión 7
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión limpia, independiente y centrada en fragilidad/contratos:
+
+- ninguna suite happy-dom se etiqueta como host real;
+- SourceView usa un `EditorView` real del entorno de test sin simular `MarkdownView`/Obsidian;
+- el test de stream usa `StringStream` real;
+- Bash comprueba roles semánticos significativos y no exige tags ornamentales solapados ni igualdad pixel-perfect;
+- CSS tests fijan únicamente clases/variables/fallbacks propios del plugin;
+- tests estáticos fijan layering y prohibiciones arquitectónicas, no internals de CodeMirror;
+- ninguna suite inventa `.cm-embed-block` para demostrar routing rendered;
+- la garantía del processor oficial permanece exclusivamente en el gate real;
+- el head validado pasó 43 archivos / 288 tests, build, `pack:all` y artifact.
+
+No se encontró modificación necesaria.
+
+Revisiones **6 y 7 son consecutivas sin cambios**: los tests de Fase 2 quedan estabilizados según TM. Se autoriza pasar al gate manual de Obsidian real.
