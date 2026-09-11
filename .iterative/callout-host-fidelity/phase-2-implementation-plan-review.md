@@ -2,46 +2,40 @@
 
 Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza final.
 
-## Revisión 1
+## Revisiones 1–2
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se reconcilió el plan con la arquitectura finalmente estabilizada: highlighter único con `tagHighlighter`, estado stream explícito, resolver/nombres sintéticos, preservación completa del parser, scanner físico completo, `invalid`, retirada `cm-*`/`token *`, paleta dark completa y SourceView nativo. Los pares limpios anteriores quedaron invalidados.
+Se estabilizaron previamente sequencing TM, layering engine/resolver, synthetic names, scanner y separación implementación/tests.
 
-## Revisión 2
+## Revisiones 3–4
+
+Resultado: SIN CAMBIOS / SIN CAMBIOS.
+
+Par limpio del plan anterior. Quedó invalidado como par final cuando la Revisión arquitectónica 6 cambió la política cromática de la surface quoted.
+
+## Revisión 5
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se fijó el layering para evitar ciclo:
+Se reconcilió el plan con la arquitectura reabierta/reestabilizada:
 
-- `common-languages.ts` aloja catálogo, engines, highlighter, resolver stream y `effectiveStreamParser`;
-- `common-semantic-ranges.ts` importa esa capa y nunca al revés;
-- nombres sintéticos deterministas;
-- guard no-progress se reinicia al avanzar el stream.
+- la parte semántica Fase 2 permanece completada;
+- se reabre únicamente la paleta quoted source;
+- la familia pública `--code-*` relevante debe remapearse a `--syntax-common-*` heredable + literal dark-safe;
+- se fijaron valores concretos y no decisiones pendientes:
+  - comment `#6a9955`;
+  - callable/function `#dcdcaa`;
+  - regex/important `#d16969`;
+  - keyword/meta/tag `#c586c0`;
+  - string `#ce9178`;
+  - number/value `#b5cea8`;
+  - operator/punctuation/normal/caret `#d4d4d4`;
+  - property `#9cdcfe`;
+  - type propio `#4ec9b0`;
+  - invalid `#f44747`;
+  - line numbers `#858c99`.
+- `--code-tag` se asigna de forma canónica a meta; `syntax-common-type` conserva su color propio;
+- tests nuevos siguen bloqueados hasta dos revisiones limpias de implementación.
 
-No cuenta como revisión limpia.
-
-## Revisión 3
-
-Resultado: SIN CAMBIOS.
-
-Primera revisión limpia del plan actual. Se validó el orden engine/resolver → semantic ranges → consumidores → retirada taxonomía antigua → CSS, con CI existente entre cortes y sin tests nuevos antes del TM de implementación.
-
-## Revisión 4
-
-Resultado: SIN CAMBIOS.
-
-Segunda revisión limpia, centrada en failure modes y límites de alcance:
-
-- el wrapper conserva estado/capabilities del StreamParser;
-- multiple styles pueden mezclar nombres declarados y públicos;
-- unknown styles fallan localmente;
-- CRLF/newline final se resuelven antes del mapping Markdown;
-- exports antiguos pueden sobrevivir temporalmente durante una migración parcial;
-- la surface negra no depende de detectar theme light/dark;
-- routing rendered, scanner de bloques, Smart Editing, contrast manager y configured profiles quedan fuera del alcance;
-- el routing oficial se decide únicamente en el gate fresco posterior.
-
-No se encontró modificación necesaria.
-
-Revisiones **3 y 4 son consecutivas sin cambios**: el plan de implementación de Fase 2 queda estabilizado según TM y se autoriza producción.
+No cuenta como revisión limpia. Las antiguas Revisiones 3–4 ya no son el par final vigente.
