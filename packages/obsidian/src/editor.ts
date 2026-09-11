@@ -9,7 +9,10 @@ import {
   WidgetType,
 } from "@codemirror/view";
 
-import { traceHostDiagnostic } from "./_tmp-host-diagnostics";
+import {
+  registerLivePreviewDiagnosticView,
+  traceHostDiagnostic,
+} from "./_tmp-host-diagnostics";
 import {
   findCodeBlocks,
   findMudCodeBlocks,
@@ -30,7 +33,6 @@ import {
 } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
 import type { LanguageRegistry } from "./languages";
-import { createLivePreviewEmbeddedBlockExtension } from "./live-preview-host";
 import type { SyntaxPluginSettings } from "./settings";
 import { createSmartEditingExtensions } from "./smart-edit";
 import {
@@ -39,6 +41,15 @@ import {
   tokenizeMud,
   type MudToken,
 } from "./tokenizer";
+
+function acceptedFenceNames(registry: LanguageRegistry): Set<string> {
+  return new Set(
+    [
+      ...registry.enabled().flatMap(({ descriptor }) => descriptor.fences),
+      ...commonFenceNames(),
+    ].map((fence) => fence.toLocaleLowerCase()),
+  );
+}
 
 function addMappedMark(
   ranges: Range<Decoration>[],
@@ -156,14 +167,7 @@ export function buildSyntaxDecorations(
 ): DecorationSet {
   const source = view.state.doc.toString();
   const ranges: Range<Decoration>[] = [];
-  const fences = new Set(
-    [
-      ...registry
-        .enabled()
-        .flatMap(({ descriptor }) => descriptor.fences),
-      ...commonFenceNames(),
-    ].map((fence) => fence.toLocaleLowerCase()),
-  );
+  const fences = acceptedFenceNames(registry);
   for (const block of findCodeBlocks(source, fences)) {
     const runtime = registry.byFence(block.language);
     const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
@@ -281,6 +285,7 @@ export function createEditorHighlighter(
     class {
       decorations: DecorationSet;
       private readonly unsubscribe: () => void;
+      private readonly unregisterDiagnostics: () => void;
       private revision = "";
 
       constructor(private readonly view: EditorView) {
@@ -292,6 +297,10 @@ export function createEditorHighlighter(
         this.unsubscribe = registry.subscribe(() => {
           this.view.dispatch({});
         });
+        this.unregisterDiagnostics = registerLivePreviewDiagnosticView(
+          view,
+          () => acceptedFenceNames(registry),
+        );
       }
 
       update(update: ViewUpdate): void {
@@ -310,6 +319,7 @@ export function createEditorHighlighter(
       }
 
       destroy(): void {
+        this.unregisterDiagnostics();
         this.unsubscribe();
       }
 
@@ -331,21 +341,14 @@ export function createMarkdownEditorExtensions(
   registry: LanguageRegistry,
   getSettings: () => SyntaxPluginSettings,
 ): Extension[] {
-  const accepted = (): Set<string> =>
-    new Set(
-      [
-        ...registry.enabled().flatMap(({ descriptor }) => descriptor.fences),
-        ...commonFenceNames(),
-      ].map((fence) => fence.toLocaleLowerCase()),
-    );
   return [
     createEditorHighlighter(registry, getSettings),
-    createLivePreviewEmbeddedBlockExtension(registry, getSettings),
     ...createSmartEditingExtensions(
       (state, position) => {
-        const block = findCodeBlocks(state.doc.toString(), accepted()).find(
-          (candidate) => isCodeBlockContentPosition(candidate, position),
-        );
+        const block = findCodeBlocks(
+          state.doc.toString(),
+          acceptedFenceNames(registry),
+        ).find((candidate) => isCodeBlockContentPosition(candidate, position));
         if (block === undefined) return undefined;
         const languageId =
           registry.byFence(block.language)?.settings.id ??
