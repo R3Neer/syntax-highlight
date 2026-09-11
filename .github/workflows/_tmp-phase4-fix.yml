@@ -1,0 +1,43 @@
+name: Temporary Phase 4 CSS repair
+
+on:
+  push:
+    paths:
+      - .github/workflows/_tmp-phase4-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/plan/obsidian-callout-host-fidelity'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Restore baseline and apply approved CSS variable
+        shell: bash
+        run: |
+          set -euo pipefail
+          path='packages/obsidian/styles.css'
+          git show d135d1dce7fa094734bb22ded9c9743880a3e40f:"$path" > "$path"
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('packages/obsidian/styles.css')
+          text = p.read_text(encoding='utf-8')
+          needle = '.cm-line.syntax-editor-code-source {\n  --code-background: transparent;'
+          replacement = '.cm-line.syntax-editor-code-source {\n  --blockquote-background-color: var(--syntax-editor-code-background, #000);\n  --code-background: transparent;'
+          assert text.count(needle) == 1, 'quoted-source block not uniquely found'
+          p.write_text(text.replace(needle, replacement), encoding='utf-8')
+          PY
+          git diff --check
+          test "$(git diff --numstat -- "$path")" = $'1\t0\tpackages/obsidian/styles.css'
+      - name: Commit repair
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add packages/obsidian/styles.css
+          git commit -m 'fix(obsidian): scope quoted background through blockquote variable'
+          git push origin HEAD:plan/obsidian-callout-host-fidelity
