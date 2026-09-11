@@ -6,39 +6,35 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-El plan existente había quedado por detrás de la arquitectura finalmente estabilizada.
-
-Se reconciliaron explícitamente:
-
-- `COMMON_SEMANTIC_HIGHLIGHTER` construido con `tagHighlighter()` en lugar de highlighters host-specific;
-- engine stream con estado inicial explícito;
-- resolver efectivo con precedencia `parser.tokenTable > engine.tokenTags > tags públicos`;
-- nombres sintéticos para no depender de aliases legacy internos de `StreamLanguage`;
-- preservación del contrato público completo del `StreamParser`;
-- scanner LF/CRLF/source vacío/newline final/zero-length;
-- `tags.invalid -> syntax-common-invalid`;
-- retirada de `cm-*`/`token *` de la taxonomía manual;
-- paleta dark quoted completa, incluido `important` e `invalid`, con contraste comprobable;
-- SourceView conservando la ruta nativa `commonLanguageSupport + syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)`;
-- tests nuevos reservados para después del TM de implementación.
-
-Los pares limpios anteriores quedaron invalidados por estos cambios.
+Se reconcilió el plan con la arquitectura finalmente estabilizada: highlighter único con `tagHighlighter`, estado stream explícito, resolver/nombres sintéticos, preservación completa del parser, scanner físico completo, `invalid`, retirada `cm-*`/`token *`, paleta dark completa y SourceView nativo. Los pares limpios anteriores quedaron invalidados.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se detectó un riesgo de ciclo de módulos si la resolución stream efectiva vivía en `common-semantic-ranges.ts` y `common-languages.ts` necesitaba importarla para construir `StreamLanguage`.
+Se fijó el layering para evitar ciclo:
 
-Corrección operativa:
-
-- `common-languages.ts` queda como capa inferior y autoridad de catálogo, engines, highlighter, resolución de style words, nombres sintéticos y `effectiveStreamParser`;
-- `common-semantic-ranges.ts` importa esa autoridad y ejecuta tree/stream/plain manual;
-- `common-languages.ts` nunca importa `common-semantic-ranges.ts`;
-- nombres sintéticos se generan de forma determinista a partir de un orden estable de claves.
-
-También se precisó que el guard de tokens sin avance se reinicia cuando `StringStream` progresa.
+- `common-languages.ts` aloja catálogo, engines, highlighter, resolver stream y `effectiveStreamParser`;
+- `common-semantic-ranges.ts` importa esa capa y nunca al revés;
+- nombres sintéticos deterministas;
+- guard no-progress se reinicia al avanzar el stream.
 
 No cuenta como revisión limpia.
 
-Los pares limpios registrados en la versión anterior de este documento ya no son válidos porque precedían a las Revisiones 1–2 actuales.
+## Revisión 3
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del plan actual, centrada en orden de migración y reversibilidad:
+
+- engine/highlighter/resolver nacen antes que semantic ranges;
+- semantic ranges se introducen antes de retirar la ruta anterior;
+- Reading y Markdown source migran después de que la autoridad pura compile;
+- SourceView conserva parser incremental nativo y cambia solo helper/highlighter;
+- `cm-*`/`token *` se retiran solo cuando ya no tienen consumidores manuales;
+- CSS dark se aplica sobre la taxonomía propia ya establecida;
+- cada corte conserva CI existente antes de avanzar;
+- tests nuevos siguen reservados para después del TM de implementación;
+- no hay migración persistente de settings/manifest ni datos que requiera fase adicional.
+
+No se encontró modificación necesaria. Esta es la primera revisión limpia del estado actual.
