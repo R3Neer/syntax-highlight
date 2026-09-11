@@ -39,7 +39,7 @@ Un helper único `commonLanguageSupport(language)` devuelve:
 - para stream, `LanguageSupport(StreamLanguage.define(effectiveStreamParser))`;
 - `undefined` para plain.
 
-`effectiveStreamParser` se crea sin mutar el parser importado y usa la misma metadata pública que la extracción manual.
+`effectiveStreamParser` se crea sin mutar el parser importado. Envuelve únicamente su salida de `token()` y su `tokenTable` mediante APIs públicas para que los styles declarados por el parser/engine tengan una representación inequívoca también dentro de `StreamLanguage`.
 
 PowerShell: stream-backed. Bash y demás gramáticas Lezer: tree-backed. Text: plain.
 
@@ -104,7 +104,7 @@ No leer `StreamLanguage.streamParser`, NodeProps, TokenTable/NodeType internos n
 
 El cuerpo lógico se recorre desde el principio para preservar estado multilinea.
 
-### 6.2 Tabla declarativa y precedencia
+### 6.2 Tabla declarativa, precedencia y nombres sintéticos
 
 El contrato público permite que `token()` devuelva nombres de tags públicos, nombres de `tokenTable`, modificadores con `.` y varios styles separados por espacios.
 
@@ -122,16 +122,32 @@ PowerShell declara al menos:
 - `keyword` → `tags.keyword`;
 - `error` → `tags.invalid`.
 
-Precedencia determinista:
+Precedencia determinista de Syntax Highlight:
 
 1. `parser.tokenTable` explícito del autor del parser gana si define la clave;
 2. `engine.tokenTags` rellena nombres que el parser no haya definido;
 3. si ninguna tabla define el nombre, resolver nombres/modificadores públicos existentes en `tags`;
 4. style desconocido: fallo local, sin abortar el bloque.
 
-La tabla efectiva con esa misma precedencia se incorpora al `effectiveStreamParser` de `commonLanguageSupport()`. No hay dos configuraciones semánticas del lenguaje.
+No se confía en la precedencia interna que `StreamLanguage` pueda aplicar a nombres legacy. Para cualquier style cubierto por `parser.tokenTable` o `engine.tokenTags`, `effectiveStreamParser` reescribe el nombre devuelto por `token()` a un nombre sintético estable que no colisione con vocabulario legacy/público, por ejemplo `syntaxStreamToken0`, y coloca su `Tag | Tag[]` en el `tokenTable` efectivo bajo ese nombre sintético.
 
-Múltiples style names se convierten en un único conjunto de Tags y se pasan a `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)`.
+Ejemplo conceptual:
+
+```text
+parser devuelve "builtin"
+        ↓
+resolver efectivo → tags.standard(tags.variableName)
+        ↓
+effectiveStreamParser devuelve "syntaxStreamToken3"
+        ↓
+tokenTable.syntaxStreamToken3 = tags.standard(tags.variableName)
+```
+
+Si un style no está en ninguna tabla y ya usa el vocabulario público (`number`, `variableName.standard`, etc.), se conserva sin reescritura.
+
+Los múltiples style names de una devolución se resuelven palabra a palabra con la misma precedencia. El scanner manual usa exactamente el mismo resolver, de modo que SourceView/StreamLanguage y semantic ranges manuales no pueden divergir por aliases internos.
+
+Los nombres sintéticos son detalle privado de construcción del parser efectivo, no parte del DOM, CSS ni API pública del plugin.
 
 ### 6.3 Scanner por líneas y offsets
 
@@ -304,8 +320,8 @@ No tocar salvo imports/tipos inevitables:
 
 - PowerShell stream: variable/number/operator/builtin/string/comment;
 - no rama renderer PowerShell;
-- `commonLanguageSupport(PowerShell)` comparte parser/tabla efectiva;
-- parser tokenTable gana sobre engine tokenTags;
+- `commonLanguageSupport(PowerShell)` y scanner manual usan el mismo resolver efectivo;
+- parser tokenTable gana sobre engine tokenTags incluso si el nombre original coincide con vocabulario legacy, gracias a la reescritura sintética;
 - nombres/modificadores públicos y múltiples styles;
 - multiline state, blankLine, LF/CRLF, terminador final sin blank fantasma, última línea sin terminador, source vacío y guard zero-length;
 - Bash tree sigue funcionando; Text plain;
@@ -321,9 +337,9 @@ No tocar salvo imports/tipos inevitables:
 Dos revisiones consecutivas sin cambios deben confirmar:
 
 1. PowerShell se corrige por engine stream genérico, no renderer especial;
-2. engine y support comparten una sola metadata;
-3. solo API pública StreamParser/StringStream/tags/Highlighter/tagHighlighter;
-4. parser.tokenTable tiene precedencia explícita y no copiamos aliases internos;
+2. engine y support comparten una sola metadata y un mismo resolver efectivo;
+3. solo API pública StreamParser/StringStream/token/tokenTable/tags/Highlighter/tagHighlighter;
+4. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
 5. tree languages conservan parser actual;
 6. manual paths convergen en `syntax-common-*`;
 7. `cm-*`/`token *` salen de nuestra taxonomía manual;
