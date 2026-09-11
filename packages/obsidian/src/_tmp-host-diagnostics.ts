@@ -317,6 +317,17 @@ function styledElementSnapshot(
   };
 }
 
+function unavailableStyledElementSnapshot(): HostDiagnosticStyledElementSnapshot {
+  return {
+    tag: "<unavailable>",
+    classes: [],
+    attributes: {},
+    text: "",
+    connected: false,
+    style: { styleError: true },
+  };
+}
+
 function styledAncestors(
   element: Element,
   viewDom: HTMLElement,
@@ -442,6 +453,24 @@ function captureLine(
   return result;
 }
 
+function captureLineSafely(
+  view: EditorView,
+  line: HTMLElement,
+  blocks: readonly MudCodeBlock[],
+): LivePreviewLineSnapshot {
+  try {
+    return captureLine(view, line, blocks);
+  } catch {
+    return {
+      element: unavailableStyledElementSnapshot(),
+      ancestors: [],
+      descendants: [],
+      descendantsTruncated: false,
+      snapshotError: true,
+    };
+  }
+}
+
 function containsClassPrefix(root: Element, prefix: string): boolean {
   if ([...root.classList].some((className) => className.startsWith(prefix))) {
     return true;
@@ -478,6 +507,25 @@ function captureEmbeddedHost(
         host.querySelector<HTMLElement>(".cm-inline-code") !== null,
       hyperMdCodeblock: containsClassPrefix(host, "HyperMD-codeblock"),
     },
+  };
+}
+
+function unavailableEmbeddedSnapshot(): LivePreviewEmbeddedSnapshot {
+  return {
+    element: unavailableStyledElementSnapshot(),
+    ancestors: [],
+    descendants: [],
+    descendantsTruncated: false,
+    contains: {
+      callout: false,
+      pre: false,
+      code: false,
+      cmLine: false,
+      syntaxClass: false,
+      inlineCode: false,
+      hyperMdCodeblock: false,
+    },
+    snapshotError: true,
   };
 }
 
@@ -519,7 +567,7 @@ function captureLivePreviewView(
     base.linesTruncated = lines.length > MAX_POST_FRAME_LINES;
     base.lines = lines
       .slice(0, MAX_POST_FRAME_LINES)
-      .map((line) => captureLine(view, line, blocks));
+      .map((line) => captureLineSafely(view, line, blocks));
 
     base.embeddedHosts = [
       ...view.dom.querySelectorAll<HTMLElement>(".cm-embed-block"),
@@ -527,22 +575,7 @@ function captureLivePreviewView(
       try {
         return captureEmbeddedHost(view, host);
       } catch {
-        return {
-          element: styledElementSnapshot(host, view.dom),
-          ancestors: [],
-          descendants: [],
-          descendantsTruncated: false,
-          contains: {
-            callout: false,
-            pre: false,
-            code: false,
-            cmLine: false,
-            syntaxClass: false,
-            inlineCode: false,
-            hyperMdCodeblock: false,
-          },
-          snapshotError: true,
-        };
+        return unavailableEmbeddedSnapshot();
       }
     });
   } catch {
