@@ -9,9 +9,26 @@ npm run install:obsidian -- --vault /path/to/vault
 
 If the new installation has no `data.json`, the installer copies the legacy
 settings. It replaces the old id in `community-plugins.json`, but does not delete
-or modify the legacy plugin directory. Reload Obsidian, check MUD blocks in
-reading and editing views, check a `.mud` file, and only then remove the old
-directory manually if desired.
+or modify the legacy plugin directory. Reload Obsidian, check the new plugin, and
+only then remove the old directory manually if desired.
+
+The same plugin build can serve vaults with different language configuration.
+Use the `common` profile for a vault that should not keep a stored MUD profile:
+
+```sh
+npm run install:obsidian -- --vault /path/to/vault --profile common
+```
+
+Use the `mud` profile for a MUD vault:
+
+```sh
+npm run install:obsidian -- --vault /path/to/mud-vault --profile mud
+```
+
+`common` removes only the stored MUD profile from the destination vault. `mud`
+adds the built-in profile when absent or enables the existing one while
+preserving its palette, grammar paths and other settings. Profiles never modify
+another vault's configuration.
 
 Portable JSON schema v2 separates the language profile and its grammar payload.
 The importer accepts v1 settings, language bundles, and themes and normalizes
