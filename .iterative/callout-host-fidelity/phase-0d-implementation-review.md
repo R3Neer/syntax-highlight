@@ -53,3 +53,18 @@ Corrección requerida:
 - incluir `view.dom` como último ancestor útil y detener el recorrido inmediatamente después;
 - aplicar el mismo límite tanto a líneas `.cm-line` como a `.cm-embed-block`, ya que ambos reutilizan `styledAncestors()`;
 - no ampliar por esta corrección el snapshot ni tocar comportamiento funcional del plugin.
+
+## Revisión 5
+
+Resultado: CAMBIOS NECESARIOS.
+
+Con el ancestry ya limitado a `view.dom`, se revisó el aislamiento interno de cada view. `captureLine()` todavía ejecuta `relevantDescendants()`, `styledElementSnapshot()` y `styledAncestors()` antes de su `try` de mapping. Si cualquiera de esas lecturas falla por una reconciliación concurrente, el `.map()` de líneas lanza y el `try` exterior marca todo el view como `captureError`, perdiendo las demás líneas y embedded hosts sanos.
+
+El fallback de embedded host tiene un problema análogo: si `captureEmbeddedHost()` lanza, el `catch` vuelve a llamar a `styledElementSnapshot(host, view.dom)`, que puede ser precisamente la operación que falló.
+
+Corrección requerida:
+
+- aislar cada `.cm-line` con un wrapper fail-soft y devolver `snapshotError:true` solo para esa línea;
+- usar un placeholder diagnóstico explícito (`tag: "<unavailable>"`, sin clases/atributos/texto inventados, `styleError:true`) cuando el propio elemento no pueda inspeccionarse;
+- usar el mismo placeholder en el fallback de embedded host y no volver a ejecutar operaciones que ya han fallado;
+- preservar el resto del view y de otros views.
