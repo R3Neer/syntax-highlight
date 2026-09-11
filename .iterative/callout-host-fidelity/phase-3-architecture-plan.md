@@ -16,7 +16,7 @@ La arquitectura debe permitir que una quoted line reciba surface/presentation au
 ## Invariantes
 
 1. **Mismo EditorView**: quoted source pertenece al EditorView exterior. No introducir editor bridge ni DOM ownership alternativo.
-2. **ViewPlugin sigue siendo la integración oficial**: no StateField nuevo, no MutationObserver, no manipulación DOM.
+2. **ViewPlugin sigue siendo la integración oficial**: no StateField nuevo en producción, no MutationObserver, no manipulación DOM.
 3. **Dos políticas de visibilidad explícitas**:
    - line semantics → `viewport` + intersección de contenido con `visibleRanges`;
    - content semantics/widgets → `visibleRanges`.
@@ -183,18 +183,30 @@ El gate de Fase 3 debe demostrar si el problema era materialización. Si las cla
 
 ### Test de composición CodeMirror
 
-Crear una extensión adversarial de prueba que oculte mediante `Decoration.replace` el prefijo `> ` de quoted lines mientras deja visible el resto del body.
+Crear una extensión adversarial **directa** de prueba que oculte mediante `Decoration.replace` el prefijo `> ` de quoted lines mientras deja visible el resto del body.
+
+La extensión debe usar, preferiblemente:
+
+```ts
+StateField<DecorationSet>
+  -> provide: EditorView.decorations.from(field)
+```
+
+No usar un segundo ViewPlugin para producir el replacement: las decorations indirectas se consultan después de computar el viewport/visible ranges y no serían una reproducción válida de este boundary.
 
 Montar un `EditorView` real de test con:
 
-1. esa extensión de replacement;
+1. ese StateField directo de replacement;
 2. `createEditorHighlighter()` / extensión equivalente de producto.
 
-Verificar:
+Antes de probar Syntax Highlight, demostrar el escenario host:
 
 - `line.from` no pertenece a `view.visibleRanges` para al menos una quoted body line;
 - la línea sí intersecta `view.viewport`;
-- parte del `[line.from, line.to)` sí intersecta `visibleRanges`;
+- parte del `[line.from, line.to)` sí intersecta `visibleRanges`.
+
+Después verificar:
+
 - `.cm-line` recibe `syntax-editor-code-source`;
 - body recibe `syntax-common-*`;
 - `>` no recibe semantic mark;
@@ -203,7 +215,7 @@ Verificar:
 
 ### Fully replaced negative case
 
-Ocultar una quoted line completa con `Decoration.replace` y verificar que esa línea no recibe source surface propia, incluso si el replacement o un rango adyacente queda en el viewport.
+Usar también una decoration directa para ocultar una quoted line completa y verificar que esa línea no recibe source surface propia, incluso si el replacement o un rango adyacente queda en el viewport.
 
 Añadir además un caso de blank body line para demostrar que una línea física vacía visible sí puede recibir surface.
 
