@@ -1,16 +1,23 @@
 // @vitest-environment happy-dom
 
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import type { MarkdownPostProcessorContext } from "obsidian";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   hostDiagnosticsController,
+  registerLivePreviewDiagnosticView,
   traceHostDiagnostic,
   traceRenderedHostObservations,
 } from "../src/_tmp-host-diagnostics";
+import { createMarkdownEditorExtensions } from "../src/editor";
 import { LanguageRegistry } from "../src/languages";
 import { renderReadingFence } from "../src/reading-host";
 import { DEFAULT_SETTINGS } from "../src/settings";
+
+const views: EditorView[] = [];
+const manualUnregisters: Array<() => void> = [];
 
 function controller() {
   const value = hostDiagnosticsController();
@@ -28,7 +35,49 @@ function context(): MarkdownPostProcessorContext {
   } as unknown as MarkdownPostProcessorContext;
 }
 
+function mountEditor(source: string, diagnosticsWiring = false): EditorView {
+  const parent = document.body.appendChild(document.createElement("div"));
+  let extensions = [];
+  if (diagnosticsWiring) {
+    const settings = structuredClone(DEFAULT_SETTINGS);
+    const registry = new LanguageRegistry(settings, () => Promise.resolve(""));
+    extensions = createMarkdownEditorExtensions(registry, () => settings);
+  }
+  const state = EditorState.create({ doc: source, extensions });
+  const view = new EditorView({ state, parent });
+  views.push(view);
+  return view;
+}
+
+function registerManually(
+  view: EditorView,
+  accepted: ReadonlySet<string>,
+): void {
+  manualUnregisters.push(
+    registerLivePreviewDiagnosticView(view, () => accepted),
+  );
+}
+
+function mockAnimationFrames() {
+  let id = 1;
+  return vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    const current = id;
+    id += 1;
+    queueMicrotask(() => callback(current));
+    return current;
+  });
+}
+
 beforeEach(() => {
+  document.body.replaceChildren();
+  controller().clear();
+  controller().disable();
+});
+
+afterEach(() => {
+  for (const unregister of manualUnregisters.splice(0)) unregister();
+  for (const view of views.splice(0)) view.destroy();
+  vi.restoreAllMocks();
   document.body.replaceChildren();
   controller().clear();
   controller().disable();
@@ -156,5 +205,156 @@ describe("temporary Obsidian host diagnostics", () => {
     expect(events[1]?.code?.classes).toContain("language-powershell");
     expect(element.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("PowerShell");
+  });
+
+  it("exposes a versioned post-frame controller and stays inert while disabled", async () => {
+    const diagnostics = controller();
+    const global = (window as unknown as Record<string, unknown>)[
+      "SyntaxHighlightHostDiagnostics"
+    ];
+
+    expect(diagnostics.version).toBe(2);
+    expect(global).toBe(diagnostics);
+    expect(typeof diagnostics.captureLivePreview).toBe("function");
+    expect(typeof diagnostics.dumpLivePreview).toBe("function");
+    expect(await diagnostics.captureLivePreview()).toEqual([]);
+    expect(diagnostics.postFrameCaptures).toEqual([]);
+  });
+
+  it("captures top-level and quoted fences after two frames through the real editor wiring", async () => {
+    const source = [
+      "```powershell",
+      "$top = 1",
+      "Write-Host $top",
+      "```",
+      "",
+      "> [!task] Nested",
+      "> ```powershell",
+      "> $foo = 42",
+      "> Write-Host $foo",
+      "> ```",
+    ].join("\n");
+    const view = mountEditor(source, true);
+    const before = view.dom.innerHTML;
+    const frames = mockAnimationFrames();
+
+    controller().enable();
+    const captures = await controller().captureLivePreview();
+
+    expect(frames).toHaveBeenCalledTimes(2);
+    expect(captures).toHaveLength(1);
+    const capture = captures[0]!;
+    expect(capture.captureError).not.toBe(true);
+    expect(capture.documentLength).toBe(source.length);
+    expect(capture.fences?.map(({ language, quoteDepth }) => ({ language, quoteDepth })))
+      .toEqual([
+        { language: "powershell", quoteDepth: 0 },
+        { language: "powershell", quoteDepth: 1 },
+      ]);
+
+    const quotedBody = capture.lines?.find(
+      ({ documentText, role }) =>
+        documentText === "> $foo = 42" &&
+        role?.role === "body" &&
+        role.quoteDepth === 1,
+    );
+    expect(quotedBody).toBeDefined();
+    expect(quotedBody?.role?.bodyIndex).toBe(0);
+    expect(quotedBody?.ancestors.at(-1)?.isViewDom).toBe(true);
+    expect(quotedBody?.ancestors.at(-1)?.text).toBe("");
+    expect(
+      quotedBody?.descendants.some(({ classes }) =>
+        classes.some(
+          (className) =>
+            className === "cm-variable" ||
+            className === "cm-number" ||
+            className.startsWith("syntax-common-"),
+        ),
+      ),
+    ).toBe(true);
+    expect(view.dom.innerHTML).toBe(before);
+    expect(controller().postFrameCaptures).toHaveLength(1);
+
+    controller().clear();
+    expect(controller().postFrameCaptures).toHaveLength(0);
+
+    view.destroy();
+    views.splice(views.indexOf(view), 1);
+    expect(await controller().captureLivePreview()).toEqual([]);
+  });
+
+  it("captures embedded callout structure while filtering URL-bearing attributes", async () => {
+    const view = mountEditor("plain");
+    registerManually(view, new Set());
+
+    const host = view.dom.appendChild(document.createElement("div"));
+    host.className = "cm-embed-block cm-callout";
+    host.setAttribute(
+      "style",
+      'background-image:url("file:///D:/Secret/(wallpaper).png"); color:red',
+    );
+    host.setAttribute("href", "file:///D:/Secret/note.md");
+    host.setAttribute("src", "file:///D:/Secret/asset.png");
+    const pre = host.appendChild(document.createElement("pre"));
+    const code = pre.appendChild(document.createElement("code"));
+    code.className = "language-powershell is-loaded";
+    const inline = code.appendChild(document.createElement("span"));
+    inline.className = "cm-inline-code HyperMD-codeblock-bg syntax-common-callable cm-builtin";
+    inline.textContent = "Write-Host";
+    const before = host.outerHTML;
+
+    mockAnimationFrames();
+    controller().enable();
+    const [capture] = await controller().captureLivePreview();
+
+    const embedded = capture?.embeddedHosts?.find(({ element }) =>
+      element.classes.includes("cm-callout"),
+    );
+    expect(embedded).toBeDefined();
+    expect(embedded?.contains).toEqual({
+      callout: true,
+      pre: true,
+      code: true,
+      cmLine: false,
+      syntaxClass: true,
+      inlineCode: true,
+      hyperMdCodeblock: true,
+    });
+    expect(embedded?.element.attributes.style).toBe("<url-redacted>");
+    expect(embedded?.element.attributes.href).toBeUndefined();
+    expect(embedded?.element.attributes.src).toBeUndefined();
+    expect(embedded?.ancestors.at(-1)?.isViewDom).toBe(true);
+    expect(embedded?.ancestors.every(({ text }) => text === "")).toBe(true);
+    expect(host.outerHTML).toBe(before);
+    expect(controller().dumpLivePreview()).not.toContain("file:///D:/Secret");
+  });
+
+  it("isolates a broken registered view instead of losing healthy captures", async () => {
+    const broken = {} as EditorView;
+    Object.defineProperty(broken, "state", {
+      get() {
+        throw new Error("destroyed view");
+      },
+    });
+    manualUnregisters.push(
+      registerLivePreviewDiagnosticView(broken, () => new Set(["text"])),
+    );
+
+    const healthySource = "```text\nok\n```";
+    const healthy = mountEditor(healthySource);
+    registerManually(healthy, new Set(["text"]));
+
+    mockAnimationFrames();
+    controller().enable();
+    const captures = await controller().captureLivePreview();
+
+    expect(captures).toHaveLength(2);
+    expect(captures.some(({ captureError }) => captureError === true)).toBe(true);
+    const good = captures.find(({ documentLength }) => documentLength === healthySource.length);
+    expect(good?.captureError).not.toBe(true);
+    expect(good?.fences?.[0]).toMatchObject({
+      language: "text",
+      quoteDepth: 0,
+    });
   });
 });
