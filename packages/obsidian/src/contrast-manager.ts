@@ -25,6 +25,7 @@ const COMMON_TOKEN_SELECTOR = [
   ".syntax-common-meta",
 ].join(",");
 
+const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
 const resolvedColorCache = new Map<string, RgbaColor | undefined>();
@@ -81,21 +82,24 @@ function effectiveBackground(element: Element): RgbaColor {
     current = current.parentElement;
   }
 
-  // CSS can legitimately leave every ancestor transparent. In that case the
-  // browser canvas is the final backing surface. Obsidian's document canvas is
-  // effectively opaque, and white is the conservative deterministic fallback
-  // when no CSS color can be recovered. Background images are intentionally not
-  // sampled pixel-by-pixel; declared translucent backgrounds are still composed.
   return compositeOver(result, { r: 1, g: 1, b: 1, a: 1 });
+}
+
+function isInsideOwnedFrame(element: Element): boolean {
+  return element.closest(OWNED_FRAME_SELECTOR) !== null;
 }
 
 function commonTokens(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
-  if (root instanceof HTMLElement && root.matches(COMMON_TOKEN_SELECTOR)) {
+  if (
+    root instanceof HTMLElement &&
+    root.matches(COMMON_TOKEN_SELECTOR) &&
+    isInsideOwnedFrame(root)
+  ) {
     result.push(root);
   }
   for (const element of root.querySelectorAll<HTMLElement>(COMMON_TOKEN_SELECTOR)) {
-    result.push(element);
+    if (isInsideOwnedFrame(element)) result.push(element);
   }
   return result;
 }
@@ -104,6 +108,17 @@ function parentNode(value: Node): ParentNode | undefined {
   return value instanceof HTMLElement || value instanceof DocumentFragment
     ? value
     : undefined;
+}
+
+function touchesOwnedFrame(root: ParentNode): boolean {
+  if (root instanceof HTMLElement) {
+    return (
+      isInsideOwnedFrame(root) ||
+      root.matches(OWNED_FRAME_SELECTOR) ||
+      root.querySelector(OWNED_FRAME_SELECTOR) !== null
+    );
+  }
+  return root.querySelector(OWNED_FRAME_SELECTOR) !== null;
 }
 
 export class CommonContrastManager {
@@ -120,12 +135,16 @@ export class CommonContrastManager {
       for (const record of records) {
         if (record.type === "attributes") {
           const root = parentNode(record.target);
-          if (root !== undefined) this.pendingRoots.add(root);
+          if (root !== undefined && touchesOwnedFrame(root)) {
+            this.pendingRoots.add(root);
+          }
           continue;
         }
         for (const node of record.addedNodes) {
           const root = parentNode(node);
-          if (root !== undefined) this.pendingRoots.add(root);
+          if (root !== undefined && touchesOwnedFrame(root)) {
+            this.pendingRoots.add(root);
+          }
         }
       }
       if (this.pendingRoots.size > 0) this.schedule();
@@ -169,6 +188,7 @@ export class CommonContrastManager {
     if (
       root instanceof HTMLElement &&
       root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
+      isInsideOwnedFrame(root) &&
       !root.matches(COMMON_TOKEN_SELECTOR)
     ) {
       this.restoreThemeColor(root);
@@ -190,13 +210,15 @@ export class CommonContrastManager {
     this.fullRefreshPending = false;
     this.scheduled = false;
     for (const element of document.querySelectorAll<HTMLElement>(
-      `[${ADJUSTED_ATTRIBUTE}]`,
+      `${OWNED_FRAME_SELECTOR} [${ADJUSTED_ATTRIBUTE}]`,
     )) {
       this.restoreThemeColor(element);
     }
   }
 
   private normalizeElement(element: HTMLElement): void {
+    if (!isInsideOwnedFrame(element)) return;
+
     // Settings previews intentionally show their selected semantic preset rather
     // than the active vault theme, so runtime normalization must not rewrite it.
     if (element.closest(".syntax-preview-output") !== null) {
