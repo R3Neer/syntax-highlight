@@ -34,4 +34,18 @@ Se revisó el orden operativo y los failure modes:
 
 No se identificó ninguna fase ausente ni cambio necesario.
 
-Falta una segunda revisión limpia consecutiva.
+## Revisión 3
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión limpia, centrada en scope y aislamiento:
+
+- parser/semantic engine de Fase 2 quedan congelados;
+- CSS y paleta quoted quedan congelados;
+- routing rendered/Reading no cambia;
+- settings gating no se mezcla con Fase 3;
+- Smart Editing, contrast manager y configured profiles no cambian;
+- el único cambio funcional autorizado es la decisión de materialización de `Decoration.line` quoted;
+- tests adversariales nuevos siguen bloqueados hasta cerrar TM de implementación.
+
+Revisiones 2 y 3 consecutivas sin cambios: el plan de implementación Fase 3 queda ESTABLE según TM.
