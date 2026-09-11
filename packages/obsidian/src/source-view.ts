@@ -26,8 +26,9 @@ import { TextFileView, type WorkspaceLeaf } from "obsidian";
 
 import type { LanguageRegistry } from "./languages";
 import {
-  COMMON_EDITOR_HIGHLIGHT_STYLE,
+  COMMON_SEMANTIC_HIGHLIGHT_STYLE,
   commonLanguageByExtension,
+  commonLanguageSupport,
 } from "./common-languages";
 import type { SyntaxPluginSettings } from "./settings";
 import { createSmartEditingExtensions } from "./smart-edit";
@@ -164,6 +165,9 @@ export class SyntaxSourceView extends TextFileView {
     const common = runtime === undefined
       ? commonLanguageByExtension(extension)
       : undefined;
+    const commonSupport = common === undefined
+      ? undefined
+      : commonLanguageSupport(common);
     const settings = this.getSettings();
     const languageId = runtime?.settings.id ?? common?.id ?? "source";
     const smartEditing = createSmartEditingExtensions(
@@ -173,7 +177,7 @@ export class SyntaxSourceView extends TextFileView {
               from: 0,
               to: state.doc.length,
               languageId,
-              nativeIndentation: common?.support !== undefined,
+              nativeIndentation: commonSupport !== undefined,
             }
           : undefined,
       this.getSettings,
@@ -191,11 +195,11 @@ export class SyntaxSourceView extends TextFileView {
         ...(runtime === undefined
           ? []
           : [createSourceHighlighter(this.registry, extension)]),
-        ...(common?.support === undefined
+        ...(commonSupport === undefined
           ? []
           : [
-              common.support(),
-              syntaxHighlighting(COMMON_EDITOR_HIGHLIGHT_STYLE),
+              commonSupport,
+              syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHT_STYLE),
             ]),
         ...smartEditing,
         keymap.of([
