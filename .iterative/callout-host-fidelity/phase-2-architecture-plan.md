@@ -19,6 +19,10 @@ Se conservan los invariantes válidos de Fase 1:
 - `blocks.ts`, quote mapping, presentation y Smart Editing permanecen autoridades actuales salvo adaptación de tipos estrictamente necesaria;
 - ViewPlugin sigue limitando materialización/trabajo caro al viewport.
 
+La documentación de Obsidian recomienda decorations desde ViewPlugin cuando el trabajo puede limitarse al viewport y CSS variables para styling de elementos propios. Esta fase mantiene ambas reglas.
+
+La documentación oficial de variables CSS de Obsidian confirma además `--code-background`, `--code-normal`, `--code-comment`, `--code-function`, `--code-keyword`, `--code-operator`, `--code-property`, `--code-punctuation`, `--code-string`, `--code-tag` y `--code-value` como variables públicas de código, y advierte expresamente que Editing y Reading usan sistemas de syntax highlighting distintos y pueden no coincidir visualmente. La arquitectura no intenta fingir que son el mismo sistema: unifica únicamente nuestra taxonomía propia.
+
 ## 2. El engine de `CommonLanguage` es la fuente de verdad
 
 `CommonLanguage` tendrá un engine discriminado o equivalente:
@@ -62,13 +66,17 @@ Consumidores manuales:
 
 ## 4. Highlighter semántico único
 
-Sustituir `COMMON_READING_HIGHLIGHT_STYLE` y `COMMON_EDITOR_HIGHLIGHT_STYLE` por un único `COMMON_SEMANTIC_HIGHLIGHT_STYLE` que emita solo `syntax-common-*`.
+Sustituir `COMMON_READING_HIGHLIGHT_STYLE` y `COMMON_EDITOR_HIGHLIGHT_STYLE` por un único `COMMON_SEMANTIC_HIGHLIGHTER` creado con la API pública `tagHighlighter()` de `@lezer/highlight`.
 
-Se usa:
+El highlighter solo emite clases `syntax-common-*`; no crea reglas CSS anónimas ni clases generadas.
 
-- `highlightTree(tree, style)` en tree-backed;
-- `style.style(tags)` en stream-backed;
-- `syntaxHighlighting(style)` en EditorViews propios.
+Se usa como el mismo objeto `Highlighter` en las tres fronteras:
+
+- `highlightTree(tree, COMMON_SEMANTIC_HIGHLIGHTER)` en tree-backed;
+- `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)` en stream-backed;
+- `syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)` en EditorViews propios.
+
+CodeMirror documenta `syntaxHighlighting(highlighter: Highlighter)` y Lezer documenta `tagHighlighter()`/`Highlighter.style()`, por lo que no necesitamos que la fuente de verdad semántica sea un `HighlightStyle` específico de CodeMirror.
 
 Una única tabla tag → rol semántico es fuente de verdad.
 
@@ -76,7 +84,7 @@ Una única tabla tag → rol semántico es fuente de verdad.
 
 1. obtener support/lenguaje del engine;
 2. parsear como hoy;
-3. `highlightTree()` con `COMMON_SEMANTIC_HIGHLIGHT_STYLE`;
+3. `highlightTree()` con `COMMON_SEMANTIC_HIGHLIGHTER`;
 4. devolver ranges puros.
 
 No hay lógica StreamLanguage en esta rama ni cambios a parsers modernos que ya funcionan.
@@ -123,7 +131,7 @@ Precedencia determinista:
 
 La tabla efectiva con esa misma precedencia se incorpora al `effectiveStreamParser` de `commonLanguageSupport()`. No hay dos configuraciones semánticas del lenguaje.
 
-Múltiples style names se convierten en un único conjunto de Tags y se pasan a `COMMON_SEMANTIC_HIGHLIGHT_STYLE.style(tags)`.
+Múltiples style names se convierten en un único conjunto de Tags y se pasan a `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)`.
 
 ### 6.3 Scanner por líneas y offsets
 
@@ -133,10 +141,12 @@ Debe preservar:
 - `StringStream` recibe solo el contenido de la línea;
 - ranges desplazados por el offset real de la línea;
 - `blankLine(state, indentUnit)` en líneas vacías;
-- defaults CodeMirror sin EditorState: `tabSize=4`, `indentUnit=2`;
+- defaults deterministas sin EditorState: `tabSize=4`, `indentUnit=2` para `StringStream`, y un indent unit explícito/documentado para `startState`;
 - opciones explícitas cuando un caller tenga state.
 
 Como `token()` puede hacer pasos de longitud cero si cambia estado, habrá un guard finito propio contra loops sin avance, sin copiar helpers internos.
+
+El scanner no altera ni normaliza el source antes de tokenizar: los offsets emitidos siempre están expresados en las coordenadas del string recibido.
 
 ### 6.4 Sin renderer PowerShell
 
@@ -164,7 +174,7 @@ Conservar la ruta oficial CodeMirror:
 
 ```text
 commonLanguageSupport(language)
-+ syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHT_STYLE)
++ syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)
 ```
 
 También para stream-backed.
@@ -177,26 +187,28 @@ No se reinventa parsing incremental. Si un gate posterior demuestra fallo espec�
 
 No clonar Nier ni ningún tema con selectores privados.
 
-El requisito del producto es fondo negro, por lo que el fallback final de la surface plugin-owned es explícito:
+El requisito del producto es fondo negro, por lo que los fallbacks finales de la surface plugin-owned son explícitos:
 
 ```css
---syntax-editor-code-background: #000;
---syntax-editor-code-color: #d4d4d4;
---syntax-editor-code-caret: #d4d4d4;
+background-color: var(--syntax-editor-code-background, #000);
+color: var(--syntax-editor-code-color, #d4d4d4);
+caret-color: var(--syntax-editor-code-caret, #d4d4d4);
 ```
 
-Un theme/snippet puede sobrescribir estas variables propias.
+Un theme/snippet puede sobrescribir estas variables propias en un scope superior o más específico sin conocer internals.
+
+No se define una custom property mediante autorreferencia (`--x: var(--x, ...)`); el literal es únicamente fallback de consumo.
 
 ### 10.2 Integrar furniture interno del host mediante variables públicas
 
-La documentación oficial confirma que `--code-background`, `--code-normal` y la familia `--code-*` son variables públicas para código.
+La documentación oficial confirma `--code-background`, `--code-normal` y la familia `--code-*` como variables públicas para código, y `--caret-color` como variable pública de caret.
 
 Dentro de `.cm-line.syntax-editor-code-source` se redefinen variables, no clases internas:
 
 ```css
 --code-background: transparent;
---code-normal: var(--syntax-editor-code-color);
---caret-color: var(--syntax-editor-code-caret);
+--code-normal: var(--syntax-editor-code-color, #d4d4d4);
+--caret-color: var(--syntax-editor-code-caret, #d4d4d4);
 ```
 
 La propia línea usa `--syntax-editor-code-background`, así que neutralizar `--code-background` solo evita rectángulos claros de descendants/furniture que consuman esa variable.
@@ -274,8 +286,9 @@ No tocar salvo imports/tipos inevitables:
 - nombres/modificadores públicos y múltiples styles;
 - multiline state, blankLine, LF/CRLF, última línea, guard zero-length;
 - Bash tree sigue funcionando; Text plain;
+- highlighter único creado con `tagHighlighter` funciona en `highlightTree`, stream `.style()` y `syntaxHighlighting()`;
 - rendered manual sin `token *`; editor manual sin `cm-*`;
-- source view conserva support + syntaxHighlighting con style único;
+- source view conserva support + syntaxHighlighting con highlighter único;
 - quoted source negro, foreground/caret legibles y `--code-background` neutralizado sin selector privado/`!important`;
 - gate real con creación fresca para routing rendered.
 
@@ -285,7 +298,7 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 
 1. PowerShell se corrige por engine stream genérico, no renderer especial;
 2. engine y support comparten una sola metadata;
-3. solo API pública StreamParser/StringStream/tags/Highlighter;
+3. solo API pública StreamParser/StringStream/tags/Highlighter/tagHighlighter;
 4. parser.tokenTable tiene precedencia explícita y no copiamos aliases internos;
 5. tree languages conservan parser actual;
 6. manual paths convergen en `syntax-common-*`;
