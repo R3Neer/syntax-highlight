@@ -84,14 +84,11 @@ function streamEngine<State>(
   parser: StreamParser<State>,
   tokenTags: CommonStreamTokenTable,
 ): CommonStreamEngine {
-  if (parser.startState === undefined) {
-    throw new Error("A common stream engine requires an explicit startState().");
-  }
-  const startState = parser.startState.bind(parser);
+  const startState = parser.startState?.bind(parser);
   return {
     kind: "stream",
     parser: parser as unknown as StreamParser<unknown>,
-    startState: (indentUnit) => startState(indentUnit),
+    startState: (indentUnit) => startState?.(indentUnit) ?? true,
     tokenTags,
   };
 }
