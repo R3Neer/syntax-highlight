@@ -6,13 +6,13 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se estabilizaron previamente sequencing TM, layering engine/resolver, synthetic names, scanner y separación implementación/tests.
+Se estabilizaron sequencing TM, layering engine/resolver, synthetic names, scanner y separación implementación/tests.
 
 ## Revisiones 3–4
 
 Resultado: SIN CAMBIOS / SIN CAMBIOS.
 
-Par limpio del plan anterior. Quedó invalidado como par final cuando la Revisión arquitectónica 6 cambió la política cromática de la surface quoted.
+Par limpio del plan anterior, invalidado como par final por el cambio cromático de Revisión arquitectónica 6.
 
 ## Revisión 5
 
@@ -20,22 +20,25 @@ Resultado: CAMBIOS NECESARIOS.
 
 Se reconcilió el plan con la arquitectura reabierta/reestabilizada:
 
-- la parte semántica Fase 2 permanece completada;
+- semántica Fase 2 permanece completada;
 - se reabre únicamente la paleta quoted source;
-- la familia pública `--code-*` relevante debe remapearse a `--syntax-common-*` heredable + literal dark-safe;
-- se fijaron valores concretos y no decisiones pendientes:
-  - comment `#6a9955`;
-  - callable/function `#dcdcaa`;
-  - regex/important `#d16969`;
-  - keyword/meta/tag `#c586c0`;
-  - string `#ce9178`;
-  - number/value `#b5cea8`;
-  - operator/punctuation/normal/caret `#d4d4d4`;
-  - property `#9cdcfe`;
-  - type propio `#4ec9b0`;
-  - invalid `#f44747`;
-  - line numbers `#858c99`.
-- `--code-tag` se asigna de forma canónica a meta; `syntax-common-type` conserva su color propio;
-- tests nuevos siguen bloqueados hasta dos revisiones limpias de implementación.
+- toda variable pública `--code-*` relevante se remapea a `--syntax-common-*` heredable + literal dark-safe;
+- valores/fallbacks quedaron fijados, incluido `--code-tag -> syntax-common-meta`, invalid y line numbers;
+- tests nuevos permanecen bloqueados hasta estabilizar implementación.
 
-No cuenta como revisión limpia. Las antiguas Revisiones 3–4 ya no son el par final vigente.
+## Revisión 6
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del plan reconciliado.
+
+Se revisó orden y rollback:
+
+- solo queda completar la paleta scoped de 5.2 antes de volver al TM de implementación;
+- un fallo CSS no obliga a deshacer el engine stream ya verde;
+- routing rendered, scanner Markdown, contrast JS, configured languages y build boundary no participan;
+- no existe una fase intermedia que requiera cobertura nueva;
+- Fase 8 sigue siendo el único punto de creación de tests nuevos;
+- todos los colores/fallbacks del tramo pendiente están determinados y no dejan decisiones al implementador.
+
+No se encontró modificación necesaria. Es la primera revisión limpia vigente.
