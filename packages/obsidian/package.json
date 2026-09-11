@@ -25,6 +25,15 @@
     "@r3nner/syntax-highlight-language-mud": "1.1.1"
   },
   "peerDependencies": {
+    "@codemirror/autocomplete": "^6.0.0",
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/language": "^6.0.0",
+    "@codemirror/search": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@lezer/common": "^1.0.0",
+    "@lezer/highlight": "^1.0.0",
+    "@lezer/lr": "^1.0.0",
     "obsidian": "^1.7.2"
   },
   "sideEffects": [
