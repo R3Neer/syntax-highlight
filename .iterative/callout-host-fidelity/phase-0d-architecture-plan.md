@@ -29,11 +29,12 @@ Responsabilidades:
 5. reaccionar a cualquier `ViewUpdate` relevante y también a mutaciones DOM scoped a `view.dom` que puedan ocurrir sin transacción de editor;
 6. batir todos esos triggers en una sola captura post-frame;
 7. reconstruir los fenced blocks reconocidos desde `view.state.doc` usando la fuente de verdad actual `findCodeBlocks()`;
-8. limitar la inspección a bloques materializados en/near `view.visibleRanges` o que contengan la selección, con un cap duro adicional;
-9. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
-10. capturar únicamente estructura/clases/estilos necesarios;
-11. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
-12. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado, salvo el propio `MutationObserver` scoped que no muta el subtree.
+8. usar `view.viewport` como filtro grueso de bloques en pantalla, incluyendo ranges que puedan estar reemplazados por widgets; usar `view.visibleRanges` después solo para describir qué source ranges tienen representación directa, y conservar además cualquier bloque que contenga la selección;
+9. aplicar un cap duro adicional de bloques;
+10. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
+11. capturar únicamente estructura/clases/estilos necesarios;
+12. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
+13. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado, salvo el propio `MutationObserver` scoped que no muta el subtree.
 
 ## Controlador y registro de targets
 
@@ -70,17 +71,29 @@ Si el observer recibe otra mutación antes/durante la captura, se agenda un nuev
 
 El propio diagnóstico no muta el DOM, de modo que `getComputedStyle`, lectura de clases y publicación de eventos no retroalimentan el observer. Mutaciones `style` originadas por otros componentes, incluido el normalizador de contraste, sí disparan una nueva captura y son deseables porque permiten observar el estado final posterior.
 
-Si durante el frame una posición pertenece a un widget/replaced range y no existe `.cm-line`, se registra explícitamente como `materialized: false` en vez de inventar una estructura.
+`view.domAtPos()` puede mapear una posición de source reemplazada a un boundary DOM que no pertenece a una `.cm-line` representativa del source. El probe debe tratar esa situación como evidencia, no como error: captura el boundary local seguro y marca la línea/source como `materialized: false`. También debe capturar excepciones de resolución como estado no materializado, nunca abortar el resto de bloques.
+
+## Filtro viewport vs materialización
+
+Esta distinción es obligatoria:
+
+- `view.viewport` responde «¿está el rango documental en la región actualmente renderizada del editor?» y se usa para decidir qué bloques merece la pena inspeccionar;
+- `view.visibleRanges` responde «¿qué rangos de source están directamente visibles y no ocultos/reemplazados?» y se usa como señal de representación;
+- un bloque que intersecta `view.viewport` pero no `view.visibleRanges` **no se descarta**: es precisamente candidato a estar reemplazado por un widget y debe poder producir `not-materialized`/`rendered-widget`;
+- cualquier bloque que contenga la selección se conserva aunque esté en el borde de estos filtros.
+
+Esto permite que el estado «cursor fuera de ambos», donde los fenced blocks pueden estar materializados como widgets, siga formando parte de la captura.
 
 ## Unidad de observación
 
-Por cada fenced block reconocido visible/relevante:
+Por cada fenced block reconocido relevante según viewport/selección:
 
 - fence normalizado;
 - `quoteDepth`;
 - posiciones físicas de opening/body/closing;
+- intersección con `viewport` y con `visibleRanges`;
 - estado de selección respecto del bloque (`outside`, `opening`, `body`, `closing`);
-- representación (`source-line`, `rendered-widget`, `not-materialized`) cuando pueda determinarse sin búsqueda global.
+- representación (`source-line`, `rendered-widget`, `not-materialized`, `unknown`) cuando pueda determinarse localmente sin búsqueda global.
 
 Por cada línea materializada:
 
@@ -90,6 +103,8 @@ Por cada línea materializada:
 - ancestry resumido hasta `.cm-s-obsidian` / `.cm-editor`;
 - descendientes relevantes con tag, clases, texto truncado y color/background computados;
 - presencia de `data-syntax-contrast-adjusted` e inline `color`/prioridad.
+
+Cuando source no esté materializado, el snapshot conserva los metadatos documentales y el boundary DOM local seguro devuelto por `domAtPos()` si existe, pero no lo rebautiza falsamente como `.cm-line`.
 
 ## Tokens objetivo
 
@@ -133,7 +148,7 @@ El API global queda temporalmente:
 - como máximo un `requestAnimationFrame` pendiente por `EditorView`;
 - `MutationObserver` únicamente scoped a `view.dom`, nunca `document.body`;
 - no escanear el DOM global;
-- filtrar por `view.visibleRanges`/selección y cap de bloques;
+- filtrar primero por `view.viewport`, conservar selección y usar `visibleRanges` solo como señal de source materializado; aplicar cap de bloques;
 - `destroy()` desconecta observer, cancela frame pendiente y desregistra callbacks;
 - eventos deduplicados por snapshot estructural/estilos, ignorando `timestamp`, para que una ráfaga de mutaciones no llene el dump con estados idénticos;
 - una transición de selección/representación sí debe producir evento aunque el DOM sea idéntico si cambia el estado `selectionRegion`;
@@ -172,11 +187,13 @@ Los tests de Fase 0D verifican la instrumentación, no el fix visual:
 - `capture()` fan-out a todos los ViewPlugins vivos sin capturar sincrónicamente;
 - scheduling batched post-frame desde ViewUpdate;
 - scheduling desde mutaciones DOM scoped;
+- filtro por `view.viewport` conserva ranges reemplazados aunque no estén en `visibleRanges`;
+- `visibleRanges` se registra como señal de source materializado, no como filtro excluyente;
 - resolución por posición documental a `.cm-line`;
-- `materialized: false` cuando una posición está reemplazada/no visible;
+- `materialized: false` cuando `domAtPos()` devuelve boundary no representativo o falla la resolución;
 - captura de clases/estilos/tokens sin mutación;
 - selección outside/body;
-- filtros visibleRanges/selección y cap de bloques;
+- cap de bloques;
 - diagnostics disabled = cero scans/cero eventos;
 - deduplicación conserva cambios de selección/representación;
 - límite y sanitización de texto/atributos;
