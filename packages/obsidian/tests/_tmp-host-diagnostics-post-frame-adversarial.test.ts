@@ -81,10 +81,13 @@ describe("post-frame diagnostic adversarials", () => {
       registerLivePreviewDiagnosticView(view, () => new Set()),
     );
 
-    Object.defineProperty(lines[0]!, "classList", {
+    // Root-level `.cm-line` discovery has already succeeded when the snapshot
+    // later walks a line's ancestry. Make only that per-line operation fail so
+    // this exercises captureLineSafely rather than the enclosing view capture.
+    Object.defineProperty(lines[0]!, "parentElement", {
       configurable: true,
       get() {
-        throw new Error("reconciled while reading");
+        throw new Error("reconciled while reading ancestry");
       },
     });
 
