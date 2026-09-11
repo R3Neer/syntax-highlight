@@ -461,13 +461,16 @@ function captureEmbeddedHost(
     descendants: descendants.elements,
     descendantsTruncated: descendants.truncated,
     contains: {
-      callout: host.matches(".cm-callout") || host.querySelector(".cm-callout") !== null,
-      pre: host.matches("pre") || host.querySelector("pre") !== null,
-      code: host.matches("code") || host.querySelector("code") !== null,
-      cmLine: host.matches(".cm-line") || host.querySelector(".cm-line") !== null,
+      callout:
+        host.classList.contains("cm-callout") ||
+        host.querySelector<HTMLElement>(".cm-callout") !== null,
+      pre: host.querySelector("pre") !== null,
+      code: host.querySelector("code") !== null,
+      cmLine: host.querySelector<HTMLElement>(".cm-line") !== null,
       syntaxClass: containsClassPrefix(host, "syntax-"),
       inlineCode:
-        host.matches(".cm-inline-code") || host.querySelector(".cm-inline-code") !== null,
+        host.classList.contains("cm-inline-code") ||
+        host.querySelector<HTMLElement>(".cm-inline-code") !== null,
       hyperMdCodeblock: containsClassPrefix(host, "HyperMD-codeblock"),
     },
   };
