@@ -6,29 +6,26 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-### Cambio A · respetar separación TM implementación/tests
+- separar estrictamente implementación y tests nuevos;
+- usar fallbacks `var(--syntax-*, literal)` para que themes/snippets puedan sobrescribir variables propias;
+- mantener ledger de tests antiguos adaptados/retirados durante la migración.
 
-El primer plan introducía tests nuevos de `common-semantic-ranges` antes de haber estabilizado implementación.
+## Revisión 2
 
-Corrección:
+Resultado: SIN CAMBIOS.
 
-- durante Fases 1–6 solo se ejecuta lint/typecheck/suite **existente**/build;
-- tests antiguos que fallen porque prueban una API deliberadamente retirada pueden adaptarse durante implementación únicamente tras registrarlos en un ledger;
-- toda cobertura nueva de Fase 2 se crea en Fase 8, después de dos revisiones consecutivas limpias de implementación.
+Primera revisión limpia del plan corregido.
 
-### Cambio B · custom properties realmente sobrescribibles
+Se revisó el orden de migración y rollback:
 
-Asignar `--syntax-editor-code-background: #000` directamente sobre la propia `.cm-line` impediría que un valor heredado desde theme/snippet reemplazara ese default.
+- conservar exports viejos mientras nace engine/highlighter nuevo;
+- crear la autoridad pura antes de migrar consumidores;
+- migrar Reading y Markdown source antes de retirar taxonomía antigua;
+- migrar SourceView mediante la ruta nativa CodeMirror;
+- aplicar CSS dark después de que `syntax-common-*` sea la taxonomía única;
+- retirar exports/clases host-specific solo cuando no queden consumidores;
+- routing rendered, scanner Markdown, contrast manager y configured tokenizers quedan fuera del cambio;
+- durante implementación solo se adapta cobertura antigua cuyo contrato desaparece y siempre con ledger;
+- cobertura nueva espera hasta después del TM de implementación.
 
-Corrección:
-
-- usar `background-color: var(--syntax-editor-code-background, #000)`;
-- equivalentes `var(--syntax-editor-code-color, #d4d4d4)` y `var(--syntax-editor-code-caret, #d4d4d4)`;
-- no declarar esos custom properties con el literal en la misma línea;
-- mantener `--code-background`, `--code-normal` y `--caret-color` como adaptación scoped del host.
-
-### Cambio C · ledger de tests migrados
-
-El plan exige un ledger temporal para cualquier test antiguo adaptado/retirado durante implementación, con destino concreto en Fase 8. Así CI no puede quedar verde por pérdida silenciosa de garantías.
-
-No cuenta como revisión limpia.
+No se encontró cambio operativo necesario. Es la primera revisión limpia.
