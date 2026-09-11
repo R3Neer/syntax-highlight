@@ -24,4 +24,17 @@ Se revisó el diff completo desde el plan estable:
 
 No se identificó corrección adicional.
 
-Falta una segunda revisión limpia consecutiva.
+## Revisión 2
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión limpia, centrada en boundaries y lifecycle:
+
+- rangos no vacíos usan overlap half-open;
+- probes puntuales preservan blank quoted source;
+- un bloque rendered puede superar el fast path grueso, pero cada line semantic sigue necesitando su prueba de materialización;
+- semantic parsing no aumenta: continúa limitado por `visibleRanges`;
+- scroll/selection rematerializan y doc/revision invalidan cache como antes;
+- top-level mantiene comportamiento y quoted solo cambia la política de line decorations.
+
+Revisiones 1 y 2 consecutivas sin cambios: implementación Fase 3 queda ESTABLE según TM.
