@@ -23,19 +23,21 @@ Se conservan los invariantes válidos de Fase 1:
 - contraste JS continúa restringido a `.syntax-highlight-frame` propio;
 - scanner quote-aware, mapping físico/lógico, presentation y Smart Editing permanecen intactos salvo adaptación de tipos estrictamente necesaria.
 
+La documentación de Obsidian recomienda decorations desde ViewPlugin cuando el trabajo puede limitarse al viewport y CSS variables para elementos propios. Esta fase mantiene ambas reglas.
+
 ## 2. Separar language support de extracción semántica manual
 
 `CommonLanguage.support()` seguirá significando: "extensiones CodeMirror útiles cuando Syntax Highlight crea un EditorView propio".
 
 Dejará de significar implícitamente: "este mismo LanguageSupport es también el mecanismo por el que extraemos manualmente ranges para Reading/Markdown decorations".
 
-`CommonLanguage` distinguirá tres engines semánticos:
+`CommonLanguage` distinguirá tres engines semánticos mediante un tipo discriminado o equivalente:
 
 1. **tree-backed**: lenguaje con parser Lezer estable;
-2. **stream-backed**: `StreamParser` público;
+2. **stream-backed**: `StreamParser` público + metadata explícita para resolver sus styles;
 3. **plain**: sin parser, Text.
 
-La representación concreta puede ser un discriminated union o campos equivalentes, pero el tipo debe hacer imposible que el caller tenga que descubrir el engine con `instanceof StreamLanguage`.
+El tipo debe impedir que el caller tenga que descubrir el engine con `instanceof StreamLanguage`.
 
 PowerShell será stream-backed porque ya importamos el `StreamParser` oficial `powerShell`.
 
@@ -43,7 +45,7 @@ Bash y los demás Lezer modernos serán tree-backed.
 
 Text será plain.
 
-## 3. Un único pipeline de semantic ranges
+## 3. Un único pipeline de semantic ranges manuales
 
 Crear una autoridad pura única, nombre provisional `common-semantic-ranges.ts`.
 
@@ -67,81 +69,125 @@ CommonLanguage + source
 
 No contiene clases Prism ni clases CodeMirror de compatibilidad.
 
-Esta función/ruta pura será utilizada por:
+Esta autoridad será utilizada por los caminos donde Syntax Highlight extrae manualmente semántica:
 
 - `renderCommonCode()`;
-- `buildEditorBlockSemantics()` para Markdown source;
-- source view propia cuando el engine stream no sea seguro mediante highlighting de árbol.
+- `buildEditorBlockSemantics()` para Markdown source.
 
-## 4. Engine tree-backed
+`SyntaxSourceView` no necesita esta ruta para colorear si CodeMirror posee el editor completo y puede usar `LanguageSupport + syntaxHighlighting()` directamente.
+
+## 4. Highlighter semántico único
+
+Sustituir los dos highlighters host-specific actuales por una única tabla tag -> clase propia, nombre provisional:
+
+```text
+COMMON_SEMANTIC_HIGHLIGHT_STYLE
+```
+
+Solo emite `syntax-common-*`.
+
+No contiene `cm-*` ni `token *`.
+
+Puede usarse:
+
+- con `highlightTree()` en engine tree-backed;
+- mediante su interfaz pública `Highlighter.style(tags)` en engine stream-backed;
+- con `syntaxHighlighting()` en EditorViews que CodeMirror posea completamente, como `SyntaxSourceView`.
+
+Así la taxonomía semántica tiene una sola fuente de verdad.
+
+## 5. Engine tree-backed
 
 Para parser Lezer:
 
-1. obtener árbol como hoy;
+1. obtener el árbol con el parser actual;
 2. ejecutar `highlightTree()`;
-3. usar un `HighlightStyle` semántico que emita **solo** `syntax-common-*`;
+3. usar `COMMON_SEMANTIC_HIGHLIGHT_STYLE`;
 4. devolver ranges puros.
 
-`parseCommonLanguageTree()` deja de contener lógica específica de StreamLanguage. Puede renombrarse o aceptar únicamente tree-backed languages para que el tipo refleje la realidad.
+La función de parseo tree-backed no contendrá lógica específica de `StreamLanguage`. Puede renombrarse o tiparse para que esa separación sea explícita.
 
 No cambiar parsers modernos que ya funcionan.
 
-## 5. Engine stream-backed
+## 6. Engine stream-backed
 
-### 5.1 Usar API pública, no internals de StreamLanguage
+### 6.1 API pública únicamente
 
-La extracción manual stream usará:
+La extracción manual stream usará solo APIs documentadas de CodeMirror/Lezer:
 
 - `StreamParser`;
 - `StringStream`;
 - `startState`;
 - `token`;
 - `blankLine` cuando proceda;
-- `tokenTable` cuando el parser lo proporcione.
+- `tokenTable` cuando el parser lo proporcione;
+- `tags` públicos;
+- `Highlighter.style(tags)`.
 
 No leer:
 
 - `StreamLanguage.streamParser` interno;
 - NodeProps internos del árbol;
 - `TokenTable` interno de CodeMirror;
-- NodeType ids privados.
+- NodeType ids privados;
+- la tabla interna de aliases legacy de `StreamLanguage`.
 
 El parser se recorre de principio a fin del cuerpo lógico para conservar estado multilinea.
 
-### 5.2 Resolver strings de token a tags semánticos
+### 6.2 Metadata explícita para styles no públicos
 
-Implementar un resolver puro de styles de `StreamParser` basado en el contrato público de CodeMirror.
+El contrato público de `StreamParser.token()` permite devolver:
 
-Debe soportar:
+- nombres de tags públicos;
+- nombres definidos en `tokenTable`;
+- modificadores públicos separados por `.`;
+- varios styles separados por espacios.
 
-- tags públicos directos (`keyword`, `number`, `operator`, `comment`, `string`, `punctuation`, etc.);
-- aliases legacy que CodeMirror documenta/usa para stream modes:
-  - `variable` -> `variableName`;
-  - `variable-2` -> `special(variableName)`;
-  - `string-2` -> `special(string)`;
-  - `def` -> `definition(variableName)`;
-  - `tag` -> `tagName`;
-  - `attribute` -> `attributeName`;
-  - `type` -> `typeName`;
-  - `builtin` -> `standard(variableName)`;
-  - `qualifier` -> `modifier`;
-  - `error` -> `invalid`;
-  - `header` -> `heading`;
-  - `property` -> `propertyName`;
-- múltiples style names separados por espacios;
-- `parser.tokenTable` como override/extension cuando exista.
+No trataremos la tabla interna de aliases legacy de CodeMirror como API.
 
-El resolver debe usar `tags` públicos del mismo runtime del plugin y entregar `Tag[]` al highlighter semántico mediante su interfaz pública `Highlighter.style(tags)`.
+Cada common language stream-backed podrá declarar un `tokenTable`/`styleTable` propio, basado exclusivamente en `Tag` públicos, para cualquier nombre no expresable directamente por el contrato público.
 
-Así tree y stream convergen en la misma tabla tag -> `syntax-common-*` sin depender de NodeProp identity.
+PowerShell declarará explícitamente, junto a su descriptor de engine, al menos:
 
-### 5.3 PowerShell no recibe un renderer especial
+- `variable` -> `tags.variableName`;
+- `number` -> `tags.number`;
+- `operator` -> `tags.operator`;
+- `builtin` -> `tags.standard(tags.variableName)`;
+- `punctuation` -> `tags.punctuation`;
+- `string` -> `tags.string`;
+- `comment` -> `tags.comment`;
+- `keyword` -> `tags.keyword`;
+- `error` -> `tags.invalid`.
+
+Esto es metadata de lenguaje, no una rama de renderer.
+
+El resolver stream:
+
+1. consulta primero la tabla explícita del language y el `parser.tokenTable` público;
+2. si no hay entrada, resuelve nombres/modificadores que existan en `tags` públicos;
+3. combina múltiples style names en un único conjunto de `Tag`;
+4. pasa el conjunto a `COMMON_SEMANTIC_HIGHLIGHT_STYLE.style(tags)`;
+5. si un style no puede resolverse, falla de forma local y deja ese trozo sin clase semántica, sin abortar el bloque.
+
+### 6.3 Scanner por líneas y offsets
+
+La implementación stream debe preservar offsets exactos del source:
+
+- `\n`, `\r\n` y última línea sin terminador;
+- `StringStream` recibe solo el contenido de una línea, nunca el terminador;
+- los ranges emitidos se desplazan por el offset real de esa línea;
+- líneas vacías llaman `blankLine(state, indentUnit)` cuando exista;
+- `tabSize`/`indentUnit` usan defaults compatibles con CodeMirror cuando no exista EditorState (`4` y `2`) y podrán pasarse explícitamente si un caller posee state.
+
+Como `StreamParser.token()` puede realizar un paso de longitud cero si actualiza estado, el scanner tendrá un guard finito propio contra loops sin avance. No copiará ni dependerá de helpers internos de `StreamLanguage`.
+
+### 6.4 PowerShell no recibe un renderer especial
 
 No habrá `if (language.id === "powershell")` en Reading/editor rendering.
 
-La única particularidad de PowerShell es declarativa: su `CommonLanguage` usa engine stream con el `powerShell` StreamParser oficial.
+La única particularidad de PowerShell es declarativa: su `CommonLanguage` usa engine stream con `powerShell` y su tabla explícita token -> tag.
 
-## 6. Una única taxonomía visual de manual highlighting
+## 7. Una única taxonomía visual de manual highlighting
 
 Eliminar del highlighter manual common la mezcla:
 
@@ -154,59 +200,51 @@ Los semantic ranges manuales emiten solo `syntax-common-*`.
 
 Motivos:
 
-- `cm-*` y `token *` representan dos ecosistemas visuales diferentes;
+- `cm-*` y `token *` representan ecosistemas visuales diferentes;
 - themes pueden asignarles reglas distintas y `!important`;
 - el gate Bash demostró divergencia visual entre source/rendered aunque la intención semántica sea la misma;
-- Obsidian recomienda integración temática mediante CSS variables para elementos propios.
+- Obsidian recomienda integrar UI propia mediante CSS variables en lugar de depender de selectores internos.
 
-`styles.css` sigue usando variables públicas `--code-*`/`--color-*` como inputs de tema, pero la clasificación visual la controla Syntax Highlight.
+`styles.css` usa variables públicas `--code-*`/`--color-*` como inputs de tema, pero la clasificación visual la controla Syntax Highlight.
 
 Configured profiles no cambian.
 
-## 7. Markdown Live Preview source
+## 8. Markdown Live Preview source
 
-### 7.1 Common languages
+Los semantic ranges comunes se generan desde `commonSemanticRanges()` y se mapean físicamente con `mapCodeBlockRange()` como hoy.
 
-Los semantic ranges comunes se generan desde la nueva autoridad pura y se mapean físicamente con `mapCodeBlockRange()` como hoy.
-
-No se depende de syntax-tree NodeProps de StreamLanguage.
+No se depende de syntax-tree NodeProps de `StreamLanguage` para manual highlighting.
 
 Se mantiene el modelo/caché por bloque visible de Fase 1.
 
-### 7.2 Coexistencia con highlighting nativo top-level
+No se asumirá que Obsidian soporta nativamente todos nuestros common languages. Por tanto Syntax Highlight sigue emitiendo sus semantic marks como garantía propia incluso top-level; ahora serán solo `syntax-common-*`.
 
-No se asumirá que Obsidian soporta nativamente todos nuestros common languages (por ejemplo futuras gramáticas o Nushell). Por tanto **no se desactiva de forma global el manual semantic highlighting top-level**.
+El host puede coexistir con esos marks en top-level. No intentamos detectar soporte nativo mediante DOM o clases privadas.
 
-Regla:
+## 9. SyntaxSourceView
 
-- Syntax Highlight sigue emitiendo sus semantic marks como garantía propia;
-- las clases son solo `syntax-common-*`, no simulaciones `cm-*`;
-- el host puede seguir aportando su highlighting nativo top-level;
-- no intentamos detectar soporte nativo mediante DOM/clases privadas.
+`SyntaxSourceView` queda deliberadamente en la ruta nativa de CodeMirror:
 
-Esto corrige la hipótesis H4 demasiado agresiva del análisis: "host first" se conserva como coexistencia, no como eliminación de nuestra garantía.
+```text
+common.support() + syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHT_STYLE)
+```
 
-## 8. SyntaxSourceView
+También para stream-backed languages.
 
-### 8.1 Tree-backed
+Razones:
 
-Puede conservar `common.support()` + `syntaxHighlighting()` si produce correctamente highlighting en el EditorView propio.
+- CodeMirror posee ese EditorView completo;
+- `StreamLanguage + syntaxHighlighting()` es la API oficial para modos legacy;
+- el gate demuestra que la ruta nativa de CodeMirror sí puede colorear PowerShell;
+- sustituirla por otro ViewPlugin manual obligaría a reinventar parsing incremental sin evidencia de necesidad.
 
-El `HighlightStyle` empleado debe usar la misma taxonomía `syntax-common-*`.
+Solo se cambia el highlighter para que emita nuestra taxonomía `syntax-common-*` en vez de las antiguas clases host-specific.
 
-### 8.2 Stream-backed
+Si el gate posterior revela un fallo específico de PowerShell en `SyntaxSourceView`, se abrirá análisis separado antes de tocar esta decisión.
 
-La source view no confiará en syntax-tree highlighting de StreamLanguage para la garantía de color.
+## 10. Source dark surface como contrato propio
 
-Usará un ViewPlugin de decorations basado en la misma `commonSemanticRanges()` stream-backed.
-
-Puede conservar `common.support()` simultáneamente para language data, indentación, brackets u otras capacidades CodeMirror, pero el color semántico stream viene de nuestra ruta directa.
-
-Ese ViewPlugin debe ser viewport-aware cuando sea razonable; para un archivo source puede tokenizar desde inicio hasta el final del bloque/documento necesario para preservar estado stream, con caché/invalidation simple. No introducir un segundo parser distinto.
-
-## 9. Source dark surface como contrato propio
-
-## 9.1 No intentar clonar el tema con selectores privados
+### 10.1 No clonar el tema con selectores privados
 
 Nier demuestra que `--code-background` no necesariamente representa el aspecto real del source code nativo.
 
@@ -214,31 +252,35 @@ No se reintroducen `HyperMD-*` para copiarlo.
 
 La surface quoted es propiedad de Syntax Highlight.
 
-### 9.2 Defaults explícitos y sobrescribibles
+### 10.2 Defaults explícitos y sobrescribibles
 
-Definir variables propias con default dark explícito:
+El requisito de producto es fondo negro en quoted source. Por tanto el fallback final es explícito, no inferido del tema:
 
 ```css
 --syntax-editor-code-background: #000;
---syntax-editor-code-color: <foreground legible>;
---syntax-editor-code-caret: <caret legible>;
+--syntax-editor-code-color: #d4d4d4;
+--syntax-editor-code-caret: #d4d4d4;
 ```
 
-El default negro es requisito de producto, no detección de tema.
+La forma concreta puede expresarse como custom properties en un scope del plugin o como fallback final equivalente. Un tema/snippet puede sobrescribir las variables propias sin conocer internals.
 
-Un theme/snippet puede sobrescribir esas variables sin conocer internals.
+El hardcode de negro aquí es deliberado y limitado a una superficie plugin-owned solicitada por producto. No existe rama por Nier ni por nombre de tema.
 
-### 9.3 Roles sobre negro
+### 10.3 Roles sobre negro
 
-Dentro de `.cm-line.syntax-editor-code-source`, definir fallbacks dark-friendly para los roles `syntax-common-*` que de otro modo puedan heredar colores oscuros de `--text-normal` o variables inválidas.
+Dentro de `.cm-line.syntax-editor-code-source`, los roles `syntax-common-*` deben tener fallbacks legibles sobre negro.
 
-Preferir variables públicas de código/color de Obsidian; proporcionar último fallback legible.
+Orden preferido:
 
-No ramificar por Nier ni por nombre de tema.
+1. variable propia `--syntax-common-*`;
+2. variable pública `--code-*`/`--color-*` apropiada si es usable;
+3. último fallback literal legible.
+
+El texto plain no debe caer a `--text-normal` como último valor, porque un tema claro puede usar texto oscuro aunque la surface quoted sea negra.
 
 Opening/body/closing comparten superficie. Solo body presentacional recibe alignment/flow.
 
-## 10. Rendered / Reading
+## 11. Rendered / Reading
 
 `renderCommonCode()` consume `CommonSemanticRange[]` directamente.
 
@@ -255,7 +297,7 @@ El DOM estructural actual se conserva:
 
 El tema puede seguir influir mediante variables públicas y reglas generales sobre `code.language-*`, pero no mediante una segunda taxonomía de token que compita con `syntax-common-*`.
 
-## 11. Diagnostics y gate rendered
+## 12. Diagnostics y gate rendered
 
 El resultado `[]` del gate anterior no se interpreta como prueba de fallo del processor porque el controller se habilitó sobre un widget que podía estar ya materializado/cacheado.
 
@@ -264,7 +306,7 @@ No cambiar producción rendered por ese dato todavía.
 El próximo gate debe:
 
 1. habilitar diagnostics antes de crear el rendered subtree;
-2. forzar creación fresca (nota nueva o edición documental posterior al enable);
+2. forzar creación fresca mediante una nota nueva o edición documental posterior al enable;
 3. capturar todos los eventos del fence objetivo;
 4. distinguir `reading-specialized` de `reading-fallback`.
 
@@ -273,20 +315,20 @@ Criterio:
 - si aparece `reading-specialized`, la premisa de Fase 1 queda confirmada;
 - si la única ruta funcional es `reading-fallback`, se detiene limpieza y se vuelve a análisis arquitectónico antes de cualquier parche.
 
-## 12. Módulos previstos
+## 13. Módulos previstos
 
 ### Modificar
 
 - `common-languages.ts`: descriptor de engine y highlighter semántico único;
 - `editor-block-model.ts`: consumir common semantic ranges;
 - `reading.ts`: consumir common semantic ranges;
-- `source-view.ts`: stream-backed decoration highlighter;
+- `source-view.ts`: cambiar al highlighter semántico único, sin nuevo parser manual;
 - `styles.css`: source dark surface + paleta scoped;
 - tests correspondientes.
 
-### Crear provisional o definitivo
+### Crear
 
-- `common-semantic-ranges.ts` (nombre provisional): engine tree/stream/plain + stream-style resolver.
+- `common-semantic-ranges.ts` (nombre provisional): engine tree/stream/plain + resolver stream público.
 
 ### No tocar salvo adaptación de imports/tipos
 
@@ -300,37 +342,42 @@ Criterio:
 - Smart Editing;
 - configured tokenizers.
 
-## 13. Tests arquitectónicos necesarios
+## 14. Tests arquitectónicos necesarios
 
 Sin implementar todavía, la arquitectura exige después:
 
 - stream tokenizer PowerShell devuelve ranges para variable/number/operator/builtin/string/comment;
-- el mismo source produce los mismos semantic role ranges para host `editor` y `reading` porque ya no existen dos highlighters host-specific;
+- no existe rama renderer `language.id === powershell`;
 - multiline strings/comments conservan estado entre líneas;
+- CRLF y última línea conservan offsets exactos;
 - blank lines llaman `blankLine` si el parser lo define;
-- resolver soporta legacy aliases y `tokenTable` custom;
+- un token de longitud cero no puede provocar loop infinito;
+- style resolver soporta nombres/modificadores públicos, varios styles y `tokenTable` explícita;
+- PowerShell usa tabla token -> tag declarativa propia, no aliases internos de CodeMirror;
 - tree-backed Bash sigue produciendo semantic ranges;
 - Text sigue plain;
-- rendered no emite `token *` manuales;
-- editor manual no emite `cm-*` manuales;
+- rendered manual no emite `token *`;
+- editor manual no emite `cm-*`;
+- source view conserva `support()+syntaxHighlighting()` con el highlighter semántico único;
 - quoted source usa negro/foreground legible mediante variables propias;
 - no se reintroducen private selectors;
-- source view PowerShell usa direct semantic decorations;
 - gate real fuerza creación fresca y verifica ruta rendered.
 
-## 14. Criterios de aceptación arquitectónica
+## 15. Criterios de aceptación arquitectónica
 
 El plan solo pasa al plan de implementación cuando dos revisiones consecutivas sin cambios confirmen que:
 
 1. PowerShell se corrige por engine stream genérico, no por renderer especial;
 2. la extracción stream usa únicamente API pública `StreamParser`/`StringStream`/tags/Highlighter;
-3. tree languages existentes conservan su parser actual;
-4. todos los manual paths convergen en `syntax-common-*`;
-5. `cm-*`/`token *` dejan de ser parte de nuestra taxonomía manual;
-6. no se sacrifica highlighting top-level de common languages no garantizados por Obsidian;
-7. source view stream usa la misma semántica directa;
-8. quoted source black es plugin-owned, sobrescribible y sin private selectors;
-9. DOM ownership de Fase 1 sigue intacto;
-10. no se modifica rendered host routing sin evidencia fresca;
-11. el alcance no se expande a piezas que el gate no incrimina;
-12. mobile y themes siguen pudiendo sobrescribir variables propias sin ramas por tema.
+3. no se replica como contrato nuestra copia de la tabla interna de aliases legacy de CodeMirror;
+4. tree languages existentes conservan su parser actual;
+5. todos los manual paths convergen en `syntax-common-*`;
+6. `cm-*`/`token *` dejan de ser parte de nuestra taxonomía manual;
+7. no se sacrifica highlighting top-level de common languages no garantizados por Obsidian;
+8. `SyntaxSourceView` conserva el camino nativo de CodeMirror salvo evidencia real posterior;
+9. quoted source black es plugin-owned, sobrescribible y sin private selectors;
+10. el scanner stream preserva estado multilinea, offsets y terminadores sin loops;
+11. DOM ownership de Fase 1 sigue intacto;
+12. no se modifica rendered host routing sin evidencia fresca;
+13. el alcance no se expande a piezas que el gate no incrimina;
+14. mobile y themes siguen pudiendo sobrescribir variables propias sin ramas por tema.
