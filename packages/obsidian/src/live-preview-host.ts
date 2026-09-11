@@ -1,7 +1,9 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
 
+import { commonFenceNames } from "./block-presentation";
 import {
+  registerLivePreviewDiagnosticView,
   traceHostDiagnostic,
   traceRenderedHostObservations,
 } from "./_tmp-host-diagnostics";
@@ -121,11 +123,24 @@ export function createLivePreviewEmbeddedBlockExtension(
   registry: LanguageRegistry,
   getSettings: () => SyntaxPluginSettings,
 ): Extension {
+  const acceptedFences = (): ReadonlySet<string> =>
+    new Set(
+      [
+        ...registry.enabled().flatMap(({ descriptor }) => descriptor.fences),
+        ...commonFenceNames(),
+      ].map((fence) => fence.toLocaleLowerCase()),
+    );
+
   return ViewPlugin.fromClass(
     class {
       private readonly bridge: LivePreviewRenderedBlockBridge;
+      private readonly unregisterDiagnostics: () => void;
 
       constructor(view: EditorView) {
+        this.unregisterDiagnostics = registerLivePreviewDiagnosticView(
+          view,
+          acceptedFences,
+        );
         this.bridge = new LivePreviewRenderedBlockBridge(
           view.dom,
           (source, element, fence) => {
@@ -138,6 +153,7 @@ export function createLivePreviewEmbeddedBlockExtension(
       }
 
       destroy(): void {
+        this.unregisterDiagnostics();
         this.bridge.dispose();
       }
     },
