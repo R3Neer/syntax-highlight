@@ -1,61 +1,84 @@
 # Syntax Highlight for Obsidian
 
-Obsidian host adapter for syntax-highlight. It highlights Markdown fences in
-reading and editing views, opens configured source extensions in a CodeMirror 6
-editor, supports semantic themes, and provides smart editing for MUD when the
-MUD profile is installed.
+Obsidian host adapter for Syntax Highlight. It highlights Markdown fences in
+Reading View and Live Preview, opens supported source extensions in CodeMirror 6,
+supports semantic themes, provides Text/Markdown presentation controls, and adds
+smart editing for configured languages such as MUD.
 
-The optional MUD profile uses `@r3nner/syntax-highlight-language-mud`; compound
-operators and indirect contextual words are therefore shared with every other
-host. MUD is not part of a normal vault's configured language list. EBNF, ASDL,
-TOML, and configurable generic profiles remain available by default.
+## Languages and Markdown fences
 
-Common languages such as JavaScript, Python, Bash, Nushell, and PowerShell follow
-the active Obsidian theme automatically. Reading tokens expose Prism-compatible
-classes, editing tokens expose CodeMirror-compatible classes, and both fall back
-to Obsidian's semantic `--code-*` variables. PowerShell accepts `powershell`,
-`pwsh`, and `ps1` fences and `.ps1`, `.psm1`, and `.psd1` source files through
-CodeMirror's PowerShell stream mode.
+Common languages include JavaScript/TypeScript, JSON, HTML, CSS, Bash, Nushell,
+PowerShell, Python, Java, C/C++, C#, SQL, YAML, Markdown, and Text. Configured
+language profiles such as MUD use the same host pipeline but keep their own
+language-pack semantics.
 
-Fenced blocks inside Markdown blockquotes are handled by the same pipeline as
-top-level blocks. This includes Obsidian callouts because callouts are blockquote
-containers: `> ```bash`, `> ```text`, presentational Text/Markdown variants, MUD,
-and other configured/common languages keep their normal highlighting and
-presentation without treating the container's `>` markers as source code.
-Nested quote depth is preserved, and editor line-number widgets are anchored at
-the actual code content rather than before the blockquote prefix.
+PowerShell accepts `powershell`, `pwsh`, and `ps1` fences plus `.ps1`, `.psm1`,
+and `.psd1` source extensions. Its stream parser is mapped into the same
+`syntax-common-*` semantic taxonomy used by tree-backed common languages.
 
-Reading View has two host entry paths that converge on the same renderer. The
-specialized code-block processor handles ordinary fences when Obsidian dispatches
-them normally. A late Markdown HTML postprocessor then inspects any untouched
-`<pre><code class="language-…">` blocks that remain, which covers nested containers
-such as callouts on Obsidian paths where the specialized processor is skipped.
-The detector accepts normal host furniture next to the direct `<code>` child,
-including Obsidian's copy button, and moves those existing nodes into the rendered
-block so their identity and listeners survive. Unknown or genuinely ambiguous
-structures remain untouched, and processed output is marked for idempotence.
+Fenced blocks inside Markdown blockquotes use the same logical language body as
+top-level blocks. This includes Obsidian callouts because their Markdown body is
+a blockquote. Quote markers are container syntax: they are stripped before
+parsing and semantic ranges are mapped back to physical document offsets, so
+`>` is never colored as source code.
 
-Live Preview uses a complementary host bridge because callouts may be rendered by
-CodeMirror as `.cm-embed-block` widgets rather than as the source lines decorated
-by the normal Markdown highlighter. A ViewPlugin scoped to its own `EditorView`
-observes only those embedded widgets, routes recognized code DOM through the same
-renderer, preserves host controls, and handles widget insertion/recreation without
-scanning the whole document or depending on a callout name.
+## Live Preview and Reading View
 
-Text and Markdown fences are presentational families rather than ordinary code
-furniture. `text`, `plaintext`, and `txt` remain parserless and use the active
-theme and contrast bridge without inventing syntax categories; `md` and
-`markdown` retain Markdown syntax highlighting. Neither family shows a language
-badge or plugin line numbers. Each family has independent vault defaults for
-left/center/right alignment and Ragged/Justified flow. Hyphen modifiers override
-one block, for example `text-right-justified`, `text-center`, `markdown-ragged`,
-or `md-center-ragged`; canonical full form is `base-alignment-flow`. Changing a
-default can either let inherited blocks adopt it or preserve their appearance by
-rewriting only affected opening fences to explicit modifiers. Text remains
-Markdown-block only and does not claim `.txt` files, while `.md` continues to use
-Obsidian's native Markdown editor. No community theme is hardcoded. See
-[`docs/theme-integration.md`](../../docs/theme-integration.md) for the bridge,
-presentation semantics, and vault-level override variables.
+While Markdown source is editable, CodeMirror owns the DOM. Syntax Highlight
+uses a `ViewPlugin` and contributes documented CodeMirror decorations for token
+ranges, quoted-code line surfaces, presentation and line numbers. It does not
+mutate CodeMirror DOM or depend on private `.cm-embed-block` structure.
+
+Rendered fences use Obsidian's Markdown processing APIs. Registered code-block
+processors are the primary path; a structural Markdown postprocessor provides a
+fail-closed fallback for recognized native `<pre><code class="language-…">`
+blocks that remain unclaimed in rendered Markdown. Unknown/ambiguous structures
+stay native, direct host furniture such as copy controls is preserved, and
+processed output is idempotent.
+
+Quoted source uses a plugin-owned dark code surface and semantic palette. The
+surface is bridged through Obsidian's public `--blockquote-background-color`
+variable so the host's blockquote styling and Syntax Highlight's code surface do
+not fight by selector specificity. See
+[`docs/theme-integration.md`](../../docs/theme-integration.md) for variables and
+theme-author guidance.
+
+## Text and Markdown presentation
+
+Text and Markdown fences are presentation families:
+
+- `text`, `plaintext`, `txt`: parserless Text;
+- `md`, `markdown`: Markdown with syntax highlighting.
+
+Neither family shows code-only badge/line-number furniture in Markdown blocks.
+Each family has independent vault defaults for alignment (`left`, `center`,
+`right`) and flow (`ragged`, `justified`). Hyphen modifiers override one block,
+for example:
+
+```text
+text-center
+text-right-justified
+markdown-ragged
+md-center-ragged
+```
+
+Changing a family default can preserve existing appearance by rewriting only the
+opening fence labels of affected blocks to explicit canonical modifiers. Quote
+prefixes, body text, closing fences and opening-line info are preserved.
+
+Text remains Markdown-block only and does not claim `.txt` files. `.md` remains
+owned by Obsidian's Markdown editor.
+
+## Themes and contrast
+
+Common languages use stable plugin semantic classes (`syntax-common-*`) and
+public Obsidian CSS variables. No community theme is hardcoded.
+
+JavaScript contrast normalization is restricted to rendered DOM owned by Syntax
+Highlight under `.syntax-highlight-frame`; CodeMirror source DOM is never
+rewritten by JavaScript. Passing colors are left unchanged, while failing
+rendered common-language foregrounds are adjusted toward WCAG AA `4.5:1` without
+changing backgrounds.
 
 ## Local installation
 
@@ -70,40 +93,40 @@ The installer requires an explicit vault. It safely migrates settings from the
 legacy `mud-syntax-highlighter` id and leaves the old directory untouched.
 Existing settings are preserved when no install profile is supplied.
 
-For a vault that should contain only the ordinary Syntax Highlight profiles,
-such as a general programming or class-notes vault, apply the `common` profile:
+For a general vault without MUD:
 
 ```sh
 npm run install:obsidian -- --vault /path/to/vault --profile common
 ```
 
-`common` removes any stored MUD profile from that vault while leaving every
-other plugin setting untouched.
+`common` removes any stored MUD profile from that destination vault while leaving
+other plugin settings untouched.
 
-For the MUD vault, apply the `mud` profile:
+For a MUD vault:
 
 ```sh
 npm run install:obsidian -- --vault /path/to/mud-vault --profile mud
 ```
 
-`mud` adds the built-in MUD profile when it is absent or enables the existing
-one when present. Existing MUD palette, grammar paths, custom theme, and other
-per-vault configuration are preserved. The two vaults therefore use the same
-plugin build but maintain independent language configuration in their own
-`.obsidian/plugins/syntax-highlight/data.json` files.
+`mud` adds the built-in MUD profile when absent or enables the existing one when
+present. Existing MUD palette, grammar paths, custom theme and other per-vault
+settings are preserved. Different vaults therefore use the same plugin build but
+keep independent `.obsidian/plugins/syntax-highlight/data.json` files.
+
+See [`docs/migration.md`](../../docs/migration.md) before removing a legacy
+installation.
 
 ## Manual check
 
-After reloading Obsidian, verify Bash, Nushell, PowerShell, Text, and Markdown
-fences under the active vault theme, both top-level and inside a normal
-blockquote/callout. Text/Markdown should show neither a language badge nor plugin
-line numbers; check the configured alignment and flow plus explicit forms such as
-`text-right-justified` and `markdown-center-ragged` in both Reading view and
-Markdown editing. Markdown must retain syntax highlighting, and Justified should
-affect visually wrapped lines while using the selected alignment for the last
-line. PowerShell should highlight commands, variables, strings, operators, and
-comments and should also open `.ps1`, `.psm1`, and `.psd1` source files with the
-common source editor. In a vault installed with `--profile mud`, also verify a MUD
-fence in reading and editing views, a `.mud` source file, `~format`, `cycle`,
-compact ranges such as `0..10`, and the current compound operators. See the
-repository migration guide before removing the legacy installation.
+After reloading Obsidian, verify Bash, Nushell, PowerShell, Text and Markdown
+fences both top-level and inside a normal blockquote/callout.
+
+- PowerShell should distinguish variables, numbers, strings, operators, commands
+  and comments in source and rendered Markdown.
+- Quoted code should keep a continuous code surface while editing and return to
+  normal rendered output when the cursor leaves the block.
+- Text/Markdown should keep configured alignment/flow in Reading and Editing.
+- `.ps1`, `.psm1`, `.psd1` and other supported common source extensions should
+  open in the common source editor.
+- A vault installed with `--profile mud` should also verify MUD fences, `.mud`
+  source files, formatting commands and current grammar-derived operators.
