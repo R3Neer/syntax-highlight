@@ -21,7 +21,7 @@ Se conservan los invariantes válidos de Fase 1:
 
 La documentación de Obsidian recomienda decorations desde ViewPlugin cuando el trabajo puede limitarse al viewport y CSS variables para styling de elementos propios. Esta fase mantiene ambas reglas.
 
-La documentación oficial de variables CSS de Obsidian confirma además `--code-background`, `--code-normal`, `--code-comment`, `--code-function`, `--code-keyword`, `--code-operator`, `--code-property`, `--code-punctuation`, `--code-string`, `--code-tag` y `--code-value` como variables públicas de código, y advierte expresamente que Editing y Reading usan sistemas de syntax highlighting distintos y pueden no coincidir visualmente. La arquitectura no intenta fingir que son el mismo sistema: unifica únicamente nuestra taxonomía propia.
+La documentación oficial de variables CSS de Obsidian confirma además `--code-background`, `--code-normal`, `--code-comment`, `--code-function`, `--code-important`, `--code-keyword`, `--code-operator`, `--code-property`, `--code-punctuation`, `--code-string`, `--code-tag` y `--code-value` como variables públicas de código, y advierte expresamente que Editing y Reading usan sistemas de syntax highlighting distintos y pueden no coincidir visualmente. La arquitectura no intenta fingir que son el mismo sistema: unifica únicamente nuestra taxonomía propia.
 
 ## 2. El engine de `CommonLanguage` es la fuente de verdad
 
@@ -91,7 +91,7 @@ Se usa como el mismo objeto `Highlighter` en las tres fronteras:
 
 CodeMirror documenta `syntaxHighlighting(highlighter: Highlighter)` y Lezer documenta `tagHighlighter()`/`Highlighter.style()`, por lo que no necesitamos que la fuente de verdad semántica sea un `HighlightStyle` específico de CodeMirror.
 
-Una única tabla tag → rol semántico es fuente de verdad.
+Una única tabla tag → rol semántico es fuente de verdad. Además de los roles ya existentes, `tags.invalid` se representa explícitamente como `syntax-common-invalid`; ningún style declarado por el engine debe resolverse a un Tag que el highlighter deje sin rol cuando ese style tiene significado visual para el usuario.
 
 ## 5. Engine tree-backed
 
@@ -269,6 +269,8 @@ Por ello `.cm-line.syntax-editor-code-source` establece una paleta scoped de var
 --syntax-editor-code-property
 --syntax-editor-code-punctuation
 --syntax-editor-code-tag
+--syntax-editor-code-important
+--syntax-editor-code-invalid
 --syntax-editor-code-caret
 ```
 
@@ -281,6 +283,7 @@ Dentro de la línea quoted, las variables públicas de Obsidian se reasignan a e
 --code-normal: var(--syntax-editor-code-color, #d4d4d4);
 --code-comment: var(--syntax-editor-code-comment, <dark-safe>);
 --code-function: var(--syntax-editor-code-function, <dark-safe>);
+--code-important: var(--syntax-editor-code-important, <dark-safe>);
 --code-keyword: var(--syntax-editor-code-keyword, <dark-safe>);
 --code-string: var(--syntax-editor-code-string, <dark-safe>);
 --code-value: var(--syntax-editor-code-value, <dark-safe>);
@@ -291,6 +294,8 @@ Dentro de la línea quoted, las variables públicas de Obsidian se reasignan a e
 --caret-color: var(--syntax-editor-code-caret, #d4d4d4);
 ```
 
+`syntax-common-invalid` usa `--syntax-editor-code-invalid` directamente dentro de la surface y un fallback de error apropiado fuera de ella; Obsidian no expone una variable `--code-invalid` equivalente en la tabla pública de código.
+
 La línea usa `--syntax-editor-code-background`, no el `--code-background` neutralizado.
 
 No usar `!important`, `.cm-inline-code` ni `HyperMD-*`.
@@ -299,7 +304,7 @@ No usar `!important`, `.cm-inline-code` ni `HyperMD-*`.
 
 Dentro de `.cm-line.syntax-editor-code-source`, los roles propios consumen primero la paleta `--syntax-editor-code-*`, no los valores globales del theme. Así los manual ranges y el furniture nativo que consuma `--code-*` convergen en la misma paleta dark scoped.
 
-Fuera de esta surface, `syntax-common-*` conserva su integración normal con las variables públicas del tema.
+Fuera de esta surface, `syntax-common-*` conserva su integración normal con las variables públicas del tema. `syntax-common-invalid` usa una variable propia con fallback a `--text-error` fuera de la surface.
 
 Opening/body/closing comparten surface y paleta. Solo body presentacional recibe alignment/flow.
 
@@ -355,7 +360,7 @@ No tocar salvo imports/tipos inevitables:
 
 ## 14. Tests exigidos después
 
-- PowerShell stream: variable/number/operator/builtin/string/comment;
+- PowerShell stream: variable/number/operator/builtin/string/comment/invalid;
 - no rama renderer PowerShell;
 - stream-backed exige estado inicial explícito; no existe fallback mágico para parser sin `startState`;
 - `effectiveStreamParser` conserva `name`, `languageData`, `indent`, `copyState`, `blankLine`, `mergeTokens` y estado inicial del parser original;
@@ -369,8 +374,8 @@ No tocar salvo imports/tipos inevitables:
 - rendered manual sin `token *`; editor manual sin `cm-*`;
 - source view conserva support + syntaxHighlighting con highlighter único;
 - quoted source negro, foreground/caret y semantic palette legibles;
-- las variables públicas `--code-*` quedan scoped a la paleta dark dentro de quoted source y `--code-background` transparente, sin selector privado/`!important`;
-- contrast tests verifican los defaults dark sobre `#000`;
+- las variables públicas `--code-*`, incluida `--code-important`, quedan scoped a la paleta dark dentro de quoted source y `--code-background` transparente, sin selector privado/`!important`;
+- contrast tests verifican los defaults dark sobre `#000`, incluido invalid/error;
 - gate lógico distingue nuestras categorías de cualquier color nativo adicional del host;
 - gate real con creación fresca para routing rendered.
 
@@ -384,16 +389,17 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 4. ningún scanner inventa el estado de un StreamParser sin `startState`; el engine exige estado inicial explícito;
 5. el wrapper efectivo preserva el resto del contrato público del StreamParser y solo adapta styles;
 6. parser.tokenTable tiene precedencia explícita sin depender de aliases o precedencia internos, usando nombres sintéticos cuando sea necesario;
-7. tree languages conservan parser actual;
-8. manual paths convergen en `syntax-common-*`;
-9. `cm-*`/`token *` salen de nuestra taxonomía manual;
-10. no se sacrifica highlighting top-level common;
-11. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
-12. SourceView conserva camino nativo CodeMirror;
-13. quoted black es plugin-owned, sobrescribible y tiene paleta propia legible;
-14. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
-15. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
-16. ownership DOM de Fase 1 permanece intacto;
-17. rendered routing no cambia sin evidencia fresca;
-18. alcance no se expande a piezas no incriminadas;
-19. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
+7. toda categoría declarada relevante, incluido `tags.invalid`, tiene rol semántico explícito;
+8. tree languages conservan parser actual;
+9. manual paths convergen en `syntax-common-*`;
+10. `cm-*`/`token *` salen de nuestra taxonomía manual;
+11. no se sacrifica highlighting top-level common;
+12. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
+13. SourceView conserva camino nativo CodeMirror;
+14. quoted black es plugin-owned, sobrescribible y tiene paleta propia legible;
+15. furniture host se integra con variables públicas scoped, incluida `--code-important`, sin internals ni `!important`;
+16. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
+17. ownership DOM de Fase 1 permanece intacto;
+18. rendered routing no cambia sin evidencia fresca;
+19. alcance no se expande a piezas no incriminadas;
+20. mobile/themes pueden sobrescribir variables propias sin ramas por tema.
