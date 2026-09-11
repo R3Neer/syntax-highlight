@@ -13,3 +13,9 @@ Se detectaron tres huecos antes de implementar:
 3. **DOM mutable durante snapshot**: aunque se capture tras dos frames, CodeMirror puede reconciliar nodos entre consultas. Cada `posAtDOM`, `getComputedStyle` y recorrido de descendants debe tolerar nodo desconectado/excepción y registrar `mappingError`/`styleError` en vez de abortar la captura completa.
 
 También se aclara que la instrumentación debe integrarse en el ViewPlugin ya existente de `createLivePreviewEmbeddedBlockExtension`, no crear una segunda extensión de lifecycle sin necesidad.
+
+## Revisión 2
+
+Resultado: SIN CAMBIOS.
+
+Se revisó el plan contra recargas del plugin, múltiples EditorView/panes, `markdownEditor` activo o inactivo, lifecycle `destroy()`, DOM desconectado durante reconciliación y el modelo alternativo en que el quoted source vive dentro de `.cm-embed-block`. El diseño ya conserva registro por carga, captura manual post-frame, errores locales no fatales y snapshot tanto de `.cm-line` como de embedded hosts. No se identificó un cambio justificable.
