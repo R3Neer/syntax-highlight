@@ -263,9 +263,17 @@ interface CommonStreamStyleResolver {
   readonly syntheticTokenTable: Readonly<Record<string, Tag | readonly Tag[]>>;
 }
 
+const COMMON_STREAM_STYLE_RESOLVERS = new WeakMap<
+  CommonStreamEngine,
+  CommonStreamStyleResolver
+>();
+
 function commonStreamStyleResolver(
   engine: CommonStreamEngine,
 ): CommonStreamStyleResolver {
+  const cached = COMMON_STREAM_STYLE_RESOLVERS.get(engine);
+  if (cached !== undefined) return cached;
+
   const explicitTokenTable = explicitCommonStreamTokenTable(engine);
   const reserved = new Set([
     ...Object.keys(PUBLIC_TAGS),
@@ -286,11 +294,13 @@ function commonStreamStyleResolver(
     syntheticTokenTable[synthetic] = explicitTokenTable[original]!;
   }
 
-  return {
+  const resolver = {
     explicitTokenTable,
     syntheticByOriginal,
     syntheticTokenTable,
-  };
+  } satisfies CommonStreamStyleResolver;
+  COMMON_STREAM_STYLE_RESOLVERS.set(engine, resolver);
+  return resolver;
 }
 
 function resolveCommonStreamStyleWord(
@@ -475,3 +485,5 @@ export const COMMON_SEMANTIC_HIGHLIGHTER: Highlighter = tagHighlighter([
   },
   { tag: tags.invalid, class: "syntax-common-invalid" },
 ]);
+
+export const COMMON_SEMANTIC_HIGHLIGHT_STYLE = COMMON_SEMANTIC_HIGHLIGHTER;
