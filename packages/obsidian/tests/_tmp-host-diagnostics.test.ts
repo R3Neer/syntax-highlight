@@ -49,6 +49,21 @@ function mountEditor(source: string, diagnosticsWiring = false): EditorView {
   return view;
 }
 
+function minimalDiagnosticView(source: string): EditorView {
+  const dom = document.body.appendChild(document.createElement("div"));
+  const line = dom.appendChild(document.createElement("div"));
+  line.className = "cm-line";
+  line.textContent = source;
+  const state = EditorState.create({ doc: source });
+  return {
+    state,
+    dom,
+    hasFocus: false,
+    viewport: { from: 0, to: state.doc.length },
+    posAtDOM: () => 0,
+  } as unknown as EditorView;
+}
+
 function registerManually(
   view: EditorView,
   accepted: ReadonlySet<string>,
@@ -221,7 +236,20 @@ describe("temporary Obsidian host diagnostics", () => {
     expect(diagnostics.postFrameCaptures).toEqual([]);
   });
 
-  it("captures top-level and quoted fences after two frames through the real editor wiring", async () => {
+  it("waits exactly two animation frames in the isolated post-frame controller", async () => {
+    const view = minimalDiagnosticView("plain");
+    registerManually(view, new Set());
+    const frames = mockAnimationFrames();
+
+    controller().enable();
+    const captures = await controller().captureLivePreview();
+
+    expect(frames).toHaveBeenCalledTimes(2);
+    expect(captures).toHaveLength(1);
+    expect(captures[0]?.captureError).not.toBe(true);
+  });
+
+  it("captures top-level and quoted fences through the real editor wiring", async () => {
     const source = [
       "```powershell",
       "$top = 1",
@@ -236,12 +264,11 @@ describe("temporary Obsidian host diagnostics", () => {
     ].join("\n");
     const view = mountEditor(source, true);
     const before = view.dom.innerHTML;
-    const frames = mockAnimationFrames();
+    mockAnimationFrames();
 
     controller().enable();
     const captures = await controller().captureLivePreview();
 
-    expect(frames).toHaveBeenCalledTimes(2);
     expect(captures).toHaveLength(1);
     const capture = captures[0]!;
     expect(capture.captureError).not.toBe(true);
