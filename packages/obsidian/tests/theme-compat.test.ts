@@ -1,91 +1,52 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { highlightTree } from "@lezer/highlight";
 import { describe, expect, it } from "vitest";
 
-import {
-  COMMON_EDITOR_HIGHLIGHT_STYLE,
-  COMMON_READING_HIGHLIGHT_STYLE,
-  commonLanguageByFence,
-  parseCommonLanguageTree,
-} from "../src/common-languages";
+import { commonSemanticRanges } from "../src/common-semantic-ranges";
+import { commonLanguageByFence } from "../src/common-languages";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import { buildThemeCss } from "../src/themes";
 
-function highlightedClasses(
-  fence: string,
-  source: string,
-  style: typeof COMMON_READING_HIGHLIGHT_STYLE,
-): string[] {
+function highlightedClasses(fence: string, source: string): string[] {
   const language = commonLanguageByFence(fence);
-  if (language?.support === undefined) {
-    throw new Error(`Missing parser-backed common language: ${fence}`);
+  if (language === undefined) {
+    throw new Error(`Missing common language: ${fence}`);
   }
-  const tree = parseCommonLanguageTree(language, source);
-  if (tree === undefined) {
-    throw new Error(`Missing syntax tree for parser-backed language: ${fence}`);
-  }
-  const classes: string[] = [];
-  highlightTree(tree, style, (_from, _to, value) => classes.push(value));
-  return classes;
+  return commonSemanticRanges(language, source).map(({ classes }) => classes);
 }
 
 describe("active theme compatibility", () => {
-  it("emits Prism-compatible token classes in Reading view", () => {
-    const classes = highlightedClasses(
-      "js",
-      "if (value) { return 1; }",
-      COMMON_READING_HIGHLIGHT_STYLE,
-    );
+  it("emits plugin semantic classes without Prism compatibility classes", () => {
+    const classes = highlightedClasses("js", "if (value) { return 1; }");
 
     expect(classes.some((value) => value.includes("syntax-common-keyword"))).toBe(true);
-    expect(classes.some((value) => value.includes("token keyword"))).toBe(true);
+    expect(classes.some((value) => value.includes("token keyword"))).toBe(false);
   });
 
-  it("emits CodeMirror-compatible token classes in Editing view", () => {
-    const classes = highlightedClasses(
-      "js",
-      "if (value) { return 1; }",
-      COMMON_EDITOR_HIGHLIGHT_STYLE,
-    );
+  it("emits plugin semantic classes without CodeMirror compatibility classes", () => {
+    const classes = highlightedClasses("js", "if (value) { return 1; }");
 
     expect(classes.some((value) => value.includes("syntax-common-keyword"))).toBe(true);
-    expect(classes.some((value) => value.includes("cm-keyword"))).toBe(true);
+    expect(classes.some((value) => value.includes("cm-keyword"))).toBe(false);
   });
 
-  it("routes PowerShell editor tokens through the same theme bridge", () => {
+  it("routes PowerShell manual tokens through the plugin semantic taxonomy", () => {
     const classes = highlightedClasses(
       "powershell",
       "# note\n$items = Get-ChildItem",
-      COMMON_EDITOR_HIGHLIGHT_STYLE,
     );
 
     expect(classes.some((value) => value.includes("syntax-common-comment"))).toBe(true);
-    expect(classes.some((value) => value.includes("cm-comment"))).toBe(true);
+    expect(classes.some((value) => value.includes("cm-comment"))).toBe(false);
+    expect(classes.some((value) => value.includes("token comment"))).toBe(false);
   });
 
-  it("maps declaration keywords to the active theme's keyword color", () => {
-    const reading = highlightedClasses(
-      "js",
-      "const value = 1;",
-      COMMON_READING_HIGHLIGHT_STYLE,
-    );
-    const editor = highlightedClasses(
-      "js",
-      "const value = 1;",
-      COMMON_EDITOR_HIGHLIGHT_STYLE,
-    );
+  it("maps declaration keywords to the common declaration role", () => {
+    const classes = highlightedClasses("js", "const value = 1;");
 
     expect(
-      reading.some((value) =>
-        value.includes("syntax-common-declaration") && value.includes("token keyword"),
-      ),
-    ).toBe(true);
-    expect(
-      editor.some((value) =>
-        value.includes("syntax-common-declaration") && value.includes("cm-keyword"),
-      ),
+      classes.some((value) => value.includes("syntax-common-declaration")),
     ).toBe(true);
   });
 
