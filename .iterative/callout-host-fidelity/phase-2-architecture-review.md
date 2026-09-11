@@ -6,51 +6,49 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se estabilizaron previamente estas decisiones:
+Se estabilizaron previamente:
 
-- no copiar aliases internos de StreamLanguage;
 - engine como fuente única de support + extracción manual;
-- SourceView conserva ruta nativa CodeMirror;
-- scanner stream define LF/CRLF/blank/zero-length;
-- `parser.tokenTable` gana sobre engine tokenTags;
-- quoted source usa surface negra propia y variables CSS públicas, sin private selectors.
+- no copiar aliases internos de StreamLanguage;
+- SourceView en ruta nativa CodeMirror;
+- scanner LF/CRLF/blank/zero-length;
+- `parser.tokenTable` sobre engine tokenTags;
+- quoted source como surface propia sin private selectors.
 
-## Revisión 4
+## Revisiones 4–5
 
-Resultado: SIN CAMBIOS.
+Resultado: SIN CAMBIOS / SIN CAMBIOS.
 
-Primera revisión limpia del estado arquitectónico anterior.
-
-## Revisión 5
-
-Resultado: SIN CAMBIOS.
-
-Segunda revisión limpia del estado anterior; la arquitectura quedó inicialmente estabilizada y se autorizó implementación.
+Par limpio de la arquitectura anterior, posteriormente invalidado como par final por el cambio de Revisión 6.
 
 ## Revisión 6
 
 Resultado: CAMBIOS NECESARIOS.
 
-La revisión de implementación cruzó la nueva surface negra con los valores reales del theme usado en el gate y encontró que el orden anterior `--syntax-common-* -> --code-* -> literal dark-safe` no garantiza contraste.
+La revisión de implementación cruzó la surface negra con valores reales del theme del gate y demostró que variables públicas válidas para un papel claro pueden ser ilegibles sobre negro (`--code-property` ≈2.95:1; `--code-value` ≈4.33:1).
 
-Evidencia concreta sobre `#000`:
+Corrección:
 
-- `--code-property: rgb(51,77,190)` ≈ 2.95:1;
-- `--code-value: rgb(161,83,170)` ≈ 4.33:1.
+- dentro de `.cm-line.syntax-editor-code-source`, la familia pública `--code-*` relevante se remapea a una paleta dark-safe propia;
+- cada valor sale de `--syntax-common-*` heredable con literal seguro;
+- `--code-background` queda transparente;
+- `--code-normal`, caret, invalid y line numbers reciben fallbacks propios legibles;
+- sin branch por theme, private selectors ni `!important`.
 
-Son variables públicas válidas pero diseñadas para un papel claro. Al forzar una surface negra propia no pueden seguir siendo autoridad cromática dentro de ese scope.
+El cambio reabrió TM arquitectónico.
 
-### Corrección arquitectónica
+## Revisión 7
 
-Dentro de `.cm-line.syntax-editor-code-source`:
+Resultado: SIN CAMBIOS.
 
-- remapear la familia pública relevante `--code-*` hacia nuestra paleta dark-safe (`--syntax-common-*` heredable -> literal seguro);
-- mantener `--code-background: transparent` para furniture interno;
-- `--code-normal` y `--caret-color` también salen de variables propias con fallback claro;
-- nuestros roles `syntax-common-*` y el furniture del host consumen así la misma paleta compatible con la surface;
-- `syntax-common-invalid` no usa `--text-error` oscuro como autoridad final dentro del quoted source;
-- line numbers reciben un fallback claramente legible.
+Primera revisión limpia del nuevo estado.
 
-No se añade branch por theme, selector privado ni `!important`.
+Se revisó la cascada/jerarquía de variables:
 
-Este hallazgo modifica una decisión arquitectónica, por lo que las antiguas Revisiones 4–5 dejan de ser el par limpio final. Se requieren dos nuevas revisiones consecutivas sin cambios antes de continuar implementación.
+- no hay ciclo CSS: las variables públicas scoped derivan de `--syntax-common-*` o literal dark-safe;
+- nuestros roles pueden consumir esas variables públicas sin depender del palette original del theme;
+- un theme/snippet que defina `--syntax-common-*` o `--syntax-editor-code-*` en un ancestro gobierna tanto nuestra semántica como el furniture que consuma `--code-*`;
+- la line decoration sigue siendo la única frontera de ownership: no se selecciona ni conoce DOM interior del host;
+- no aparecen APIs desktop-only, por lo que el diseño sigue siendo válido en mobile.
+
+No se encontró modificación necesaria. Es la primera revisión limpia tras Revisión 6.
