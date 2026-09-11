@@ -26,29 +26,33 @@ Responsabilidades:
 2. registrarse como target de diagnóstico en el controlador temporal global;
 3. cuando diagnostics pase a enabled, conectar su observer scoped y programar inmediatamente una captura;
 4. cuando diagnostics pase a disabled, desconectar observer y cancelar cualquier frame pendiente;
-5. reaccionar a cualquier `ViewUpdate` relevante y también a mutaciones DOM scoped a `view.dom` que puedan ocurrir sin transacción de editor;
-6. batir todos esos triggers en una sola captura post-frame;
-7. reconstruir los fenced blocks reconocidos desde `view.state.doc` usando la fuente de verdad actual `findCodeBlocks()`;
-8. usar `view.viewport` como filtro grueso de bloques en pantalla, incluyendo ranges que puedan estar reemplazados por widgets; usar `view.visibleRanges` después solo para describir qué source ranges tienen representación directa, y conservar además cualquier bloque que contenga la selección;
-9. aplicar un cap duro adicional de bloques;
-10. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
-11. capturar únicamente estructura/clases/estilos necesarios;
-12. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
-13. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado, salvo el propio `MutationObserver` scoped que no muta el subtree.
+5. cuando el controller haga `clear()`, invalidar su baseline local de deduplicación;
+6. reaccionar a cualquier `ViewUpdate` relevante y también a mutaciones DOM scoped a `view.dom` que puedan ocurrir sin transacción de editor;
+7. batir todos esos triggers en una sola captura post-frame;
+8. reconstruir los fenced blocks reconocidos desde `view.state.doc` usando la fuente de verdad actual `findCodeBlocks()`;
+9. usar `view.viewport` como filtro grueso de bloques en pantalla, incluyendo ranges que puedan estar reemplazados por widgets; usar `view.visibleRanges` después solo para describir qué source ranges tienen representación directa, y conservar además cualquier bloque que contenga la selección;
+10. aplicar un cap duro adicional de bloques;
+11. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
+12. capturar únicamente estructura/clases/estilos necesarios;
+13. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
+14. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado, salvo el propio `MutationObserver` scoped que no muta el subtree.
 
 ## Controlador y registro de targets
 
 El helper `_tmp-host-diagnostics.ts` sigue siendo dueño del estado global de diagnostics. Se ampliará con una interfaz temporal de lifecycle, sin que el helper conozca CodeMirror:
 
 - `enabled` sigue siendo la fuente de verdad;
-- `subscribeEnabled(listener)` o API equivalente notifica transiciones enabled/disabled;
+- una suscripción de lifecycle notifica al menos `enabled`, `disabled` y `cleared`;
 - `registerCaptureTarget(capture)` registra una callback por cada diagnostic ViewPlugin vivo y devuelve `unregister`;
 - `capture()` invoca los targets registrados para programar, no ejecutar sincrónicamente, una captura post-frame;
-- `enable()` cambia estado, notifica a listeners y provoca que cada ViewPlugin conecte observer + schedule;
-- `disable()` notifica a listeners y cada ViewPlugin desconecta/cancela;
+- `enable()` cambia estado y emite `enabled` solo en transición false→true;
+- `disable()` emite `disabled` solo en transición true→false;
+- `clear()` vacía eventos y emite `cleared` siempre, de modo que cada target invalide su baseline de deduplicación;
 - `destroy()` del ViewPlugin desregistra listener y capture target.
 
 No habrá referencias a `EditorView` dentro del controlador global. Así se evita acoplar la utilidad de exportación a CodeMirror y se simplifica su eliminación al final del ciclo.
+
+`clear()` no programa una captura por sí mismo. El patrón manual `clear(); capture()` queda determinista: clear invalida dedup y capture solicita el nuevo snapshot.
 
 ## Triggers y settling
 
@@ -61,7 +65,9 @@ Triggers:
 - `ViewUpdate` con `docChanged`, `selectionSet`, `viewportChanged`, `geometryChanged` o `focusChanged` cuando exista;
 - `MutationObserver` scoped a `view.dom` para `childList`, `subtree` y atributos `class`/`style`.
 
-Todos los triggers llaman a un único scheduler idempotente.
+`cleared` invalida dedup, pero no es un trigger de captura.
+
+Todos los triggers de captura llaman a un único scheduler idempotente.
 
 Secuencia mínima:
 
@@ -129,7 +135,7 @@ Texto de líneas/tokens se limita a fragmentos del propio bloque y se trunca. At
 
 Extender `_tmp-host-diagnostics.ts` con un tipo/evento separado `live-preview-post-frame`, en lugar de sobrecargar semánticamente `live-preview-source`.
 
-Añadir una consulta barata `hostDiagnosticsEnabled()` para que cualquier trigger pueda cortar antes de inspeccionar. El lifecycle enabled/disabled se propaga mediante la suscripción descrita arriba, por lo que activar diagnostics desde DevTools no depende de que ocurra después un `ViewUpdate`.
+Añadir una consulta barata `hostDiagnosticsEnabled()` para que cualquier trigger pueda cortar antes de inspeccionar. El lifecycle se propaga mediante la suscripción descrita arriba, por lo que activar diagnostics desde DevTools no depende de un `ViewUpdate` posterior y `clear()` puede resetear dedup de todos los targets vivos.
 
 El API global queda temporalmente:
 
@@ -151,6 +157,7 @@ El API global queda temporalmente:
 - filtrar primero por `view.viewport`, conservar selección y usar `visibleRanges` solo como señal de source materializado; aplicar cap de bloques;
 - `destroy()` desconecta observer, cancela frame pendiente y desregistra callbacks;
 - eventos deduplicados por snapshot estructural/estilos, ignorando `timestamp`, para que una ráfaga de mutaciones no llene el dump con estados idénticos;
+- `clear()` invalida las baselines locales de dedup, garantizando que la siguiente captura explícita pueda volver a publicar un estado idéntico;
 - una transición de selección/representación sí debe producir evento aunque el DOM sea idéntico si cambia el estado `selectionRegion`;
 - límites de líneas, descendientes, atributos y longitud de texto.
 
@@ -184,6 +191,8 @@ Los tests de Fase 0D verifican la instrumentación, no el fix visual:
 
 - `enable()` conecta observer y agenda captura sin requerir `ViewUpdate` posterior;
 - `disable()` desconecta observer y cancela frame;
+- `clear()` invalida dedup pero no captura por sí solo;
+- `clear(); capture()` vuelve a publicar aunque el snapshot coincida con el último anterior al clear;
 - `capture()` fan-out a todos los ViewPlugins vivos sin capturar sincrónicamente;
 - scheduling batched post-frame desde ViewUpdate;
 - scheduling desde mutaciones DOM scoped;
