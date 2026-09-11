@@ -6,53 +6,71 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-- no copiar aliases internos de `StreamLanguage`; metadata explícita style → Tag y API pública;
-- conservar `SyntaxSourceView` en la ruta oficial `StreamLanguage + syntaxHighlighting()`;
-- fijar LF/CRLF, blankLine, múltiples styles y guard de tokens sin avance.
+- separar engine tree/stream/plain explícitamente;
+- no copiar aliases internos de `StreamLanguage`;
+- conservar `SyntaxSourceView` sobre la ruta nativa `StreamLanguage + syntaxHighlighting()` en vez de sustituirla por un parser manual.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-- engine y `LanguageSupport` pasan a compartir una única metadata;
-- `commonLanguageSupport()` construye tree/stream support;
-- quoted source integra furniture host mediante variables públicas de código scoped, sin selectores privados ni `!important`;
-- surface propia mantiene fondo negro explícito y variables `--syntax-*`.
+La tabla semántica dejó de modelarse como `HighlightStyle` host-specific y pasó a un único `Highlighter` creado mediante la API pública `tagHighlighter()`. Ese mismo highlighter se usa en `highlightTree`, scanner stream y `syntaxHighlighting()`.
 
 ## Revisión 3
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se fijó precedencia de tablas stream:
-
-1. `parser.tokenTable`;
-2. `engine.tokenTags` como relleno;
-3. nombres/modificadores públicos de `tags`;
-4. desconocidos fallan localmente.
-
-La misma tabla efectiva alimenta `effectiveStreamParser` y extracción manual.
+- se explicitó que Obsidian documenta motores de highlighting diferentes en Editing/Reading y no se promete identidad visual pixel-perfect con highlighting nativo top-level;
+- se cerró la semántica física de LF/CRLF/terminador final para no crear una blank line sintética.
 
 ## Revisión 4
 
-Resultado: SIN CAMBIOS.
+Resultado: CAMBIOS NECESARIOS.
 
-Primera revisión limpia. Se contrastó el plan completo contra las APIs oficiales de StreamParser/StringStream/Highlighter, ViewPlugin y las variables CSS documentadas de código en Obsidian. No se encontró modificación necesaria.
+Una simple fusión de `tokenTable` todavía podía depender de la precedencia interna de aliases legacy de `StreamLanguage`.
+
+Corrección: `effectiveStreamParser.token()` reescribe styles cubiertos por `parser.tokenTable`/`engine.tokenTags` a nombres sintéticos privados y los publica por el `tokenTable` efectivo. El scanner manual usa el mismo resolver. La precedencia queda en Syntax Highlight pero se implementa exclusivamente por API pública.
 
 ## Revisión 5
 
+Resultado: CAMBIOS NECESARIOS.
+
+`StreamParser.startState` es opcional en la API pública y su fallback interno no es un contrato que el scanner manual deba copiar.
+
+Corrección: un engine stream manualmente escaneable exige estado inicial explícito. PowerShell ya lo aporta. `startState` y `StringStream` reciben un `indentUnit` explícito y coherente.
+
+## Revisión 6
+
+Resultado: CAMBIOS NECESARIOS.
+
+Una surface negra fija no puede heredar ciegamente una paleta de theme light.
+
+Corrección: paleta dark plugin-owned, sobrescribible mediante variables propias y con defaults contrastados sobre negro. Bajo la línea quoted, las variables públicas `--code-*` se reasignan a esa paleta para integrar furniture del host sin selectores privados ni `!important`.
+
+## Revisión 7
+
+Resultado: CAMBIOS NECESARIOS.
+
+El wrapper stream debe preservar todo el contrato público ajeno al styling.
+
+Corrección: conservar/delegar `name`, `startState`, `copyState`, `blankLine`, `indent`, `languageData`, `mergeTokens` y demás campos públicos aplicables, sustituyendo únicamente `token()`/`tokenTable` en la frontera de styles.
+
+## Revisión 8
+
 Resultado: SIN CAMBIOS.
 
-Segunda revisión limpia, centrada en failure modes y portabilidad:
+Primera revisión limpia del plan actual.
 
-- estado multilinea, CRLF, blank lines y token sin avance tienen contrato explícito;
-- un stream parser con `tokenTable` propio conserva su autoridad;
-- style desconocido falla localmente;
-- no se asume soporte nativo top-level de todos los common languages;
-- SourceView mantiene la ruta nativa de CodeMirror y no se reinventa parsing incremental;
-- la surface negra usa únicamente decorations + variables CSS scoped y no introduce APIs desktop-only;
-- themes/snippets pueden sobrescribir variables `--syntax-*` sin ramas por tema;
-- la metadata de PowerShell es declarativa y el renderer sigue agnóstico.
+Se contrastó de nuevo contra documentación oficial de Obsidian y CodeMirror/Lezer y contra los módulos actuales del adapter:
 
-No se encontró modificación necesaria.
+- ViewPlugin/decorations mantienen ownership correcto y trabajo por viewport;
+- styling propio se apoya en variables CSS y no muta DOM;
+- `tagHighlighter`, `Highlighter.style`, `syntaxHighlighting`, `StreamParser`, `StringStream` y `tokenTable` son APIs públicas suficientes;
+- nombres sintéticos no dependen de aliases/NodeProps/TokenTable internos;
+- wrapper conserva capacidades no relacionadas con highlighting;
+- scanner conserva offsets/estado y no inventa blank final;
+- SourceView mantiene parser incremental oficial;
+- no se reabre routing rendered sin evidencia fresca;
+- no se intenta suprimir highlighting nativo mediante internals o `!important`.
 
-Revisiones **4 y 5 son consecutivas sin cambios**: el plan arquitectónico de Fase 2 queda estabilizado según TM y se autoriza crear el plan de implementación con checkboxes.
+No se encontró cambio necesario. Esta es la primera revisión limpia del estado actual; los pares limpios anteriores a las Revisiones 4–7 quedan invalidados por los cambios posteriores.
