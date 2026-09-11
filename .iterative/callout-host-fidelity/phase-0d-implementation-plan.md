@@ -62,13 +62,19 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 
 Archivo de integración: `packages/obsidian/src/editor.ts`.
 
-## 5. Verificación de implementación antes de tests formales
+## 5. Verificación de implementación antes de tests formales nuevos
 
-- [ ] `npm run typecheck`.
+No se escriben todavía los tests nuevos de Fase 0D, pero la implementación no puede considerarse estable si rompe garantías que el repositorio ya tenía.
+
 - [ ] `npm run lint`.
+- [ ] `npm run typecheck`.
+- [ ] Ejecutar la suite de tests **preexistente** como regresión; cualquier fallo exige corregir implementación antes del TM.
+- [ ] `npm run build`.
 - [ ] Inspección de diff: solo código diagnóstico temporal + wiring mínimo; no fix visual accidental.
 - [ ] Comprobar por inspección/lifecycle que diagnostics off no mantiene observer activo ni agenda frames.
 - [ ] Revisión TM de implementación hasta dos revisiones consecutivas sin cambios.
+
+Los tests específicos nuevos de esta instrumentación pertenecen a la fase 6 y no se usan para adaptar retrospectivamente una implementación ya declarada correcta: si exponen un defecto, se reabre la fase de implementación y su TM.
 
 ## 6. Tests de Fase 0D
 
