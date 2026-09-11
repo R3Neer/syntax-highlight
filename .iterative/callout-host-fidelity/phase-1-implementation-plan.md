@@ -6,28 +6,28 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 ## 0. Baseline y guardrails
 
-- [ ] Confirmar head de `plan/obsidian-callout-host-fidelity` y CI verde antes de producción.
-- [ ] Confirmar que ningún archivo temporal anterior se elimina todavía: diagnostics y planes siguen siendo necesarios hasta el gate real.
-- [ ] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
-- [ ] Mantener un pequeño ledger dentro de este plan de tests/garantías antiguas retiradas durante la refactorización, indicando en qué tarea de la Fase 9 se sustituyen.
+- [x] Confirmar head de `plan/obsidian-callout-host-fidelity` y CI verde antes de producción.
+- [x] Confirmar que ningún archivo temporal anterior se elimina todavía: diagnostics y planes siguen siendo necesarios hasta el gate real.
+- [x] Registrar cualquier cambio de alcance en este plan antes de implementarlo.
+- [x] Mantener un pequeño ledger dentro de este plan de tests/garantías antiguas retiradas durante la refactorización, indicando en qué tarea de la Fase 9 se sustituyen.
 
 ## 1. Frontera oficial de runtime
 
 ### Producción
 
-- [ ] Crear helper de build con la frontera completa del sample oficial actual:
-  - [ ] `obsidian`;
-  - [ ] `electron`;
-  - [ ] `@codemirror/autocomplete`, `collab`, `commands`, `language`, `lint`, `search`, `state`, `view`;
-  - [ ] `@lezer/common`, `highlight`, `lr`;
-  - [ ] `builtinModules` de Node.
-- [ ] Hacer que `packages/obsidian/esbuild.config.mjs` consuma esa lista centralizada.
-- [ ] Mantener `electron`/built-ins como externals de bundle sin convertirlos en peers npm si no existe import runtime que lo justifique.
-- [ ] Activar `metafile` en el build y añadir una aserción que falle si un paquete host prohibido se empaqueta como input en vez de quedar external.
-- [ ] Mantener empaquetados los language packages no proporcionados por Obsidian.
-- [ ] Añadir/ajustar peerDependencies explícitas del paquete Obsidian únicamente para los módulos host que el paquete publicado deja como runtime imports y los módulos Lezer cuya identidad debe compartirse, con rangos compatibles con `obsidian`.
-- [ ] Actualizar lockfile de forma coherente.
-- [ ] Ejecutar CI existente; no añadir todavía tests nuevos de Fase 1.
+- [x] Crear helper de build con la frontera completa del sample oficial actual:
+  - [x] `obsidian`;
+  - [x] `electron`;
+  - [x] `@codemirror/autocomplete`, `collab`, `commands`, `language`, `lint`, `search`, `state`, `view`;
+  - [x] `@lezer/common`, `highlight`, `lr`;
+  - [x] `builtinModules` de Node.
+- [x] Hacer que `packages/obsidian/esbuild.config.mjs` consuma esa lista centralizada.
+- [x] Mantener `electron`/built-ins como externals de bundle sin convertirlos en peers npm si no existe import runtime que lo justifique.
+- [x] Activar `metafile` en el build y añadir una aserción que falle si un paquete host prohibido se empaqueta como input en vez de quedar external.
+- [x] Mantener empaquetados los language packages no proporcionados por Obsidian.
+- [x] Añadir/ajustar peerDependencies explícitas del paquete Obsidian únicamente para los módulos host que el paquete publicado deja como runtime imports y los módulos Lezer cuya identidad debe compartirse, con rangos compatibles con `obsidian`.
+- [x] Mantener lockfile coherente; el cambio de peer metadata no requirió reescritura y `npm ci` lo valida.
+- [x] Ejecutar CI existente; no añadir todavía tests nuevos de Fase 1.
 
 ### Resultado esperado
 
@@ -39,109 +39,109 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 
 ### Producción
 
-- [ ] Crear `rendered-code-candidate.ts` (nombre final sujeto a código) sin dependencias de Live Preview.
-- [ ] Mover allí detección de PRE/CODE, processed guard y preservación de furniture.
-- [ ] Resolver `language-*` desde PRE y CODE:
-  - [ ] PRE-only válido;
-  - [ ] CODE-only válido;
-  - [ ] ambos iguales válido;
-  - [ ] conflicto/varios valores -> fail closed.
-- [ ] Mantener un único CODE directo como requisito.
-- [ ] Adaptar `reading-host.ts` al detector nuevo.
-- [ ] Mantener `registerMarkdownPostProcessor` como fallback cuya **garantía contractual es Reading View**.
-- [ ] No añadir lógica para impedir que un renderer Markdown interno lo invoque en otro contexto; garantizar idempotencia/fail-closed si ocurre.
-- [ ] No usar ese postprocessor como requisito para la corrección de Live Preview.
-- [ ] Ejecutar CI existente.
+- [x] Crear `rendered-code-candidate.ts` (nombre final sujeto a código) sin dependencias de Live Preview.
+- [x] Mover allí detección de PRE/CODE, processed guard y preservación de furniture.
+- [x] Resolver `language-*` desde PRE y CODE:
+  - [x] PRE-only válido;
+  - [x] CODE-only válido;
+  - [x] ambos iguales válido;
+  - [x] conflicto/varios valores -> fail closed.
+- [x] Mantener un único CODE directo como requisito.
+- [x] Adaptar `reading-host.ts` al detector nuevo.
+- [x] Mantener `registerMarkdownPostProcessor` como fallback cuya **garantía contractual es Reading View**.
+- [x] No añadir lógica para impedir que un renderer Markdown interno lo invoque en otro contexto; garantizar idempotencia/fail-closed si ocurre.
+- [x] No usar ese postprocessor como requisito para la corrección de Live Preview.
+- [x] Ejecutar CI existente.
 
 ## 3. Eliminar bridge DOM de rendered Live Preview
 
 ### Producción
 
-- [ ] Inventariar tests existentes que cubren `LivePreviewRenderedBlockBridge` y anotar en el ledger qué garantía útil conserva cada uno antes de borrarlo/adaptarlo.
-- [ ] Retirar `LivePreviewRenderedBlockBridge` y sus helpers de scanning/replacement del EditorView.
-- [ ] Retirar cualquier producción que dependa de `.cm-embed-block` o `.cm-callout`.
-- [ ] Retirar `LIVE_PREVIEW_HOST_ATTRIBUTE` si deja de tener consumidores legítimos.
-- [ ] Dejar la **garantía** de rendered Live Preview exclusivamente en `registerMarkdownCodeBlockProcessor`.
-- [ ] No depender del generic Markdown postprocessor para Live Preview, aunque pueda ejecutarse incidentalmente en un subtree rendered.
-- [ ] Reubicar temporalmente `registerLivePreviewDiagnosticView()` dentro de la extensión source existente para no perder el gate 0D.
-- [ ] Eliminar `live-preview-host.ts` si tras la reubicación no conserva responsabilidad production.
-- [ ] Ajustar/eliminar tests antiguos únicamente cuando su contrato production haya desaparecido; cada garantía útil retirada debe quedar enlazada a una tarea concreta de Fase 9.
-- [ ] Ejecutar CI existente; la nueva cobertura arquitectónica se reserva para la fase de tests.
+- [x] Inventariar tests existentes que cubren `LivePreviewRenderedBlockBridge` y anotar en el ledger qué garantía útil conserva cada uno antes de borrarlo/adaptarlo.
+- [x] Retirar `LivePreviewRenderedBlockBridge` y sus helpers de scanning/replacement del EditorView.
+- [x] Retirar cualquier producción que dependa de `.cm-embed-block` o `.cm-callout`.
+- [x] Retirar `LIVE_PREVIEW_HOST_ATTRIBUTE` si deja de tener consumidores legítimos.
+- [x] Dejar la **garantía** de rendered Live Preview exclusivamente en `registerMarkdownCodeBlockProcessor`.
+- [x] No depender del generic Markdown postprocessor para Live Preview, aunque pueda ejecutarse incidentalmente en un subtree rendered.
+- [x] Reubicar temporalmente `registerLivePreviewDiagnosticView()` dentro de la extensión source existente para no perder el gate 0D.
+- [x] Eliminar `live-preview-host.ts` al no conservar responsabilidad production.
+- [x] Ajustar/eliminar tests antiguos únicamente cuando su contrato production haya desaparecido; cada garantía útil retirada queda enlazada en el ledger a Fase 9 o gate real.
+- [x] Ejecutar CI existente; la nueva cobertura arquitectónica se reserva para la fase de tests.
 
 ## 4. Modelo source y caché por viewport
 
 ### Producción · modelo
 
-- [ ] Crear `editor-block-model.ts` o nombre equivalente sin DOM/CodeMirror View ownership.
-- [ ] Definir modelo estructural/resuelto de bloque.
-- [ ] Resolver configured/common una sola vez por reconstrucción del modelo.
-- [ ] Definir helper de intersección bloque <-> `visibleRanges`.
-- [ ] Definir clave de caché semántica por bloque + runtime revision.
-- [ ] Usar invalidación conservadora durante esta refactorización:
-  - [ ] cualquier `docChanged` limpia la caché semántica completa del view;
-  - [ ] cualquier cambio de runtime/registry revision relevante limpia la caché;
-  - [ ] viewport/selection sin cambio documental reutiliza entradas válidas.
-- [ ] No introducir reutilización posicional sofisticada entre documentos distintos en este ciclo.
-- [ ] No tokenizar bloques no visibles.
+- [x] Crear `editor-block-model.ts` sin DOM/CodeMirror View ownership.
+- [x] Definir modelo estructural/resuelto de bloque.
+- [x] Resolver configured/common una sola vez por reconstrucción del modelo.
+- [x] Definir helper de intersección bloque <-> `visibleRanges`.
+- [x] Definir clave de caché semántica por bloque + runtime revision.
+- [x] Usar invalidación conservadora durante esta refactorización:
+  - [x] cualquier `docChanged` limpia la caché semántica completa del view;
+  - [x] cualquier cambio de runtime/registry revision relevante limpia la caché;
+  - [x] viewport/selection sin cambio documental reutiliza entradas válidas.
+- [x] No introducir reutilización posicional sofisticada entre documentos distintos en este ciclo.
+- [x] No tokenizar bloques no visibles.
 
 ### Producción · semántica
 
-- [ ] Para bloque visible configurado, tokenizar cuerpo lógico completo y mapear a offsets físicos.
-- [ ] Para common parser-backed, parsear cuerpo lógico completo y mapear highlights físicos.
-- [ ] Para Text parserless, producir plain spans sin parser.
-- [ ] Construir line semantics propias por opening/body/closing.
-- [ ] Fusionar surface + presentation en una sola especificación de línea por posición.
-- [ ] Mantener line-number policy separada.
+- [x] Para bloque visible configurado, tokenizar cuerpo lógico completo y mapear a offsets físicos.
+- [x] Para common parser-backed, parsear cuerpo lógico completo y mapear highlights físicos.
+- [x] Para Text parserless, producir plain spans sin parser.
+- [x] Construir line semantics propias por opening/body/closing.
+- [x] Fusionar surface + presentation en una sola especificación de línea por posición.
+- [x] Mantener line-number policy separada.
 
 ### Producción · adapter CodeMirror
 
-- [ ] Refactorizar `createEditorHighlighter` para conservar:
-  - [ ] modelo estructural cacheado;
-  - [ ] caché semántica visible;
-  - [ ] DecorationSet materializado.
-- [ ] Reconstruir modelo solo en doc/revision/fence-resolution change.
-- [ ] Aplicar las invalidaciones conservadoras definidas arriba antes de materializar.
-- [ ] Reconstruir materialización en model change / `viewportChanged` / `selectionSet` / settings visuales relevantes.
-- [ ] Generar marks/lines/widgets solo donde intersecten visible ranges.
-- [ ] Mantener suscripción del registry y cleanup de `destroy()`.
-- [ ] Mantener Smart Editing usando `findCodeBlocks()`/modelo sin acoplarlo a DOM.
-- [ ] Ejecutar CI existente.
+- [x] Refactorizar `createEditorHighlighter` para conservar:
+  - [x] modelo estructural cacheado;
+  - [x] caché semántica visible;
+  - [x] DecorationSet materializado.
+- [x] Reconstruir modelo solo en doc/revision/fence-resolution change.
+- [x] Aplicar las invalidaciones conservadoras definidas arriba antes de materializar.
+- [x] Reconstruir materialización en model change / `viewportChanged` / `selectionSet` / settings visuales relevantes.
+- [x] Generar marks/lines/widgets solo donde intersecten visible ranges.
+- [x] Mantener suscripción del registry y cleanup de `destroy()`.
+- [x] Mantener Smart Editing usando `findCodeBlocks()`/modelo sin acoplarlo a DOM.
+- [x] Ejecutar CI existente.
 
 ## 5. Surface/presentation source con clases propias
 
 ### Producción
 
-- [ ] Eliminar `QUOTED_CODE_SOURCE_CLASS` y toda emisión `HyperMD-codeblock*`.
-- [ ] Emitir únicamente clases `syntax-editor-code-source*` y presentation propias.
-- [ ] Añadir en `styles.css` surface source basada en `--syntax-editor-code-background` -> `--code-background`.
-- [ ] Añadir color base source `--syntax-editor-code-color` -> `--code-normal`/`--text-normal` solo donde sea necesario.
-- [ ] No usar selector `.cm-embed-block`, `.cm-callout` o `HyperMD-*` en funcionalidad nueva.
-- [ ] No introducir margins verticales; usar únicamente propiedades seguras de línea/surface.
-- [ ] Mantener alignment/flow en body presentacional.
-- [ ] Confirmar que top-level no recibe una segunda surface propia si Obsidian ya lo representa nativamente.
-- [ ] Ejecutar CI existente.
+- [x] Eliminar `QUOTED_CODE_SOURCE_CLASS` y toda emisión `HyperMD-codeblock*`.
+- [x] Emitir únicamente clases `syntax-editor-code-source*` y presentation propias.
+- [x] Añadir en `styles.css` surface source basada en `--syntax-editor-code-background` -> `--code-background`.
+- [x] Añadir color base source `--syntax-editor-code-color` -> `--text-normal`; las categorías semánticas específicas conservan sus fallbacks `--code-*`.
+- [x] No usar selector `.cm-embed-block`, `.cm-callout` o `HyperMD-*` como dependencia funcional nueva.
+- [x] No introducir margins verticales; usar únicamente propiedades seguras de línea/surface.
+- [x] Mantener alignment/flow en body presentacional.
+- [x] Confirmar que top-level no recibe una segunda surface propia si Obsidian ya lo representa nativamente.
+- [x] Ejecutar CI existente.
 
 ## 6. Contraste respetando ownership
 
 ### Producción
 
-- [ ] Cambiar `CommonContrastManager` para considerar normalizables solo tokens dentro de `.syntax-highlight-frame` plugin-owned.
-- [ ] Impedir que source CodeMirror reciba `style.color` o `data-syntax-contrast-adjusted` del manager.
-- [ ] Mantener exclusión de settings preview.
-- [ ] Mantener configured profile semantics fuera del manager común.
-- [ ] Reducir pending roots/normalización al subtree plugin-owned cuando sea posible sin reescribir el algoritmo perceptual.
-- [ ] Confirmar restore/dispose correcto únicamente sobre nodos que el manager pudo modificar.
-- [ ] Ejecutar CI existente.
+- [x] Cambiar `CommonContrastManager` para considerar normalizables solo tokens dentro de `.syntax-highlight-frame` plugin-owned.
+- [x] Impedir que source CodeMirror reciba `style.color` o `data-syntax-contrast-adjusted` del manager.
+- [x] Mantener exclusión de settings preview.
+- [x] Mantener configured profile semantics fuera del manager común.
+- [x] Reducir pending roots/normalización al subtree plugin-owned sin reescribir el algoritmo perceptual.
+- [x] Confirmar restore/dispose correcto únicamente sobre nodos que el manager pudo modificar.
+- [x] Ejecutar CI existente.
 
 ## 7. Common highlighting tras unificar runtime
 
 ### Producción
 
-- [ ] Revisar `parseCommonLanguageTree()` y eliminar únicamente workaround que resulte redundante; mantener `EditorState + ensureSyntaxTree` para StreamLanguage salvo evidencia contraria.
-- [ ] No añadir ramas específicas PowerShell al renderer.
-- [ ] Mantener `createCommonHighlightStyle()` como taxonomía única.
-- [ ] Mantener `source-view.ts` usando `common.support()` + `syntaxHighlighting(COMMON_EDITOR_HIGHLIGHT_STYLE)`.
-- [ ] Ejecutar build/CI existente con el runtime externo.
+- [x] Revisar `parseCommonLanguageTree()` y mantener `EditorState + ensureSyntaxTree` para StreamLanguage; no hay evidencia para retirar el workaround seguro.
+- [x] No añadir ramas específicas PowerShell al renderer.
+- [x] Mantener `createCommonHighlightStyle()` como taxonomía única.
+- [x] Mantener `source-view.ts` usando `common.support()` + `syntaxHighlighting(COMMON_EDITOR_HIGHLIGHT_STYLE)`.
+- [x] Ejecutar build/CI existente con el runtime externo.
 
 ## 8. Revisión TM de implementación
 
@@ -193,7 +193,7 @@ Este plan ejecuta el plan arquitectónico estabilizado. Los checkboxes son la fu
 ### Theme/contrast
 
 - [ ] no se emiten `HyperMD-codeblock*`.
-- [ ] source usa clases propias y variables `--code-*`.
+- [ ] source usa clases propias y variables `--code-*`/`--text-normal`.
 - [ ] CommonContrastManager no modifica tokens source de CodeMirror.
 - [ ] CommonContrastManager sí puede normalizar rendered DOM propio.
 - [ ] restore/dispose preserva color original.
