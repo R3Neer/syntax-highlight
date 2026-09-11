@@ -83,4 +83,20 @@ Se revisó el caso ambiguo en el que un source range no está directamente visib
 
 No se encontró una corrección adicional.
 
-**ESTABLE según TM tras reapertura:** revisiones 6 y 7 consecutivas sin cambios.
+La arquitectura volvió a quedar estable provisionalmente según TM (revisiones 6 y 7), pero la revisión del plan de implementación detectó un segundo problema de protocolo y obliga a una nueva reapertura.
+
+## Revisión 8 · hallazgo descendente de deduplicación
+
+Resultado: CAMBIOS NECESARIOS.
+
+La deduplicación local de snapshots podía sobrevivir a `SyntaxHighlightHostDiagnostics.clear()`. En el flujo manual, un cambio de selección puede disparar una captura automática, después `clear(); capture()` intenta volver a capturar el mismo estado y el ViewPlugin podría suprimirlo como duplicado, dejando el dump vacío.
+
+Cambios arquitectónicos:
+
+- el lifecycle global notifica también `cleared`;
+- `clear()` vacía eventos e invalida la baseline de deduplicación de todos los targets, pero no captura por sí solo;
+- `clear(); capture()` queda definido como protocolo determinista para volver a publicar incluso un snapshot idéntico al anterior;
+- enable/disable siguen notificándose solo en transiciones reales;
+- la invalidación de dedup no conoce CodeMirror y se propaga por la misma suscripción de lifecycle.
+
+Este cambio afecta al contrato controller↔ViewPlugin y, por tanto, pertenece a arquitectura.
