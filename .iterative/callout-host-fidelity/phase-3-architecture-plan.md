@@ -60,12 +60,12 @@ Introducir un helper puro, conceptualmente:
 lineSemanticIsMaterialized(line, viewport, visibleRanges)
 ```
 
-con contrato:
+Contrato:
 
 ```text
-intersects([line.from, line.to], viewport)
+line overlaps viewport
 AND
-intersects([line.from, line.to], any visibleRange)
+line has at least one materialized source point/range in visibleRanges
 ```
 
 Si devuelve true:
@@ -76,6 +76,28 @@ Decoration.line({ attributes: { class: ... } }).range(line.from)
 
 No exigir `positionIsVisible(line.from, visibleRanges)`.
 
+### Semántica de intersección
+
+No reutilizar ciegamente el predicado inclusivo histórico para decidir materialización de línea.
+
+Para una línea no vacía `[from, to)` y un rango CodeMirror `[range.from, range.to)` existe overlap real solo si:
+
+```text
+from < range.to && to > range.from
+```
+
+Una línea completamente replaced que solo **toque** el inicio de un `visibleRange` adyacente no cuenta como visible.
+
+Para una línea física vacía (`from === to`), usar point containment explícito:
+
+```text
+point >= range.from && point <= range.to
+```
+
+Esto permite surface sobre blank lines reales sin convertir adyacencias en contenido visible.
+
+El mismo criterio se aplica al `viewport`: overlap half-open para líneas no vacías y point containment para líneas vacías.
+
 ### B. Semantic marks
 
 Sin cambio:
@@ -83,6 +105,8 @@ Sin cambio:
 - solo si `blockBodyIntersectsVisible(..., visibleRanges)`;
 - cada span solo si intersecta `visibleRanges`;
 - mapping lógico→físico permanece igual.
+
+La semántica de contenido existente conserva sus helpers actuales para no ampliar scope de esta fase.
 
 ### C. Line-number widgets
 
@@ -95,24 +119,27 @@ El número pertenece al contenido editable visible, no al `.cm-line` como surfac
 
 ### D. Block-level fast path
 
-No usar un único early-return basado exclusivamente en `visibleRanges` que pueda impedir line semantics válidas.
+Conservar el fast path físico existente de `editor.ts`:
 
-Separar la decisión:
+```text
+openingLineFrom -> closingLineTo/bodyTo
+```
 
-- un bloque puede necesitar **line decorations** si su rango físico intersecta viewport y alguna línea tiene contenido visible;
-- un bloque necesita **semantic spans/widgets** si su body intersecta `visibleRanges`.
+contra `visibleRanges`.
 
-Puede mantenerse un fast path si es la unión de ambas necesidades, no si vuelve a colapsarlas en una sola condición.
+Ese rango ya cubre opening/body/closing y basta como descarte grueso: si una line semantic válida tiene contenido visible, el bloque físico también intersecta algún `visibleRange`.
+
+No introducir un segundo fast path de bloque ni migrar todo el bloque a `viewport`; el cambio debe ocurrir **solo al decidir cada `Decoration.line`**.
 
 ## Helpers de rango
 
-Mantener helpers host-neutral en `editor-block-model.ts` o un módulo puro equivalente:
+Mantener la lógica host-neutral en `editor-block-model.ts` o un módulo puro equivalente:
 
-- `rangeIntersectsVisible(from, to, ranges)` existente;
-- `rangeIntersectsViewport(from, to, viewport)` o reutilizar el mismo predicado con un rango único;
-- `lineSemanticIsMaterialized(...)`.
+- conservar `rangeIntersectsVisible()` para consumers existentes;
+- añadir un helper específico de materialización de línea con semántica half-open/blank-point;
+- el helper recibe `EditorLineSemantic`, un `viewport` simple y `visibleRanges` simples.
 
-No introducir dependencia de `EditorView` dentro de `editor-block-model.ts`.
+No introducir dependencia de `EditorView` dentro del modelo.
 
 El adapter `editor.ts` traduce:
 
@@ -167,6 +194,7 @@ Verificar:
 
 - `line.from` no pertenece a `view.visibleRanges` para al menos una quoted body line;
 - la línea sí intersecta `view.viewport`;
+- parte del `[line.from, line.to)` sí intersecta `visibleRanges`;
 - `.cm-line` recibe `syntax-editor-code-source`;
 - body recibe `syntax-common-*`;
 - `>` no recibe semantic mark;
@@ -175,9 +203,11 @@ Verificar:
 
 ### Fully replaced negative case
 
-Ocultar una quoted line completa con `Decoration.replace` y verificar que esa línea no recibe source surface propia.
+Ocultar una quoted line completa con `Decoration.replace` y verificar que esa línea no recibe source surface propia, incluso si el replacement o un rango adyacente queda en el viewport.
 
-Esto impide que la corrección degrade widgets rendered o otros reemplazos del host.
+Añadir además un caso de blank body line para demostrar que una línea física vacía visible sí puede recibir surface.
+
+Esto impide que la corrección degrade widgets rendered u otros reemplazos del host.
 
 ### Existing regressions
 
