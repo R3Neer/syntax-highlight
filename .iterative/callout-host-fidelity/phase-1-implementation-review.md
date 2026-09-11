@@ -39,21 +39,32 @@ Cambio: cerrar trazabilidad del ledger y del plan con una matriz explícita de t
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del estado actual. Se comprobó runtime/bundle, contrato npm, ownership DOM, ruta oficial de LP rendered, contraste, selectores privados, viewport/caché, lifecycle y ledger. No se encontró modificación necesaria.
+Primera revisión limpia del estado anterior. Se comprobó runtime/bundle, contrato npm, ownership DOM, ruta oficial de LP rendered, contraste, selectores privados, viewport/caché, lifecycle y ledger.
 
 ## Revisión 7
 
 Resultado: SIN CAMBIOS.
 
-Segunda revisión independiente centrada en los contratos públicos de Obsidian/CodeMirror y en estados de lifecycle:
+Segunda revisión limpia del estado anterior. Revisiones 6 y 7 estabilizaron la implementación y autorizaron inicialmente el paso a Fase 9.
 
-- `MarkdownView.getMode()`, `containerEl`, `sourcePath`, code-block processors y editor extensions son APIs públicas;
-- ninguna decisión funcional depende de `.cm-embed-block`, `.cm-callout` o `HyperMD-codeblock*`;
-- no hay modificación directa del DOM gestionado por CodeMirror;
-- LP rendered depende del code-block processor oficial, no del generic postprocessor;
-- el fallback estructural sigue siendo host-neutral e idempotente;
-- source y rendered comparten taxonomía semántica sin excepción PowerShell;
-- runtime externo y peers npm describen la misma frontera real;
-- CI completa y `pack:all` están verdes.
+## Revisión 8
 
-No se encontró modificación necesaria. Revisiones 6 y 7 son consecutivas sin cambios: **implementación estabilizada según TM**. Se autoriza el paso a Fase 9 de tests nuevos.
+Resultado: CAMBIOS NECESARIOS.
+
+La primera ejecución de los tests nuevos reveló que la política mode/settings estaba enterrada dentro de `main.ts` y solo podía probarse intentando cargar el módulo runtime `obsidian` en Vitest. Esa prueba no representa un host real y además el paquete `obsidian` del entorno de tests actúa como contrato de tipos, no como implementación JS ejecutable.
+
+### Corrección de producción
+
+Se extrajo una frontera pura y host-neutral:
+
+- nuevo `markdown-render-mode.ts` define `MarkdownRenderViewState` y `markdownHighlightEnabledForContext()`;
+- la función pura recibe únicamente `mode`, `sourcePath`, `ownsElement` y los dos settings;
+- `main.ts` sigue siendo el único adapter Obsidian: convierte `MarkdownView` reales mediante APIs públicas (`getMode()`, `file?.path`, `containerEl.contains(element)`) y delega la decisión;
+- se conserva exactamente la semántica estabilizada: owner por containment primero, único `sourcePath` como fallback y ausencia/ambigüedad -> `markdownReading`;
+- no se añade ninguna dependencia de DOM privado ni una nueva ruta de rendering.
+
+### Motivo arquitectónico
+
+La extracción mejora la separación adapter host / política pura y permite probar la decisión sin inventar una implementación de `MarkdownView` ni cargar internals de Obsidian. El cambio fue provocado por la fase de tests y, por ello, **reabre el TM de implementación**. Las antiguas revisiones 6–7 dejan de ser el par limpio final; hacen falta dos nuevas revisiones consecutivas sin cambios sobre este estado.
+
+No se reanuda la expansión de tests hasta estabilizar de nuevo implementación.
