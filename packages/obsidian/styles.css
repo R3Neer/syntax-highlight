@@ -138,6 +138,10 @@
   user-select: none;
 }
 
+.cm-line.syntax-editor-code-source .syntax-editor-line-number {
+  color: var(--syntax-editor-code-line-number, #6b7280);
+}
+
 /*
  * Theme-agnostic semantic fallbacks for common languages. Manual highlighting
  * uses only Syntax Highlight's own semantic classes. Obsidian's public code
@@ -159,11 +163,12 @@
 .syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--code-punctuation, var(--text-muted))); }
 .syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--code-punctuation, var(--text-muted))); }
 .syntax-common-meta { color: var(--syntax-common-meta, var(--code-tag, var(--color-red))); }
+.syntax-common-invalid { color: var(--syntax-common-invalid, var(--text-error)); }
 
 /*
  * Quoted Live Preview source deliberately uses a dark plugin-owned surface.
  * Give every semantic role a readable final fallback instead of falling back
- * to --text-normal, which may be dark in light-paper themes such as Nier.
+ * to --text-normal, which may be dark in light-paper themes.
  */
 .cm-line.syntax-editor-code-source .syntax-common-plain {
   color: var(--syntax-common-text, var(--code-normal, #d4d4d4));
@@ -211,6 +216,9 @@
 }
 .cm-line.syntax-editor-code-source .syntax-common-meta {
   color: var(--syntax-common-meta, var(--code-tag, #c586c0));
+}
+.cm-line.syntax-editor-code-source .syntax-common-invalid {
+  color: var(--syntax-common-invalid, var(--text-error, #f44747));
 }
 
 .syntax-token-comment {
