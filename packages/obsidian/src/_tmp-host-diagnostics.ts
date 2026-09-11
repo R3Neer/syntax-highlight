@@ -251,7 +251,7 @@ function truncateText(value: string): string {
 }
 
 function sanitizeDiagnosticValue(value: string): string {
-  return truncateText(value.replace(/url\([^)]*\)/gi, "url(<redacted>)"));
+  return /url\s*\(/i.test(value) ? "<url-redacted>" : truncateText(value);
 }
 
 function keepDiagnosticAttribute(name: string): boolean {
@@ -335,7 +335,9 @@ function styledAncestors(
   const result: HostDiagnosticStyledElementSnapshot[] = [];
   let current = element.parentElement;
   while (current !== null && result.length < MAX_ANCESTORS) {
-    result.push(styledElementSnapshot(current, viewDom));
+    const snapshot = styledElementSnapshot(current, viewDom);
+    snapshot.text = "";
+    result.push(snapshot);
     if (current === viewDom) break;
     current = current.parentElement;
   }
