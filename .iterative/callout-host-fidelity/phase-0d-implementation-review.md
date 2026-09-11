@@ -68,3 +68,18 @@ Corrección requerida:
 - usar un placeholder diagnóstico explícito (`tag: "<unavailable>"`, sin clases/atributos/texto inventados, `styleError:true`) cuando el propio elemento no pueda inspeccionarse;
 - usar el mismo placeholder en el fallback de embedded host y no volver a ejecutar operaciones que ya han fallado;
 - preservar el resto del view y de otros views.
+
+## Revisión 6
+
+Resultado: CAMBIOS NECESARIOS.
+
+Tras aislar snapshots por nodo, la revisión final de minimización de datos detectó dos excesos:
+
+1. `styledAncestors()` reutilizaba `styledElementSnapshot()` y por tanto conservaba `textContent`. Aunque ahora el recorrido termina en `view.dom`, el texto de ese root puede incluir el inline title de la nota y otros contenidos que no son necesarios para diagnosticar ancestry, contradiciendo el requisito de no exportar nombres de archivo.
+2. `sanitizeDiagnosticValue()` sustituía `url(...)` mediante una regex parcial. Una URL con paréntesis internos o una serialización CSS poco habitual podría dejar un sufijo visible. El diagnóstico no necesita preservar ninguna parte de un valor que contenga URL.
+
+Corrección requerida:
+
+- los snapshots de ancestors conservan tag/clases/atributos/estilos, pero fuerzan `text: ""`;
+- si un valor contiene `url(`, redaccionarlo completo como `<url-redacted>` en vez de intentar reescribir solo el argumento;
+- mantener el texto únicamente en la `.cm-line`, descendants relevantes y embedded host observados, donde sí sirve para identificar el contenido del probe.
