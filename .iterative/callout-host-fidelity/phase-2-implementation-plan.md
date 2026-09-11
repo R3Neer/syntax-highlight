@@ -72,22 +72,22 @@ Checklist operativo vigente. La arquitectura detallada vive en `phase-2-architec
 
 Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública relevante a **variable propia heredable → literal dark-safe**:
 
-- [ ] `--code-normal` → `--syntax-editor-code-color` → `#d4d4d4`.
-- [ ] `--code-comment` → `--syntax-common-comment` → `#6a9955` (≈6.3:1 sobre negro).
-- [ ] `--code-function` → `--syntax-common-callable` → `#dcdcaa`.
-- [ ] `--code-important` → `--syntax-common-regex` → `#d16969`.
-- [ ] `--code-keyword` → `--syntax-common-keyword` → `#c586c0`.
-- [ ] `--code-string` → `--syntax-common-string` → `#ce9178`.
-- [ ] `--code-value` → `--syntax-common-number` → `#b5cea8`.
-- [ ] `--code-operator` → `--syntax-common-operator` → `#d4d4d4`.
-- [ ] `--code-property` → `--syntax-common-property` → `#9cdcfe`.
-- [ ] `--code-punctuation` → `--syntax-common-punctuation` → `#d4d4d4`.
-- [ ] `--code-tag` → `--syntax-common-meta` → `#c586c0`. El rol `syntax-common-type` conserva su propia variable/fallback `#4ec9b0`.
-- [ ] `--caret-color` → `--syntax-editor-code-caret` → `#d4d4d4`.
-- [ ] `syntax-common-invalid` quoted → `--syntax-common-invalid` → `#f44747` (≈5.8:1), sin `--text-error` como autoridad final.
-- [ ] Line numbers quoted → `--syntax-editor-code-line-number` → `#858c99` (≈6.2:1).
-- [ ] Roles scoped consumen primero `--syntax-common-*` y después la variable `--code-*` ya remapeada, nunca el palette original del theme.
-- [ ] CI existente + build + `pack:all` verdes tras completar la paleta.
+- [x] `--code-normal` → `--syntax-editor-code-color` → `#d4d4d4`.
+- [x] `--code-comment` → `--syntax-common-comment` → `#6a9955` (≈6.3:1 sobre negro).
+- [x] `--code-function` → `--syntax-common-callable` → `#dcdcaa`.
+- [x] `--code-important` → `--syntax-common-regex` → `#d16969`.
+- [x] `--code-keyword` → `--syntax-common-keyword` → `#c586c0`.
+- [x] `--code-string` → `--syntax-common-string` → `#ce9178`.
+- [x] `--code-value` → `--syntax-common-number` → `#b5cea8`.
+- [x] `--code-operator` → `--syntax-common-operator` → `#d4d4d4`.
+- [x] `--code-property` → `--syntax-common-property` → `#9cdcfe`.
+- [x] `--code-punctuation` → `--syntax-common-punctuation` → `#d4d4d4`.
+- [x] `--code-tag` → `--syntax-common-meta` → `#c586c0`. El rol `syntax-common-type` conserva su propia variable/fallback `#4ec9b0`.
+- [x] `--caret-color` → `--syntax-editor-code-caret` → `#d4d4d4`.
+- [x] `syntax-common-invalid` quoted → `--syntax-common-invalid` → `#f44747`, sin `--text-error` como autoridad final.
+- [x] Line numbers quoted → `--syntax-editor-code-line-number` → `#858c99`.
+- [x] Roles scoped consumen primero `--syntax-common-*` y después la variable `--code-*` ya remapeada, nunca la paleta original del theme.
+- [x] CI existente + build + `pack:all` verdes tras completar la paleta.
 
 ## 6. Coherencia y scope
 
@@ -103,16 +103,15 @@ Remapear dentro de `.cm-line.syntax-editor-code-source` cada variable pública r
 - [x] Revisión 1: CAMBIOS NECESARIOS, cache resolver + hipótesis inicial blank-line.
 - [x] Revisión 2: CAMBIOS NECESARIOS, corregir boundary contra StreamLanguage oficial + startState opcional.
 - [x] Revisión 3: CAMBIOS NECESARIOS, detectar contraste insuficiente de variables theme sobre surface negra y reabrir arquitectura.
-- [x] Arquitectura reestabilizada con Revisiones 7–8 limpias.
-- [ ] Reestabilizar este plan de implementación tras el cambio arquitectónico.
-- [ ] Completar 5.2.
-- [ ] Revisar layering/API pública/tag precedence/parser efectivo.
-- [ ] Revisar scanner y scope del diff.
-- [ ] Revisar cascade/contraste CSS y overrides heredables.
-- [ ] Revisar ledger.
-- [ ] Primera revisión completa SIN CAMBIOS.
-- [ ] Segunda revisión consecutiva SIN CAMBIOS.
-- [ ] Solo entonces tests nuevos.
+- [x] Arquitectura y plan de implementación reestabilizados con dos revisiones consecutivas limpias tras la reapertura.
+- [x] Completar 5.2.
+- [x] Revisar layering/API pública/tag precedence/parser efectivo.
+- [x] Revisar scanner y scope del diff.
+- [x] Revisar cascade/contraste CSS y overrides heredables.
+- [x] Revisar ledger.
+- [x] Revisión 4 completa SIN CAMBIOS.
+- [x] Revisión 5 consecutiva SIN CAMBIOS.
+- [x] Solo entonces tests nuevos.
 
 ## 8. Tests nuevos/reconstruidos Fase 2
 
