@@ -1,0 +1,127 @@
+name: Temporary finalize v1.2.0
+
+on:
+  push:
+    paths:
+      - .github/workflows/_tmp-finalize-v1.2.0.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.ref == 'refs/heads/plan/obsidian-callout-host-fidelity'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Remove temporary diagnostics and TM artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          editor = Path('packages/obsidian/src/editor.ts')
+          text = editor.read_text()
+          text = text.replace(
+              'import {\n  registerLivePreviewDiagnosticView,\n  traceHostDiagnostic,\n} from "./_tmp-host-diagnostics";\n',
+              '',
+          )
+          text = re.sub(
+              r'\nfunction traceVisibleBlock\(.*?\n}\n\n(?=function semanticSpans)',
+              '\n',
+              text,
+              flags=re.S,
+          )
+          text = text.replace('    traceVisibleBlock(view, resolved);\n\n', '')
+          text = text.replace('      private readonly unregisterDiagnostics: () => void;\n', '')
+          text = re.sub(
+              r'\n        this\.unregisterDiagnostics = registerLivePreviewDiagnosticView\(\n          view,\n          \(\) => acceptedEditorFenceNames\(registry\),\n        \);',
+              '',
+              text,
+          )
+          text = text.replace('        this.unregisterDiagnostics();\n', '')
+          editor.write_text(text)
+
+          boundary = Path('packages/obsidian/tests/architecture-boundaries.test.mjs')
+          text = boundary.read_text()
+          text = text.replace(
+              '    .filter((name) => name.endsWith(".ts"))\n    .filter((name) => name !== "_tmp-host-diagnostics.ts");',
+              '    .filter((name) => name.endsWith(".ts"));',
+          )
+          text = re.sub(
+              r'\n  it\("keeps private-selector diagnostics explicitly temporary".*?\n  }\);',
+              '',
+              text,
+              flags=re.S,
+          )
+          boundary.write_text(text)
+          PY
+          rm -f packages/obsidian/src/_tmp-host-diagnostics.ts
+          rm -f packages/obsidian/tests/_tmp-host-diagnostics.test.ts
+          rm -f packages/obsidian/tests/_tmp-host-diagnostics-post-frame-adversarial.test.ts
+          rm -rf .iterative
+          rm -f .github/workflows/_tmp-finalize-v1.2.0.yml
+          if grep -R -n -E '_tmp-host-diagnostics|SyntaxHighlightHostDiagnostics' packages/obsidian/src packages/obsidian/tests; then
+            echo 'Temporary diagnostics references remain' >&2
+            exit 1
+          fi
+      - name: Bump coordinated version to 1.2.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import json
+
+          version = '1.2.0'
+          files = [Path('package.json'), *sorted(Path('packages').glob('*/package.json'))]
+          for path in files:
+              data = json.loads(path.read_text())
+              data['version'] = version
+              for section in ('dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'):
+                  for name in list(data.get(section, {})):
+                      if name.startswith('@r3nner/syntax-highlight-'):
+                          data[section][name] = version
+              path.write_text(json.dumps(data, indent=2) + '\n')
+
+          manifest_path = Path('packages/obsidian/manifest.json')
+          manifest = json.loads(manifest_path.read_text())
+          manifest['version'] = version
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+
+          versions_path = Path('versions.json')
+          old = json.loads(versions_path.read_text())
+          versions = {version: manifest['minAppVersion']}
+          for key, value in old.items():
+              if key != version:
+                  versions[key] = value
+          versions_path.write_text(json.dumps(versions, indent=2) + '\n')
+          PY
+          npm install --package-lock-only --ignore-scripts
+      - name: Verify final tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .iterative
+          test ! -e packages/obsidian/src/_tmp-host-diagnostics.ts
+          git diff --check
+          npm ci
+          npm run check
+          npm run pack:all
+      - name: Commit finalized release tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: finalize v1.2.0 release tree'
+          git push origin HEAD:plan/obsidian-callout-host-fidelity
