@@ -14,6 +14,7 @@ function mountedToken(
   className = "syntax-common-keyword token keyword",
 ): HTMLElement {
   const host = document.createElement("div");
+  host.className = "syntax-highlight-frame";
   host.style.backgroundColor = background;
   const token = document.createElement("span");
   token.className = className;
@@ -29,7 +30,7 @@ afterEach(() => {
 });
 
 describe("CommonContrastManager", () => {
-  it("adjusts only a low-contrast common token", () => {
+  it("adjusts only a low-contrast common token in plugin-owned rendered DOM", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const manager = new CommonContrastManager();
 
@@ -43,7 +44,7 @@ describe("CommonContrastManager", () => {
       .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
   });
 
-  it("applies the same contrast floor to parserless Text spans", () => {
+  it("applies the same contrast floor to rendered parserless Text spans", () => {
     const token = mountedToken(
       "rgb(229, 192, 123)",
       "rgb(221, 216, 199)",
@@ -73,7 +74,7 @@ describe("CommonContrastManager", () => {
     expect(token.style.getPropertyValue("color")).toBe("rgb(35, 35, 35)");
   });
 
-  it("recomputes from the original theme color after the background changes", () => {
+  it("recomputes from the original theme color after the rendered background changes", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const host = token.parentElement!;
     const manager = new CommonContrastManager();
@@ -88,7 +89,7 @@ describe("CommonContrastManager", () => {
     expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
   });
 
-  it("restores the theme color when an editor reuses a span for non-syntax text", () => {
+  it("restores the theme color when owned rendered DOM reuses a span for non-syntax text", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const manager = new CommonContrastManager();
     manager.normalize(token);
@@ -99,6 +100,24 @@ describe("CommonContrastManager", () => {
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
     expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
+  });
+
+  it("does not mutate CodeMirror-owned source tokens", () => {
+    const editor = document.createElement("div");
+    editor.className = "cm-content";
+    editor.style.backgroundColor = "rgb(221, 216, 199)";
+    const token = document.createElement("span");
+    token.className = "syntax-common-keyword cm-keyword";
+    token.style.color = "rgb(229, 192, 123)";
+    token.textContent = "source";
+    editor.append(token);
+    document.body.append(editor);
+
+    new CommonContrastManager().normalize(document.body);
+
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
+    expect(token.style.getPropertyPriority("color")).toBe("");
   });
 
   it("restores a pre-existing inline theme color when disposed", () => {
@@ -112,15 +131,18 @@ describe("CommonContrastManager", () => {
     expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
   });
 
-  it("does not rewrite semantic theme previews", () => {
+  it("does not rewrite semantic theme previews even when they use plugin-owned frames", () => {
     const preview = document.createElement("div");
     preview.className = "syntax-preview-output";
     preview.style.backgroundColor = "rgb(250, 250, 250)";
+    const frame = document.createElement("div");
+    frame.className = "syntax-highlight-frame";
     const token = document.createElement("span");
     token.className = "syntax-common-keyword";
     token.style.color = "rgb(245, 245, 245)";
     token.textContent = "preview";
-    preview.append(token);
+    frame.append(token);
+    preview.append(frame);
     document.body.append(preview);
 
     new CommonContrastManager().normalize(document.body);
