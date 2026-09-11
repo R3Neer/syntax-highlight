@@ -17,10 +17,11 @@ import {
   LanguageSupport,
   StreamLanguage,
   syntaxTree,
+  type StreamParser,
 } from "@codemirror/language";
 import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { csharp } from "@replit/codemirror-lang-csharp";
-import { tags } from "@lezer/highlight";
+import { tags, type Tag } from "@lezer/highlight";
 
 export type CommonPresentationFamily = "text" | "markdown";
 
@@ -30,20 +31,66 @@ export interface CommonLanguagePresentation {
   family?: CommonPresentationFamily;
 }
 
+export type CommonStreamTokenTable = Readonly<
+  Record<string, Tag | readonly Tag[]>
+>;
+
+export interface CommonTreeEngine {
+  kind: "tree";
+  support: () => LanguageSupport;
+}
+
+export interface CommonStreamEngine {
+  kind: "stream";
+  parser: StreamParser<unknown>;
+  tokenTags: CommonStreamTokenTable;
+}
+
+export interface CommonPlainEngine {
+  kind: "plain";
+}
+
+export type CommonLanguageEngine =
+  | CommonTreeEngine
+  | CommonStreamEngine
+  | CommonPlainEngine;
+
 export interface CommonLanguage {
   id: string;
   name: string;
   fences: readonly string[];
   extensions: readonly string[];
-  /** Parser-backed languages expose CodeMirror support. Parserless entries are plain text. */
-  support?: () => LanguageSupport;
+  engine: CommonLanguageEngine;
   /** Optional visual furniture policy. Omitted values keep ordinary code-block behavior. */
   presentation?: CommonLanguagePresentation;
 }
 
-function powerShellSupport(): LanguageSupport {
-  return new LanguageSupport(StreamLanguage.define(powerShell));
+function treeEngine(support: () => LanguageSupport): CommonTreeEngine {
+  return { kind: "tree", support };
 }
+
+function streamEngine<State>(
+  parser: StreamParser<State>,
+  tokenTags: CommonStreamTokenTable,
+): CommonStreamEngine {
+  return {
+    kind: "stream",
+    parser: parser as StreamParser<unknown>,
+    tokenTags,
+  };
+}
+
+const POWERSHELL_TOKEN_TAGS: CommonStreamTokenTable = {
+  variable: tags.variableName,
+  number: tags.number,
+  operator: tags.operator,
+  builtin: tags.standard(tags.variableName),
+  punctuation: tags.punctuation,
+  string: tags.string,
+  comment: tags.comment,
+  keyword: tags.keyword,
+  error: tags.invalid,
+};
 
 const COMMON_LANGUAGES: readonly CommonLanguage[] = [
   {
@@ -51,112 +98,112 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     name: "JavaScript",
     fences: ["js", "javascript", "jsx", "mjs", "cjs"],
     extensions: ["js", "jsx", "mjs", "cjs"],
-    support: () => javascript({ jsx: true }),
+    engine: treeEngine(() => javascript({ jsx: true })),
   },
   {
     id: "typescript",
     name: "TypeScript",
     fences: ["ts", "typescript", "tsx", "mts", "cts"],
     extensions: ["ts", "tsx", "mts", "cts"],
-    support: () => javascript({ jsx: true, typescript: true }),
+    engine: treeEngine(() => javascript({ jsx: true, typescript: true })),
   },
   {
     id: "json",
     name: "JSON",
     fences: ["json", "jsonc"],
     extensions: ["json", "jsonc"],
-    support: json,
+    engine: treeEngine(json),
   },
   {
     id: "html",
     name: "HTML",
     fences: ["html", "htm"],
     extensions: ["html", "htm"],
-    support: html,
+    engine: treeEngine(html),
   },
   {
     id: "css",
     name: "CSS",
     fences: ["css"],
     extensions: ["css"],
-    support: css,
+    engine: treeEngine(css),
   },
   {
     id: "bash",
     name: "Bash",
     fences: ["bash", "sh", "shell"],
     extensions: ["sh", "bash"],
-    support: () => shell(),
+    engine: treeEngine(() => shell()),
   },
   {
     id: "nu",
     name: "Nushell",
     fences: ["nu", "nushell"],
     extensions: ["nu"],
-    support: nushell,
+    engine: treeEngine(nushell),
   },
   {
     id: "powershell",
     name: "PowerShell",
     fences: ["powershell", "pwsh", "ps1"],
     extensions: ["ps1", "psm1", "psd1"],
-    support: powerShellSupport,
+    engine: streamEngine(powerShell, POWERSHELL_TOKEN_TAGS),
   },
   {
     id: "python",
     name: "Python",
     fences: ["py", "python"],
     extensions: ["py"],
-    support: python,
+    engine: treeEngine(python),
   },
   {
     id: "java",
     name: "Java",
     fences: ["java"],
     extensions: ["java"],
-    support: java,
+    engine: treeEngine(java),
   },
   {
     id: "c",
     name: "C",
     fences: ["c"],
     extensions: ["c", "h"],
-    support: cpp,
+    engine: treeEngine(cpp),
   },
   {
     id: "cpp",
     name: "C++",
     fences: ["cpp", "c++", "cc", "cxx"],
     extensions: ["cpp", "cc", "cxx", "hpp", "hxx"],
-    support: cpp,
+    engine: treeEngine(cpp),
   },
   {
     id: "csharp",
     name: "C#",
     fences: ["cs", "csharp"],
     extensions: ["cs"],
-    support: csharp,
+    engine: treeEngine(csharp),
   },
   {
     id: "sql",
     name: "SQL",
     fences: ["sql"],
     extensions: ["sql"],
-    support: () => sql({ dialect: PostgreSQL }),
+    engine: treeEngine(() => sql({ dialect: PostgreSQL })),
   },
   {
     id: "yaml",
     name: "YAML",
     fences: ["yaml", "yml"],
     extensions: ["yaml", "yml"],
-    support: yaml,
+    engine: treeEngine(yaml),
   },
   {
     id: "markdown",
     name: "Markdown",
     fences: ["md", "markdown"],
     extensions: ["md", "markdown"],
-    support: markdown,
+    engine: treeEngine(markdown),
     presentation: {
       badge: false,
       lineNumbers: false,
@@ -168,6 +215,7 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     name: "Text",
     fences: ["text", "plaintext", "txt"],
     extensions: [],
+    engine: { kind: "plain" },
     presentation: {
       badge: false,
       lineNumbers: false,
@@ -202,27 +250,128 @@ export function commonLanguageByExtension(
   );
 }
 
+export function effectiveCommonStreamTokenTable(
+  engine: CommonStreamEngine,
+): Record<string, Tag | readonly Tag[]> {
+  return {
+    ...engine.tokenTags,
+    ...(engine.parser.tokenTable ?? {}),
+  };
+}
+
+export function effectiveCommonStreamParser(
+  engine: CommonStreamEngine,
+): StreamParser<unknown> {
+  return {
+    ...engine.parser,
+    tokenTable: effectiveCommonStreamTokenTable(engine),
+  };
+}
+
+export function commonLanguageSupport(
+  language: CommonLanguage,
+): LanguageSupport | undefined {
+  switch (language.engine.kind) {
+    case "tree":
+      return language.engine.support();
+    case "stream":
+      return new LanguageSupport(
+        StreamLanguage.define(effectiveCommonStreamParser(language.engine)),
+      );
+    case "plain":
+      return undefined;
+  }
+}
+
+/**
+ * Transitional tree adapter retained while the manual Reading/editor consumers
+ * migrate to commonSemanticRanges(). Stream languages intentionally still use
+ * the old host path here until those consumers are switched in Phase 2.
+ */
 export function parseCommonLanguageTree(
   language: CommonLanguage,
   source: string,
 ) {
-  const support = language.support?.();
+  const support = commonLanguageSupport(language);
   if (support === undefined) return undefined;
 
-  if (!(support.language instanceof StreamLanguage)) {
+  if (language.engine.kind === "tree") {
     return support.language.parser.parse(source);
   }
 
-  // StreamLanguage parsers are viewport-aware in some CodeMirror versions.
-  // Running them through EditorState establishes the ParseContext they expect,
-  // whereas calling parser.parse() directly can dereference a null viewport in
-  // Obsidian's host-provided CodeMirror runtime.
   const state = EditorState.create({ doc: source, extensions: [support] });
   return (
     ensureSyntaxTree(state, state.doc.length, Number.POSITIVE_INFINITY) ??
     syntaxTree(state)
   );
 }
+
+function semanticCommonHighlightStyle(): HighlightStyle {
+  return HighlightStyle.define([
+    { tag: tags.comment, class: "syntax-common-comment" },
+    {
+      tag: [
+        tags.keyword,
+        tags.controlKeyword,
+        tags.moduleKeyword,
+        tags.operatorKeyword,
+      ],
+      class: "syntax-common-keyword",
+    },
+    { tag: tags.definitionKeyword, class: "syntax-common-declaration" },
+    {
+      tag: [tags.typeName, tags.className, tags.namespace],
+      class: "syntax-common-type",
+    },
+    {
+      tag: tags.standard(tags.variableName),
+      class: "syntax-common-callable",
+    },
+    { tag: tags.variableName, class: "syntax-common-variable" },
+    {
+      tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
+      class: "syntax-common-callable",
+    },
+    {
+      tag: tags.definition(tags.variableName),
+      class: "syntax-common-declaration",
+    },
+    { tag: tags.propertyName, class: "syntax-common-property" },
+    {
+      tag: [tags.string, tags.special(tags.string)],
+      class: "syntax-common-string",
+    },
+    { tag: tags.regexp, class: "syntax-common-regex" },
+    {
+      tag: [tags.number, tags.integer, tags.float, tags.bool, tags.null, tags.atom],
+      class: "syntax-common-number",
+    },
+    {
+      tag: [
+        tags.operator,
+        tags.compareOperator,
+        tags.logicOperator,
+        tags.arithmeticOperator,
+      ],
+      class: "syntax-common-operator",
+    },
+    {
+      tag: [tags.bracket, tags.paren, tags.squareBracket, tags.brace],
+      class: "syntax-common-delimiter",
+    },
+    {
+      tag: [tags.punctuation, tags.separator],
+      class: "syntax-common-punctuation",
+    },
+    {
+      tag: [tags.meta, tags.processingInstruction, tags.annotation],
+      class: "syntax-common-meta",
+    },
+    { tag: tags.invalid, class: "syntax-common-meta" },
+  ]);
+}
+
+export const COMMON_SEMANTIC_HIGHLIGHT_STYLE = semanticCommonHighlightStyle();
 
 type CommonHighlightHost = "reading" | "editor";
 
@@ -315,5 +464,7 @@ function createCommonHighlightStyle(host: CommonHighlightHost): HighlightStyle {
   ]);
 }
 
+/** @deprecated Transitional export; remove after all manual consumers migrate. */
 export const COMMON_READING_HIGHLIGHT_STYLE = createCommonHighlightStyle("reading");
+/** @deprecated Transitional export; remove after all manual consumers migrate. */
 export const COMMON_EDITOR_HIGHLIGHT_STYLE = createCommonHighlightStyle("editor");
