@@ -17,24 +17,59 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          registry-url: https://registry.npmjs.org
       - run: npm ci
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const expected = process.env.RELEASE_TAG.replace(/^v/, '');
+          const packagePaths = [
+            'package.json',
+            'packages/core/package.json',
+            'packages/language-mud/package.json',
+            'packages/html/package.json',
+            'packages/codemirror/package.json',
+            'packages/mcp/package.json',
+            'packages/cli/package.json',
+            'packages/obsidian/package.json',
+          ];
+          for (const path of packagePaths) {
+            const value = JSON.parse(fs.readFileSync(path, 'utf8')).version;
+            if (value !== expected) {
+              throw new Error(`${path}: expected ${expected}, found ${value}`);
+            }
+          }
+          const manifest = JSON.parse(
+            fs.readFileSync('packages/obsidian/manifest.json', 'utf8'),
+          );
+          if (manifest.version !== expected) {
+            throw new Error(
+              `packages/obsidian/manifest.json: expected ${expected}, found ${manifest.version}`,
+            );
+          }
+          const versions = JSON.parse(fs.readFileSync('versions.json', 'utf8'));
+          if (versions[expected] !== manifest.minAppVersion) {
+            throw new Error(
+              `versions.json must map ${expected} to ${manifest.minAppVersion}`,
+            );
+          }
+          NODE
       - run: npm run check
       - run: npm run pack:all
-      - name: Verify npm packages
-        run: |
-          for package in core language-mud html codemirror mcp cli obsidian; do
-            name=$(node -p "require('./packages/$package/package.json').name")
-            version=$(node -p "require('./packages/$package/package.json').version")
-            npm view "$name@$version" version
-          done
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME"
-          release/npm/*.tgz
-          packages/obsidian/dist/main.js
-          packages/obsidian/dist/manifest.json
-          packages/obsidian/dist/styles.css
-          --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists" >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            release/npm/*.tgz \
+            packages/obsidian/dist/main.js \
+            packages/obsidian/dist/manifest.json \
+            packages/obsidian/dist/styles.css \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
