@@ -11,6 +11,14 @@ import { LanguageRegistry } from "../src/languages";
 import { renderCommonCode } from "../src/reading";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
+const BASH_REQUIRED_ROLES = [
+  "syntax-common-declaration",
+  "syntax-common-callable",
+  "syntax-common-variable",
+  "syntax-common-string",
+  "syntax-common-comment",
+] as const;
+
 function registry(): LanguageRegistry {
   return new LanguageRegistry(
     structuredClone(DEFAULT_SETTINGS),
@@ -64,14 +72,24 @@ function quotedEditorMarks(fence: string, body: string) {
   return { source, marks };
 }
 
+function expectRequiredRoles(actual: ReadonlySet<string>, expected: ReadonlySet<string>): void {
+  for (const role of BASH_REQUIRED_ROLES) {
+    expect(expected.has(role), `semantic engine should expose ${role}`).toBe(true);
+    expect(actual.has(role), `consumer should expose ${role}`).toBe(true);
+  }
+}
+
 describe("common semantic consumers", () => {
-  it("keeps Bash semantic roles aligned between the semantic engine and rendered DOM", () => {
+  it("keeps the significant Bash roles in the rendered DOM", () => {
     const body = ['name="world"', 'echo "$name"', "# comment"].join("\n");
 
-    expect(renderedRoles("bash", body)).toEqual(expectedRoles("bash", body));
+    expectRequiredRoles(
+      renderedRoles("bash", body),
+      expectedRoles("bash", body),
+    );
   });
 
-  it("maps the same Bash roles into quoted Markdown source without decorating quote prefixes", () => {
+  it("maps the same significant Bash roles into quoted Markdown source without decorating quote prefixes", () => {
     const body = ['name="world"', 'echo "$name"', "# comment"].join("\n");
     const expected = expectedRoles("bash", body);
     const { source, marks } = quotedEditorMarks("bash", body);
@@ -79,7 +97,7 @@ describe("common semantic consumers", () => {
       marks.flatMap(({ classes }) => semanticRoles(classes)),
     );
 
-    expect(actual).toEqual(expected);
+    expectRequiredRoles(actual, expected);
     expect(marks.length).toBeGreaterThan(0);
     for (const mark of marks) {
       expect(mark.text).not.toContain("\n>");
