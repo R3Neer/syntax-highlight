@@ -19,3 +19,20 @@ Se revisó el plan operativo contra la arquitectura estabilizada y la evidencia 
 No se identificó ningún cambio necesario.
 
 Falta una segunda revisión limpia consecutiva.
+
+## Revisión 2
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente centrada en failure modes y scope:
+
+- si el host no consume la variable pública en ese contexto, el fallback directo `background-color` sigue intacto;
+- si un theme fuerza otra propiedad final, el gate real lo detecta y no se responde automáticamente con `!important`;
+- Text/Bash/PowerShell quoted deben compartir el arreglo porque la causa es surface, no lenguaje;
+- rendered y Reading permanecen fuera del cambio funcional;
+- no se autoriza ninguna modificación de TypeScript ni de la taxonomía semántica;
+- el gate real sigue siendo la autoridad para confirmar cascada efectiva.
+
+No se identificó ningún cambio necesario.
+
+Revisiones 1 y 2 consecutivas SIN CAMBIOS: plan de implementación Fase 4 estable según TM.
