@@ -18,13 +18,15 @@ No se intenta corregir todavía superficie, presentation ni colores.
 - La captura se inicia manualmente desde DevTools para evitar atribuir a producción una carrera de timing.
 - La captura no incluye rutas del vault ni nombres de archivos.
 - Los datos crudos siguen siendo temporales; solo fixtures sanitizados podrán sobrevivir al ciclo.
+- La instrumentación se integra en el ViewPlugin existente de Live Preview; no se crea un segundo lifecycle paralelo.
 
 ## Diseño
 
-### 1. Controlador global temporal
+### 1. Controlador global temporal y recargas
 
-Extender `HostDiagnosticsController` de `_tmp-host-diagnostics.ts` de forma aditiva con:
+Extender `HostDiagnosticsController` de `_tmp-host-diagnostics.ts` con:
 
+- `version` de esquema temporal;
 - `postFrameCaptures`: capturas estructuradas recientes;
 - `captureLivePreview(): Promise<LivePreviewPostFrameCapture[]>`;
 - `dumpLivePreview(): string`.
@@ -33,25 +35,30 @@ Extender `HostDiagnosticsController` de `_tmp-host-diagnostics.ts` de forma adit
 
 `captureLivePreview()` solo actuará cuando `enabled === true`.
 
+**Requisito de recarga:** una nueva carga del bundle debe instalar un controller nuevo de la versión actual y sustituir cualquier objeto global de una build diagnóstica anterior. No debe conservar callbacks a EditorView de una carga previa. Las funciones del módulo actual usan siempre el controller instalado por esa misma carga.
+
+Esto evita el caso en que `window.SyntaxHighlightHostDiagnostics` sobreviva a una recarga de Obsidian con una interfaz antigua.
+
 ### 2. Registro de EditorView activos
 
 Añadir una API interna temporal:
 
 `registerLivePreviewDiagnosticView(view, acceptedFences): () => void`
 
-- cada `EditorView` obtiene un id efímero;
-- se registra al crear `createLivePreviewEmbeddedBlockExtension()`;
+- cada `EditorView` obtiene un id efímero perteneciente a la carga actual del bundle;
+- se registra dentro del ViewPlugin ya creado por `createLivePreviewEmbeddedBlockExtension()`;
 - se desregistra en `destroy()`;
 - `acceptedFences` será callback, no snapshot, para reflejar registry/settings vigentes;
-- no se expone el `EditorView` en el objeto global.
+- no se expone el `EditorView` en el objeto global;
+- un callback desregistrado o un view destruido no participa en capturas posteriores.
 
 ### 3. Momento de captura
 
 Al ejecutar `captureLivePreview()`:
 
 1. esperar un `requestAnimationFrame` completo;
-2. esperar un segundo `requestAnimationFrame` para quedar después de reconciliaciones que se hayan programado durante el primero;
-3. capturar sin mutaciones todos los EditorView registrados.
+2. esperar un segundo `requestAnimationFrame` para quedar después de reconciliaciones programadas durante el primero;
+3. capturar sin mutaciones todos los EditorView actualmente registrados.
 
 Se usan dos frames porque la operación es manual/diagnóstica y prima evidencia estable sobre latencia.
 
@@ -78,8 +85,8 @@ Para cada `.cm-line` descendiente de `view.dom`:
 
 - intentar `view.posAtDOM(line, 0)`;
 - si funciona, derivar línea/offset documental desde `view.state.doc`;
-- si falla, registrar `mappingError: true` sin inventar posición;
-- tag, clases y atributos;
+- si falla, registrar `mappingError` sin inventar posición;
+- tag, clases y **atributos filtrados**;
 - texto visible truncado a límite diagnóstico;
 - estilos computados:
   - display;
@@ -92,20 +99,38 @@ Para cada `.cm-line` descendiente de `view.dom`:
   - borderRadius;
   - paddingLeft/right;
   - left/right;
-- ancestors hasta `view.dom`, con tag/clases/atributos y estilos de color/background/display;
-- descendants relevantes de la línea (`span`, `code`, `pre`, widgets o elementos con clases `syntax-*`, `cm-*`, `token`) con texto corto, clases, atributos y estilos computados de color/background/display/borderRadius.
+- ancestors hasta `view.dom`, con tag/clases/atributos filtrados y estilos de color/background/display;
+- descendants relevantes de la línea (`span`, `code`, `pre`, widgets o elementos con clases `syntax-*`, `cm-*`, `token`) con texto corto, clases, atributos filtrados y estilos computados de color/background/display/borderRadius.
 
-### 6. Snapshot de hosts embedded/callout
+Si el nodo queda desconectado o `posAtDOM`/`getComputedStyle` falla durante la reconciliación, se registra el error local y se continúa con el resto de la captura.
 
-Como M2 contempla que el source visible pueda vivir dentro de un host no representado por `.cm-line`, capturar también cada `.cm-embed-block` visible:
+### 6. Política de atributos
+
+La captura profunda no reutilizará ciegamente el `snapshotElement()` amplio existente.
+
+Para post-frame se conservarán solo atributos estructurales necesarios, por ejemplo:
+
+- `class`, `style`;
+- `data-syntax-*`;
+- `data-callout`, `data-callout-metadata`, `data-callout-fold`;
+- `contenteditable`, `role`, `tabindex`, `spellcheck`;
+- `aria-*`;
+- otros atributos estructurales sin URL/ruta que la implementación necesite explícitamente.
+
+Se excluyen `href`, `src` y atributos que puedan introducir rutas o URLs ajenas al diagnóstico.
+
+### 7. Snapshot de hosts embedded/callout
+
+Como M2 contempla que el source visible pueda vivir dentro de un host no representado por `.cm-line`, capturar también cada `.cm-embed-block`, esté o no visualmente visible en ese instante:
 
 - snapshot del root y ancestry;
+- estilos computados, incluido `display`/`visibility`;
 - descendants relevantes limitados en número;
 - marcar si contiene `.cm-callout`, `pre`, `code`, `.cm-line`, `syntax-*`, `cm-inline-code`, `HyperMD-codeblock*`.
 
-Esto permite descubrir source visible fuera del mapeo normal del EditorView.
+No se presupone que un nodo con `display:none` sea irrelevante: se registra ese dato y se deja la interpretación al análisis.
 
-### 7. Anotación contra fences lógicos
+### 8. Anotación contra fences lógicos
 
 Cuando una `.cm-line` tenga posición documental válida, anotar su papel relativo a un fence reconocido:
 
@@ -118,7 +143,18 @@ Para body, conservar índice lógico de línea.
 
 No inferir un papel para líneas sin mapping.
 
-### 8. Límites
+### 9. Tolerancia a DOM mutable
+
+Cada operación potencialmente frágil se aísla:
+
+- `view.posAtDOM`;
+- `getComputedStyle`;
+- recorrido de ancestors/descendants;
+- lectura de atributos/texto sobre nodos que puedan quedar desconectados.
+
+Una excepción local genera `mappingError`, `styleError` o `snapshotError` y no aborta la captura del view ni la de otros views.
+
+### 10. Límites
 
 - máximo 120 `.cm-line` por view;
 - máximo 160 descendants relevantes por embedded host;
@@ -133,14 +169,14 @@ Si se alcanza un límite, marcar `truncated: true`.
 Modificar solo:
 
 - `packages/obsidian/src/_tmp-host-diagnostics.ts`;
-- `packages/obsidian/src/live-preview-host.ts` para registrar/desregistrar el view;
+- `packages/obsidian/src/live-preview-host.ts` para registrar/desregistrar el view en el ViewPlugin ya existente;
 - tests temporales del helper después de implementar, según el orden solicitado para este ciclo.
 
 No tocar todavía:
 
 - `styles.css`;
 - `common-languages.ts`;
-- `editor.ts` salvo que sea estrictamente necesario para exponer los accepted fences; preferencia: reutilizar la lógica ya disponible en `createLivePreviewEmbeddedBlockExtension`;
+- `editor.ts` salvo necesidad demostrada;
 - `blocks.ts`;
 - `contrast-manager.ts`;
 - `reading-host.ts`.
