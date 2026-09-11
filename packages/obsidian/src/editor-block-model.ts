@@ -7,6 +7,7 @@ import {
 import {
   findCodeBlocks,
   mapCodeBlockRange,
+  type CodeBlockBodyLine,
   type MudCodeBlock,
 } from "./blocks";
 import { commonSemanticRanges } from "./common-semantic-ranges";
@@ -21,6 +22,9 @@ export interface EditorHighlightSpan {
 
 export interface EditorLineSemantic {
   from: number;
+  to: number;
+  visibilityFrom: number;
+  visibilityTo: number;
   classes: readonly string[];
 }
 
@@ -69,30 +73,77 @@ function lineSemantics(
   block: MudCodeBlock,
   common: CommonFenceMatch | undefined,
 ): EditorLineSemantic[] {
-  const classes = new Map<number, Set<string>>();
-  const add = (from: number, ...values: readonly string[]): void => {
+  const lines = new Map<
+    number,
+    {
+      from: number;
+      to: number;
+      visibilityFrom: number;
+      visibilityTo: number;
+      classes: Set<string>;
+    }
+  >();
+
+  const add = (
+    from: number,
+    to: number,
+    visibilityFrom: number,
+    visibilityTo: number,
+    ...values: readonly string[]
+  ): void => {
     if (values.length === 0) return;
-    const line = classes.get(from) ?? new Set<string>();
-    for (const value of values) if (value) line.add(value);
-    classes.set(from, line);
+    let line = lines.get(from);
+    if (line === undefined) {
+      line = {
+        from,
+        to,
+        visibilityFrom,
+        visibilityTo,
+        classes: new Set<string>(),
+      };
+      lines.set(from, line);
+    }
+    for (const value of values) if (value) line.classes.add(value);
+  };
+
+  const addBodyLine = (
+    line: CodeBlockBodyLine,
+    ...values: readonly string[]
+  ): void => {
+    add(
+      line.lineFrom,
+      line.lineTo,
+      line.sourceFrom,
+      line.sourceTo,
+      ...values,
+    );
   };
 
   if (block.quoteDepth > 0) {
     add(
       block.openingLineFrom,
+      block.openingLineTo,
+      block.openingLineFrom,
+      block.openingLineTo,
       "syntax-editor-code-source",
       "syntax-editor-code-source-opening",
     );
     for (const line of block.bodyLines) {
-      add(
-        line.lineFrom,
+      addBodyLine(
+        line,
         "syntax-editor-code-source",
         "syntax-editor-code-source-body",
       );
     }
-    if (block.closingLineFrom !== undefined) {
+    if (
+      block.closingLineFrom !== undefined &&
+      block.closingLineTo !== undefined
+    ) {
       add(
         block.closingLineFrom,
+        block.closingLineTo,
+        block.closingLineFrom,
+        block.closingLineTo,
         "syntax-editor-code-source",
         "syntax-editor-code-source-closing",
       );
@@ -101,12 +152,12 @@ function lineSemantics(
 
   if (common !== undefined) {
     const presentation = presentationClassNames(common);
-    for (const line of block.bodyLines) add(line.lineFrom, ...presentation);
+    for (const line of block.bodyLines) addBodyLine(line, ...presentation);
   }
 
-  return [...classes.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([from, values]) => ({ from, classes: [...values] }));
+  return [...lines.values()]
+    .sort((left, right) => left.from - right.from)
+    .map(({ classes, ...line }) => ({ ...line, classes: [...classes] }));
 }
 
 export function buildEditorBlockModel(
@@ -180,6 +231,33 @@ export function rangeIntersectsVisible(
   visibleRanges: readonly EditorVisibleRange[],
 ): boolean {
   return visibleRanges.some((range) => from <= range.to && to >= range.from);
+}
+
+function rangeOverlapsMaterialized(
+  from: number,
+  to: number,
+  range: EditorVisibleRange,
+): boolean {
+  if (from > to) return false;
+  if (from === to) return from >= range.from && from <= range.to;
+  return from < range.to && to > range.from;
+}
+
+export function lineSemanticIsMaterialized(
+  line: EditorLineSemantic,
+  viewport: EditorVisibleRange,
+  visibleRanges: readonly EditorVisibleRange[],
+): boolean {
+  return (
+    rangeOverlapsMaterialized(line.from, line.to, viewport) &&
+    visibleRanges.some((range) =>
+      rangeOverlapsMaterialized(
+        line.visibilityFrom,
+        line.visibilityTo,
+        range,
+      ),
+    )
+  );
 }
 
 export function blockBodyIntersectsVisible(
