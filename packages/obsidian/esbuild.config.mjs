@@ -2,35 +2,38 @@ import esbuild from "esbuild";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import {
+  OBSIDIAN_BUILD_EXTERNALS,
+  assertObsidianHostRuntimeBoundary,
+} from "./build-runtime.mjs";
+
 const production = process.argv[2] === "production";
 const packageRoot = fileURLToPath(new URL(".", import.meta.url));
 const context = await esbuild.context({
   absWorkingDir: packageRoot,
   entryPoints: ["src/main.ts"],
   bundle: true,
-  external: [
-    "obsidian",
-    "@codemirror/commands",
-    "@codemirror/language",
-    "@codemirror/search",
-    "@codemirror/state",
-    "@codemirror/view"
-  ],
+  external: OBSIDIAN_BUILD_EXTERNALS,
   format: "cjs",
   platform: "browser",
   target: "es2022",
   logLevel: "info",
+  metafile: true,
   sourcemap: production ? false : "inline",
   treeShaking: true,
   minify: production,
   loader: {
-    ".ebnf": "text"
+    ".ebnf": "text",
   },
-  outfile: "dist/main.js"
+  outfile: "dist/main.js",
 });
 
 if (production) {
-  await context.rebuild();
+  const result = await context.rebuild();
+  if (result.metafile === undefined) {
+    throw new Error("Missing esbuild metafile for Obsidian boundary validation.");
+  }
+  assertObsidianHostRuntimeBoundary(result.metafile);
   await context.dispose();
 } else {
   await context.watch();
