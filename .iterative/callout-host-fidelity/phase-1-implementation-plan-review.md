@@ -24,14 +24,19 @@ Se reconcilió el plan con la reapertura arquitectónica:
 
 Resultado: SIN CAMBIOS.
 
-Se revisó el orden operativo y las dependencias entre fases:
+El orden operativo y las dependencias entre fases se revisaron sin encontrar cambios necesarios.
 
-- unificar runtime primero garantiza que el resto se valida ya contra la identidad host correcta;
-- extraer el detector PRE/CODE antes de retirar el bridge conserva la lógica estructural útil;
-- retirar el bridge antes de rehacer source fuerza una frontera nítida: LP editable solo puede depender de editor extensions/decorations;
-- la invalidación conservadora evita introducir a la vez un algoritmo incremental difícil de auditar;
-- surface/presentation se estabiliza antes de restringir contraste, permitiendo comprobar ownership por capas;
-- tests nuevos esperan a implementación estable, mientras el ledger evita borrar garantías silenciosamente;
-- el gate real cubre el contrato de code-block processor que no se debe fingir con happy-dom.
+## Revisión 4
 
-No se encontró un cambio necesario.
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente centrada en failure modes y capacidad de rollback:
+
+- externalización falla temprano antes de cambiar comportamiento funcional;
+- ausencia inesperada del code-block processor en LP obliga a volver a análisis/gate, no a reintroducir DOM privado;
+- scanner quote-aware y Smart Editing permanecen autoridades separadas del nuevo materializador source;
+- contraste rendered queda aislado de source por diseño;
+- diagnostics se conservan hasta después del gate real, por lo que toda la migración permanece observable;
+- cada eliminación de test/API antiguo está ligada al ledger de garantías.
+
+No se encontró un cambio necesario. Revisiones 3 y 4 son consecutivas sin cambios; plan de implementación estable según TM.
