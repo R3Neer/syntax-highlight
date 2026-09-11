@@ -26,7 +26,6 @@ import {
   blockBodyIntersectsVisible,
   buildEditorBlockModel,
   buildEditorBlockSemantics,
-  lineSemanticIsMaterialized,
   positionIsVisible,
   rangeIntersectsVisible,
   type EditorBlockModel,
@@ -49,13 +48,6 @@ function visibleRanges(view: EditorView): readonly EditorVisibleRange[] {
     view as EditorView & { visibleRanges?: readonly EditorVisibleRange[] }
   ).visibleRanges;
   return ranges ?? [{ from: 0, to: view.state.doc.length }];
-}
-
-function viewportRange(view: EditorView): EditorVisibleRange {
-  const viewport = (
-    view as EditorView & { viewport?: EditorVisibleRange }
-  ).viewport;
-  return viewport ?? { from: 0, to: view.state.doc.length };
 }
 
 function blockPhysicalTo(block: MudCodeBlock): number {
@@ -115,7 +107,6 @@ function materializeSyntaxDecorations(
 ): DecorationSet {
   const ranges: Range<Decoration>[] = [];
   const visible = visibleRanges(view);
-  const viewport = viewportRange(view);
 
   for (const resolved of model.blocks) {
     const { block } = resolved;
@@ -124,7 +115,7 @@ function materializeSyntaxDecorations(
     traceVisibleBlock(view, resolved);
 
     for (const line of resolved.lineSemantics) {
-      if (!lineSemanticIsMaterialized(line, viewport, visible)) continue;
+      if (!positionIsVisible(line.from, visible)) continue;
       if (line.classes.length === 0) continue;
       ranges.push(
         Decoration.line({
