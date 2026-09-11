@@ -48,4 +48,21 @@ Revisión de compatibilidad con las APIs/versiones declaradas por el repositorio
 
 No apareció una corrección arquitectónica adicional justificable antes de la captura real.
 
-**ESTABLE según TM:** revisiones 3 y 4 consecutivas sin cambios.
+La arquitectura quedó estable provisionalmente según TM (revisiones 3 y 4), pero una revisión posterior del plan de implementación descubrió una premisa arquitectónica incorrecta. Según el método TM, el plan se reabre y debe estabilizarse de nuevo antes de continuar.
+
+## Revisión 5 · hallazgo descendente
+
+Resultado: CAMBIOS NECESARIOS.
+
+El plan usaba `view.visibleRanges` como filtro principal. Esto excluye precisamente rangos de source que CodeMirror reemplaza por widgets, por lo que el diagnóstico podía omitir el estado `cursor fuera`, donde los fenced blocks pueden estar renderizados/replaced.
+
+Cambios arquitectónicos:
+
+- `view.viewport` pasa a ser el filtro grueso de bloques en la región renderizada;
+- `view.visibleRanges` deja de excluir candidatos y se usa como señal de source directamente materializado;
+- un bloque en viewport pero fuera de visibleRanges se conserva como candidato a `rendered-widget/not-materialized`;
+- la selección conserva un bloque incluso en bordes de viewport;
+- `domAtPos()` sobre replaced ranges se trata como boundary potencialmente no representativo: si no existe una `.cm-line` válida, se registra `materialized:false` en vez de asignar el nodo vecino;
+- excepciones de resolución por posición no abortan la captura del resto.
+
+Este cambio es arquitectónico, no un detalle de implementación, porque redefine qué estados del host forman parte de la unidad de observación.
