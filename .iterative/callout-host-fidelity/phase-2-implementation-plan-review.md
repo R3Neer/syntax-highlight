@@ -14,18 +14,22 @@ Resultado: CAMBIOS NECESARIOS.
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del plan corregido.
+Primera revisión limpia. Se validó el orden engine → ranges → consumidores → SourceView → CSS → retirada de taxonomía antigua, manteniendo routing/ownership fuera del alcance.
 
-Se revisó el orden de migración y rollback:
+## Revisión 3
 
-- conservar exports viejos mientras nace engine/highlighter nuevo;
-- crear la autoridad pura antes de migrar consumidores;
-- migrar Reading y Markdown source antes de retirar taxonomía antigua;
-- migrar SourceView mediante la ruta nativa CodeMirror;
-- aplicar CSS dark después de que `syntax-common-*` sea la taxonomía única;
-- retirar exports/clases host-specific solo cuando no queden consumidores;
-- routing rendered, scanner Markdown, contrast manager y configured tokenizers quedan fuera del cambio;
-- durante implementación solo se adapta cobertura antigua cuyo contrato desaparece y siempre con ledger;
-- cobertura nueva espera hasta después del TM de implementación.
+Resultado: SIN CAMBIOS.
 
-No se encontró cambio operativo necesario. Es la primera revisión limpia.
+Segunda revisión limpia, centrada en failure modes:
+
+- una migración incompleta puede detenerse conservando temporalmente exports viejos;
+- `parser.tokenTable` y unknown styles tienen conducta determinista;
+- tests antiguos que fallen por contrato retirado se trazan antes de adaptarse;
+- custom properties conservan override por herencia;
+- un fallo del gate rendered no provoca reintroducción automática del bridge;
+- scanner Markdown, contrast manager, build boundary, Smart Editing y configured tokenizers permanecen fuera del alcance;
+- no hay tests nuevos antes de estabilizar implementación.
+
+No se encontró cambio operativo necesario.
+
+Revisiones **2 y 3 son consecutivas sin cambios**: el plan de implementación de Fase 2 queda estabilizado según TM y se autoriza producción.
