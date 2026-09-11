@@ -1,13 +1,11 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const sourceRoot = fileURLToPath(new URL("../src/", import.meta.url));
-const stylesPath = fileURLToPath(new URL("../styles.css", import.meta.url));
-const removedBridgePath = fileURLToPath(
-  new URL("../src/live-preview-host.ts", import.meta.url),
-);
+const sourceRoot = resolve(process.cwd(), "packages/obsidian/src");
+const stylesPath = resolve(process.cwd(), "packages/obsidian/styles.css");
+const removedBridgePath = resolve(sourceRoot, "live-preview-host.ts");
 
 async function productionSources() {
   const names = await readdir(sourceRoot);
@@ -17,7 +15,7 @@ async function productionSources() {
   const entries = await Promise.all(
     files.map(async (name) => [
       name,
-      await readFile(new URL(`../src/${name}`, import.meta.url), "utf8"),
+      await readFile(resolve(sourceRoot, name), "utf8"),
     ]),
   );
   entries.push(["styles.css", await readFile(stylesPath, "utf8")]);
@@ -47,10 +45,7 @@ describe("Obsidian public host boundaries", () => {
   });
 
   it("does not observe or replace EditorView DOM from the source highlighter", async () => {
-    const editor = await readFile(
-      new URL("../src/editor.ts", import.meta.url),
-      "utf8",
-    );
+    const editor = await readFile(resolve(sourceRoot, "editor.ts"), "utf8");
     expect(editor).not.toContain("MutationObserver");
     expect(editor).not.toContain("replaceWith(");
     expect(editor).not.toContain("querySelector(\".cm-");
@@ -58,7 +53,7 @@ describe("Obsidian public host boundaries", () => {
 
   it("keeps private-selector diagnostics explicitly temporary", async () => {
     const diagnostics = await readFile(
-      new URL("../src/_tmp-host-diagnostics.ts", import.meta.url),
+      resolve(sourceRoot, "_tmp-host-diagnostics.ts"),
       "utf8",
     );
     expect(diagnostics).toContain(".cm-embed-block");
