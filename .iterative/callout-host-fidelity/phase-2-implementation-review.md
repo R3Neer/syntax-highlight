@@ -8,70 +8,66 @@ Resultado: CAMBIOS NECESARIOS.
 
 Se revisó el estado funcional completo contra el plan arquitectónico Fase 2.
 
-### Cambio A · resolver stream reconstruido por token
+Cambios:
 
-`commonStreamTagsForStyle()` y el wrapper del parser efectivo reconstruían la tabla/mapas estáticos para cada token.
+- cachear el resolver stream/tablas sintéticas una vez por engine;
+- se formuló inicialmente una hipótesis incorrecta sobre la línea vacía virtual tras un terminador final, corregida en Revisión 2.
 
-Corrección aplicada:
-
-- `WeakMap<CommonStreamEngine, CommonStreamStyleResolver>`;
-- tabla efectiva y nombres sintéticos se construyen una vez por engine;
-- manual extraction y native StreamLanguage conservan la misma metadata y precedencia.
-
-### Cambio B inicial · tratamiento de línea vacía final
-
-La primera lectura de esta revisión interpretó que la línea vacía virtual posterior a un terminador final debía recibir `blankLine()` y cambió temporalmente el scanner de `<` a `<=`.
-
-La Revisión 2 contrastó esa conclusión con la implementación oficial actual de `StreamLanguage` y la corrigió. Por tanto este Cambio B **no forma parte del estado final** y la revisión sigue contando como cambios necesarios.
+No cuenta como revisión limpia.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se comparó el scanner directo con la implementación oficial actual de `@codemirror/language`.
+Se contrastó el scanner directo con la implementación oficial actual de `StreamLanguage`.
 
-### Cambio A · revertir blankLine virtual final
+Cambios:
 
-`StreamLanguage.Parse.parseLine()` procesa posiciones reales hasta `to`; no invoca `blankLine()` para:
-
-- un documento de longitud cero;
-- la línea vacía virtual posterior a un terminador LF/CRLF final.
-
-Sí invoca `blankLine()` para líneas vacías que ocupan una posición real dentro del input.
-
-Corrección:
-
-- restaurar `while (lineFrom < source.length)`;
-- conservar LF/CRLF y última línea no terminada;
-- documentar explícitamente que el límite replica la conducta host actual.
-
-### Cambio B · `startState` es opcional en la API pública
-
-El primer engine exigía `parser.startState` y lanzaba error si faltaba. La interfaz pública `StreamParser` lo declara opcional y CodeMirror usa un estado trivial cuando no existe.
-
-Corrección:
-
-- `streamEngine()` acepta cualquier StreamParser válido;
-- `engine.startState(indentUnit)` delega en el parser cuando existe y devuelve `true` en caso contrario;
-- SourceView y manual extraction comparten ese mismo comportamiento efectivo.
-
-### Revisión del parser efectivo nativo
-
-Se revisó además la necesidad de los nombres sintéticos usados por `effectiveCommonStreamParser()`.
-
-La implementación actual de CodeMirror inicializa `TokenTable.table` con su tabla legacy por defecto y resuelve esa tabla antes de crear un token usando `tokenTable` extra. Por ello un nombre como `variable` puede ser capturado por el alias legacy antes que por una entrada extra del mismo nombre.
-
-La solución actual no copia esa tabla ni depende de saber qué claves contiene:
-
-- todo style que Syntax Highlight define explícitamente se reescribe a un nombre sintético único;
-- ese nombre sintético se declara mediante la API pública `StreamParser.tokenTable`;
-- modificadores y múltiples styles siguen usando el contrato público del StreamParser;
+- restaurar el límite `lineFrom < source.length`: source vacío y línea virtual tras LF/CRLF final no llaman `blankLine`, mientras una línea vacía física intermedia sí;
+- aceptar `StreamParser.startState` opcional y usar estado trivial cuando falta;
+- mantener synthetic token names para la ruta nativa: CodeMirror resuelve su tabla legacy antes del `tokenTable` extra, así que los nombres explícitos del engine se traducen a nombres únicos publicados únicamente mediante la API pública `tokenTable`;
 - manual extraction conserva los nombres originales y resuelve los mismos Tags desde la misma tabla efectiva.
 
-Esto mantiene una sola metadata semántica sin depender de NodeProps/internals para el resultado.
+CI completa pasó tras las correcciones: lint, typecheck, suite existente, build, `pack:all` y artifact.
 
-### Validación
+No cuenta como revisión limpia.
 
-CI completa vuelve a pasar tras las correcciones: lint, typecheck, suite existente, build, `pack:all` y artifact.
+## Revisión 3
 
-Esta revisión no cuenta como limpia.
+Resultado: CAMBIOS NECESARIOS.
+
+La revisión de cascade/contraste cruzó la nueva surface negra con valores reales del theme usado en el gate y detectó que variables públicas de código válidas para un papel claro podían quedar por debajo del contraste mínimo sobre negro (`--code-property` ≈2.95:1; `--code-value` ≈4.33:1).
+
+El hallazgo modificaba una decisión arquitectónica, por lo que se detuvo implementación y se reabrieron correctamente:
+
+1. plan arquitectónico;
+2. TM arquitectónico hasta Revisiones 7–8 consecutivas SIN CAMBIOS;
+3. plan de implementación;
+4. TM del plan hasta Revisiones 6–7 consecutivas SIN CAMBIOS.
+
+La arquitectura restabilizada exige que dentro de `.cm-line.syntax-editor-code-source` toda la familia pública `--code-*` relevante se remapee a una paleta dark-safe propia (`--syntax-common-*` heredable → literal seguro), manteniendo `--code-background: transparent`, sin private selectors, branches por theme ni `!important`.
+
+No cuenta como revisión limpia.
+
+## Revisión 4
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del estado completo posterior a todas las correcciones de producción.
+
+Se revisó el diff funcional completo frente a la arquitectura restabilizada:
+
+- los únicos módulos production modificados están dentro del alcance permitido: catálogo/engine common, autoridad de semantic ranges, consumidores Reading/Markdown source, SourceView y CSS;
+- `blocks.ts`, presentation, contrast manager, build boundary, Smart Editing, configured tokenizers y routing rendered no cambian funcionalmente;
+- engine stream manual y support nativo parten de la misma tabla efectiva y la misma precedencia;
+- synthetic names usan únicamente el contrato público de `StreamParser.tokenTable` y evitan que aliases legacy internos ganen antes de la tabla extra, sin consultar/copyar esa tabla interna;
+- scanner coincide con el boundary actual de StreamLanguage para LF/CRLF, blank lines, source vacío y terminador final;
+- manual common emite únicamente `syntax-common-*`;
+- SourceView conserva la ruta nativa `LanguageSupport + syntaxHighlighting` con el highlighter único;
+- quoted source posee su surface negra mediante Decoration.line + variables CSS públicas scoped;
+- toda variable `--code-*` relevante dentro de quoted source deriva de `--syntax-common-*` o literal dark-safe, por lo que el palette claro original del theme no vuelve a dominar la surface;
+- no aparecen private selectors ni `!important` nuevos;
+- el ledger contiene las expectativas antiguas adaptadas hasta este punto;
+- CI completa y `pack:all` están verdes en el estado funcional final.
+
+No se encontró modificación necesaria. Esta es la primera revisión limpia del estado final de implementación.
