@@ -7,7 +7,7 @@ import {
   type RgbaColor,
 } from "./contrast";
 
-const COMMON_TOKEN_SELECTOR = [
+const COMMON_TOKEN_SELECTORS = [
   ".syntax-common-plain",
   ".syntax-common-comment",
   ".syntax-common-keyword",
@@ -23,9 +23,13 @@ const COMMON_TOKEN_SELECTOR = [
   ".syntax-common-delimiter",
   ".syntax-common-punctuation",
   ".syntax-common-meta",
-].join(",");
+] as const;
 
+const COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS.join(",");
 const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
+const OWNED_COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS
+  .map((selector) => `${OWNED_FRAME_SELECTOR} ${selector}`)
+  .join(",");
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
 const resolvedColorCache = new Map<string, RgbaColor | undefined>();
@@ -93,13 +97,14 @@ function commonTokens(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
   if (
     root instanceof HTMLElement &&
-    root.matches(COMMON_TOKEN_SELECTOR) &&
-    isInsideOwnedFrame(root)
+    root.matches(OWNED_COMMON_TOKEN_SELECTOR)
   ) {
     result.push(root);
   }
-  for (const element of root.querySelectorAll<HTMLElement>(COMMON_TOKEN_SELECTOR)) {
-    if (isInsideOwnedFrame(element)) result.push(element);
+  for (const element of root.querySelectorAll<HTMLElement>(
+    OWNED_COMMON_TOKEN_SELECTOR,
+  )) {
+    result.push(element);
   }
   return result;
 }
