@@ -6,65 +6,70 @@ Estado: TEMPORAL. Eliminar tras tests, gate real y limpieza final.
 
 Resultado: CAMBIOS NECESARIOS.
 
-La primera ejecución de los tests nuevos no llegó a completar TypeScript: el mock del test `rendered-code-candidate` declaraba una función sin argumentos y después se invocaba con un candidato.
-
-Corrección: tipar el mock con la firma del candidato sin cambiar producción.
+El mock de `rendered-code-candidate` tenía una firma incompatible con su uso. Se corrigió el test, sin cambio de producción.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-La corrección anterior satisfizo TypeScript pero creó un parámetro ficticio no usado que ESLint rechazó.
-
-Corrección: declarar la firma genérica de `vi.fn` y usar `mockReturnValue(false)` sin parámetro artificial.
+La firma anterior satisfizo TypeScript pero dejó un parámetro ficticio no usado. Se cambió a `vi.fn<signature>().mockReturnValue(false)`.
 
 ## Revisión 3
 
 Resultado: CAMBIOS NECESARIOS.
 
-La primera ejecución amplia de Fase 9 encontró varios supuestos incorrectos de tests y un problema real de testabilidad de producción:
+La primera ejecución amplia encontró:
 
-- los cuerpos lógicos preservan deliberadamente el salto de línea anterior al fence de cierre; las expectativas lo recortaban incorrectamente;
-- los `.mjs` no pueden usar `fileURLToPath(import.meta.url)` bajo la transformación actual de Vitest en esta repo;
-- `markdown-mode-settings.test.ts` intentaba cargar `MarkdownView`/`main.ts`, pero el módulo `obsidian` del entorno de test no es un runtime JS del host;
-- esa última limitación reveló que la política mode/settings estaba enterrada en `main.ts`.
+- expectativas que recortaban incorrectamente el `\n` anterior al fence de cierre;
+- rutas `.mjs` basadas en `import.meta.url` incompatibles con la transformación Vitest actual;
+- intento de cargar `MarkdownView`/`main.ts` como runtime en Vitest;
+- la última limitación reveló una frontera de testabilidad de producción y provocó la extracción de `markdown-render-mode.ts`.
 
-Correcciones de test:
-
-- expectativas de cuerpos lógicos conservan `\n` final;
-- las suites `.mjs` pasan a resolver archivos desde el root de trabajo;
-- la matriz mode/settings pasa a apuntar a una política pura.
-
-Corrección de producción provocada por tests:
-
-- extracción de `markdown-render-mode.ts` y delegación desde `main.ts`.
-
-Como producción cambió, se reabrió el TM de implementación y la expansión de tests quedó pausada hasta estabilizarlo de nuevo.
+La modificación production reabrió TM de implementación antes de continuar tests.
 
 ## Revisión 4
 
 Resultado: CAMBIOS NECESARIOS.
 
-Tras corregir las rutas de los `.mjs`, ESLint detectó `process` como global no declarado en esas suites.
-
-Corrección: importar `process` explícitamente desde `node:process` en vez de ensanchar los globals de todos los `.mjs` de la repo.
-
-No hubo cambio de producción.
+Las suites `.mjs` pasaron a `process.cwd()`, pero ESLint exige importar `process` explícitamente. Se corrigió sin cambiar producción.
 
 ## Revisión 5
 
 Resultado: CAMBIOS NECESARIOS.
 
-Después de restabilizar implementación en Revisiones 9–10, se revisó la semántica de los propios nombres/fixtures de tests.
+`reading-real-dom.test.ts` llamaba “real” a un fixture happy-dom construido por nosotros. Se sustituyó por `reading-host-fixture.test.ts`, con nomenclatura explícitamente simulada y las mismas garantías útiles.
 
-Hallazgo: `reading-real-dom.test.ts` usaba happy-dom y construía manualmente un DOM parecido al host, pero su nombre y `describe` lo presentaban como real. Eso viola la regla del plan de no confundir fixtures simulados con evidencia del host.
+## Revisión 6
 
-Corrección:
+Resultado: CAMBIOS NECESARIOS.
 
-- reemplazarlo por `reading-host-fixture.test.ts`;
-- renombrar helper/describe/casos para declarar explícitamente que es un fixture simulado con forma de host;
-- conservar exactamente las garantías útiles de furniture identity y rechazo de ambigüedad.
+Se auditó el ledger de garantías retiradas al eliminar el bridge privado. Aunque la cobertura ya existía, el ledger seguía apuntando genéricamente a “Fase 9” y no demostraba dónde vivía cada garantía.
 
-No hubo cambio de producción.
+Corrección documental:
 
-La siguiente revisión debe auditar cobertura y fragilidad sobre el estado ya corregido. Se requieren dos revisiones consecutivas sin cambios para cerrar Fase 10.
+- cada garantía automatizable apunta ahora a archivos concretos (`rendered-code-candidate.test.ts`, `reading-fallback.test.ts`, `reading-host-fixture.test.ts`, `editor-block-model.test.ts`, `markdown-mode-settings.test.ts`, `powershell-semantic-bridge.test.ts`, `_tmp-host-diagnostics.test.ts`, etc.);
+- las garantías de recreación rendered permanecen explícitamente `GATE REAL`;
+- comportamiento inseparable del MutationObserver retirado queda `ELIMINADA`, no convertido artificialmente en una nueva garantía;
+- se registró evidencia de artifact/CI: host runtime external, language packages bundled, build y `pack:all` verdes.
+
+No cambió producción ni assertions, pero la trazabilidad de cobertura sí cambió; por tanto no cuenta como revisión limpia.
+
+## Revisión 7
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia de la suite ya corregida.
+
+Se cruzó cada invariante del plan y del ledger con cobertura concreta:
+
+- frontera runtime/external: tests unitarios + guardrail sobre metafile real en cada build;
+- language packages: no externalizados y presentes en artifact CI; CodeMirror/Lezer/Obsidian permanecen imports externos;
+- Reading fallback: detector puro, integración, furniture, unknown, idempotencia y aislamiento de excepciones;
+- source model: top-level/quoted, viewport, cuerpo lógico completo, mapping físico, presentation/surface y caché;
+- lifecycle: `_tmp-host-diagnostics.test.ts` destruye el `EditorView` y verifica desregistro;
+- mode/settings: política pura sin fingir runtime Obsidian;
+- PowerShell: variable/operator/number/builtin/string/comment en Reading y source;
+- arquitectura: tests estáticos impiden reintroducir bridge/selectores privados en producción;
+- recreación rendered de Live Preview permanece deliberadamente en gate real.
+
+No se encontró garantía faltante ni test que requiera cambio. Esta es la primera revisión limpia.
