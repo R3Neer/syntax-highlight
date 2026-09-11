@@ -26,7 +26,7 @@ import { TextFileView, type WorkspaceLeaf } from "obsidian";
 
 import type { LanguageRegistry } from "./languages";
 import {
-  COMMON_SEMANTIC_HIGHLIGHT_STYLE,
+  COMMON_SEMANTIC_HIGHLIGHTER,
   commonLanguageByExtension,
   commonLanguageSupport,
 } from "./common-languages";
@@ -199,7 +199,7 @@ export class SyntaxSourceView extends TextFileView {
           ? []
           : [
               commonSupport,
-              syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHT_STYLE),
+              syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER),
             ]),
         ...smartEditing,
         keymap.of([
