@@ -36,3 +36,20 @@ Corrección requerida:
 - redaccionar cualquier `url(...)` como `url(<redacted>)`;
 - aplicar la misma sanitización a valores CSS computados susceptibles de contener URL, en particular `backgroundImage`;
 - mantener intactos colores, display, alignment y demás propiedades necesarias para el diagnóstico.
+
+## Revisión 4
+
+Resultado: CAMBIOS NECESARIOS.
+
+Tras aplicar la sanitización y obtener CI verde, la revisión de scope del snapshot detectó que `styledAncestors()` no se detenía al alcanzar `view.dom`. Marcaba ese nodo con `isViewDom`, pero continuaba ascendiendo hasta `MAX_ANCESTORS`.
+
+Eso contradice el plan y tiene dos riesgos:
+
+- ruido diagnóstico: se capturan contenedores del workspace que ya no forman parte del EditorView observado;
+- privacidad: como cada ancestor incluye `textContent` truncado, ascender más allá de `view.dom` puede incorporar títulos de pestañas, nombres de archivo u otro texto ajeno al fenced block.
+
+Corrección requerida:
+
+- incluir `view.dom` como último ancestor útil y detener el recorrido inmediatamente después;
+- aplicar el mismo límite tanto a líneas `.cm-line` como a `.cm-embed-block`, ya que ambos reutilizan `styledAncestors()`;
+- no ampliar por esta corrección el snapshot ni tocar comportamiento funcional del plugin.
