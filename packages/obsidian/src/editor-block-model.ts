@@ -1,5 +1,3 @@
-import { highlightTree } from "@lezer/highlight";
-
 import {
   commonFenceMatch,
   commonFenceNames,
@@ -11,10 +9,7 @@ import {
   mapCodeBlockRange,
   type MudCodeBlock,
 } from "./blocks";
-import {
-  COMMON_EDITOR_HIGHLIGHT_STYLE,
-  parseCommonLanguageTree,
-} from "./common-languages";
+import { commonSemanticRanges } from "./common-semantic-ranges";
 import type { LanguageRegistry, LanguageRuntime } from "./languages";
 import { tokenClass, tokenColorClass } from "./tokenizer";
 
@@ -172,24 +167,10 @@ export function buildEditorBlockSemantics(
     return spans;
   }
 
-  const language = common!.language;
-  const tree = parseCommonLanguageTree(language, block.body);
-  if (tree === undefined) {
-    for (const line of block.bodyLines) {
-      if (line.sourceFrom >= line.sourceTo) continue;
-      spans.push({
-        from: line.sourceFrom,
-        to: line.sourceTo,
-        className: "syntax-common-plain",
-      });
-    }
-    return spans;
+  for (const range of commonSemanticRanges(common!.language, block.body)) {
+    if (range.from >= range.to) continue;
+    spans.push(...mappedSpans(block, range.from, range.to, range.classes));
   }
-
-  highlightTree(tree, COMMON_EDITOR_HIGHLIGHT_STYLE, (from, to, className) => {
-    if (from >= to) return;
-    spans.push(...mappedSpans(block, from, to, className));
-  });
   return spans;
 }
 
