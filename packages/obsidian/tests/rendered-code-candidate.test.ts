@@ -6,6 +6,7 @@ import {
   RENDERED_PROCESSED_ATTRIBUTE,
   collectUnprocessedRenderedCodeBlocks,
   replaceRenderedCodeBlockCandidate,
+  type RenderedCodeBlockCandidate,
 } from "../src/rendered-code-candidate";
 
 function preWith(
@@ -106,7 +107,7 @@ describe("rendered code candidate contract", () => {
     const root = document.createElement("div");
     root.append(pre);
     const before = root.innerHTML;
-    const handler = vi.fn(() => false);
+    const handler = vi.fn((_candidate: RenderedCodeBlockCandidate) => false);
 
     const found = collectUnprocessedRenderedCodeBlocks(root);
     for (const item of found) handler(item);
