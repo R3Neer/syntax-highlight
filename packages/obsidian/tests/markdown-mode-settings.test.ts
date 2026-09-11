@@ -1,148 +1,79 @@
-// @vitest-environment happy-dom
-
-import {
-  MarkdownView,
-  type MarkdownPostProcessorContext,
-  type TFile,
-} from "obsidian";
 import { describe, expect, it } from "vitest";
 
-import SyntaxHighlightPlugin from "../src/main";
-import { DEFAULT_SETTINGS, type SyntaxPluginSettings } from "../src/settings";
+import {
+  markdownHighlightEnabledForContext,
+  type MarkdownRenderViewState,
+} from "../src/markdown-render-mode";
+import { DEFAULT_SETTINGS } from "../src/settings";
 
-interface TestablePlugin {
-  app: {
-    workspace: {
-      getLeavesOfType(type: string): Array<{ view: MarkdownView }>;
-    };
-  };
-  pluginSettings: SyntaxPluginSettings;
-  markdownHighlightEnabled(
-    element: HTMLElement,
-    context: MarkdownPostProcessorContext,
-  ): boolean;
-}
-
-function fakeMarkdownView(
-  mode: "source" | "preview",
-  path: string,
-  containerEl: HTMLElement,
-): MarkdownView {
-  const view = Object.create(MarkdownView.prototype) as MarkdownView;
-  Object.defineProperty(view, "containerEl", {
-    configurable: true,
-    value: containerEl,
-  });
-  Object.defineProperty(view, "file", {
-    configurable: true,
-    value: { path } as TFile,
-  });
-  Object.defineProperty(view, "getMode", {
-    configurable: true,
-    value: () => mode,
-  });
-  return view;
-}
-
-function context(sourcePath: string): MarkdownPostProcessorContext {
-  return { sourcePath } as MarkdownPostProcessorContext;
-}
-
-function plugin(
-  views: MarkdownView[],
-  overrides: Partial<Pick<SyntaxPluginSettings, "markdownEditor" | "markdownReading">> = {},
-): TestablePlugin {
-  const instance = Object.create(
-    SyntaxHighlightPlugin.prototype,
-  ) as TestablePlugin;
-  instance.pluginSettings = {
+function settings(
+  markdownEditor: boolean,
+  markdownReading: boolean,
+) {
+  return {
     ...structuredClone(DEFAULT_SETTINGS),
-    ...overrides,
+    markdownEditor,
+    markdownReading,
   };
-  Object.defineProperty(instance, "app", {
-    configurable: true,
-    value: {
-      workspace: {
-        getLeavesOfType: (type: string) =>
-          type === "markdown" ? views.map((view) => ({ view })) : [],
-      },
-    },
-  });
-  return instance;
+}
+
+function view(
+  mode: "source" | "preview",
+  sourcePath: string,
+  ownsElement = false,
+): MarkdownRenderViewState {
+  return { mode, sourcePath, ownsElement };
 }
 
 describe("rendered Markdown setting resolution", () => {
-  it("uses markdownEditor when the owning MarkdownView is in source mode", () => {
-    const container = document.createElement("div");
-    const element = container.appendChild(document.createElement("div"));
-    const instance = plugin(
-      [fakeMarkdownView("source", "note.md", container)],
-      { markdownEditor: false, markdownReading: true },
-    );
-
-    expect(instance.markdownHighlightEnabled(element, context("note.md"))).toBe(false);
+  it("uses markdownEditor for the owning source-mode MarkdownView", () => {
+    expect(markdownHighlightEnabledForContext(
+      settings(false, true),
+      [view("source", "note.md", true)],
+      "note.md",
+    )).toBe(false);
   });
 
-  it("uses markdownReading when the owning MarkdownView is in preview mode", () => {
-    const container = document.createElement("div");
-    const element = container.appendChild(document.createElement("div"));
-    const instance = plugin(
-      [fakeMarkdownView("preview", "note.md", container)],
-      { markdownEditor: false, markdownReading: true },
-    );
-
-    expect(instance.markdownHighlightEnabled(element, context("note.md"))).toBe(true);
+  it("uses markdownReading for the owning preview-mode MarkdownView", () => {
+    expect(markdownHighlightEnabledForContext(
+      settings(false, true),
+      [view("preview", "note.md", true)],
+      "note.md",
+    )).toBe(true);
   });
 
   it("prioritizes DOM ownership over sourcePath for transcluded Markdown", () => {
-    const hostContainer = document.createElement("div");
-    const element = hostContainer.appendChild(document.createElement("div"));
-    const embeddedContainer = document.createElement("div");
-    const instance = plugin(
+    expect(markdownHighlightEnabledForContext(
+      settings(false, true),
       [
-        fakeMarkdownView("source", "host.md", hostContainer),
-        fakeMarkdownView("preview", "embedded.md", embeddedContainer),
+        view("source", "host.md", true),
+        view("preview", "embedded.md", false),
       ],
-      { markdownEditor: false, markdownReading: true },
-    );
-
-    expect(instance.markdownHighlightEnabled(element, context("embedded.md"))).toBe(false);
+      "embedded.md",
+    )).toBe(false);
   });
 
   it("uses a unique sourcePath match when the processor element is not mounted yet", () => {
-    const element = document.createElement("div");
-    const instance = plugin(
-      [fakeMarkdownView("source", "note.md", document.createElement("div"))],
-      { markdownEditor: false, markdownReading: true },
-    );
-
-    expect(instance.markdownHighlightEnabled(element, context("note.md"))).toBe(false);
+    expect(markdownHighlightEnabledForContext(
+      settings(false, true),
+      [view("source", "note.md")],
+      "note.md",
+    )).toBe(false);
   });
 
   it("falls back conservatively to markdownReading when ownership is ambiguous", () => {
-    const element = document.createElement("div");
-    const instance = plugin(
-      [
-        fakeMarkdownView("source", "note.md", document.createElement("div")),
-        fakeMarkdownView("preview", "note.md", document.createElement("div")),
-      ],
-      { markdownEditor: false, markdownReading: true },
-    );
-
-    expect(instance.markdownHighlightEnabled(element, context("note.md"))).toBe(true);
+    expect(markdownHighlightEnabledForContext(
+      settings(false, true),
+      [view("source", "note.md"), view("preview", "note.md")],
+      "note.md",
+    )).toBe(true);
   });
 
   it("falls back to markdownReading when there is no associated MarkdownView", () => {
-    const instance = plugin([], {
-      markdownEditor: true,
-      markdownReading: false,
-    });
-
-    expect(
-      instance.markdownHighlightEnabled(
-        document.createElement("div"),
-        context("orphan.md"),
-      ),
-    ).toBe(false);
+    expect(markdownHighlightEnabledForContext(
+      settings(true, false),
+      [],
+      "orphan.md",
+    )).toBe(false);
   });
 });
