@@ -33,26 +33,27 @@ Cambios:
 
 Resultado: CAMBIOS NECESARIOS.
 
-Cambio: cerrar trazabilidad del ledger con una matriz explícita de tests futura para settings/mode, incluyendo transclusión, owner por containment y fallback conservador.
+Cambio: cerrar trazabilidad del ledger y del plan con una matriz explícita de tests futura para settings/mode, incluyendo transclusión, owner por containment y fallback conservador.
 
 ## Revisión 6
 
 Resultado: SIN CAMBIOS.
 
-Se revisó de nuevo el conjunto completo, no los commits individuales, contra los invariantes arquitectónicos estabilizados.
+Primera revisión limpia del estado actual. Se comprobó runtime/bundle, contrato npm, ownership DOM, ruta oficial de LP rendered, contraste, selectores privados, viewport/caché, lifecycle y ledger. No se encontró modificación necesaria.
 
-Comprobaciones:
+## Revisión 7
 
-- el artifact comparte CodeMirror/Lezer con Obsidian y el guardrail de build hace fallar cualquier runtime host empaquetado o import no externalizado;
-- el contrato npm describe los imports externos reales del artifact sin convertir toda la lista preventiva de externals en peers;
-- Live Preview source participa solo mediante `Decoration.mark`, `Decoration.line` y widgets inline de un ViewPlugin;
-- no existe bridge rendered ni MutationObserver que sustituya DOM gestionado por CodeMirror;
-- el `MutationObserver` de contraste solo programa normalización de `.syntax-highlight-frame`, DOM creado por Syntax Highlight;
-- las clases privadas `.cm-embed-block`, `.cm-callout` y `HyperMD-codeblock*` no son dependencia funcional de producción; permanecen únicamente en diagnostics temporales;
-- rendered Live Preview tiene como garantía `registerMarkdownCodeBlockProcessor`; el generic postprocessor no es requisito de corrección de LP;
-- el resolver de settings usa `MarkdownView.getMode()`, containment público y fallback por `sourcePath` solo si es inequívoco;
-- el modelo estructural se reconstruye conservadoramente y la semántica cara solo se calcula para bloques visibles, procesando el bloque lógico completo;
-- el highlighter MUD específico exportado en `editor.ts` no tiene consumidores production fuera del propio módulo y no crea una segunda ruta Markdown activa;
-- el ledger y el plan contienen destino para todas las garantías retiradas o nuevas.
+Resultado: SIN CAMBIOS.
 
-No se encontró modificación necesaria. Esta es la primera revisión limpia del estado actual.
+Segunda revisión independiente centrada en los contratos públicos de Obsidian/CodeMirror y en estados de lifecycle:
+
+- `MarkdownView.getMode()`, `containerEl`, `sourcePath`, code-block processors y editor extensions son APIs públicas;
+- ninguna decisión funcional depende de `.cm-embed-block`, `.cm-callout` o `HyperMD-codeblock*`;
+- no hay modificación directa del DOM gestionado por CodeMirror;
+- LP rendered depende del code-block processor oficial, no del generic postprocessor;
+- el fallback estructural sigue siendo host-neutral e idempotente;
+- source y rendered comparten taxonomía semántica sin excepción PowerShell;
+- runtime externo y peers npm describen la misma frontera real;
+- CI completa y `pack:all` están verdes.
+
+No se encontró modificación necesaria. Revisiones 6 y 7 son consecutivas sin cambios: **implementación estabilizada según TM**. Se autoriza el paso a Fase 9 de tests nuevos.
