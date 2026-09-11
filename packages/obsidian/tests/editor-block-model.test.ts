@@ -45,6 +45,11 @@ function tomlRuntime(languages: LanguageRegistry) {
   return runtime;
 }
 
+// Logical block bodies intentionally preserve the line ending before the
+// closing fence. Stream/multiline parsers therefore see the exact Markdown line
+// structure instead of a body silently trimmed by the editor adapter.
+const withClosingLineEnding = (value: string) => `${value}\n`;
+
 describe("Markdown editor block model", () => {
   it("discovers top-level and quoted blocks without DOM ownership", () => {
     const source = [
@@ -63,7 +68,7 @@ describe("Markdown editor block model", () => {
     expect(model.blocks).toHaveLength(2);
     expect(model.blocks[0]?.block.quoteDepth).toBe(0);
     expect(model.blocks[1]?.block.quoteDepth).toBe(1);
-    expect(model.blocks[1]?.block.body).toBe("$foo = 42");
+    expect(model.blocks[1]?.block.body).toBe(withClosingLineEnding("$foo = 42"));
   });
 
   it("does not tokenize a configured block outside the supplied viewport", () => {
@@ -92,7 +97,7 @@ describe("Markdown editor block model", () => {
     );
 
     expect(tokenize).toHaveBeenCalledTimes(1);
-    expect(tokenize).toHaveBeenCalledWith("first = 1");
+    expect(tokenize).toHaveBeenCalledWith(withClosingLineEnding("first = 1"));
   });
 
   it("parses the complete logical body when the viewport intersects only its middle", () => {
@@ -115,9 +120,9 @@ describe("Markdown editor block model", () => {
     );
 
     expect(tokenize).toHaveBeenCalledTimes(1);
-    expect(tokenize).toHaveBeenCalledWith(
+    expect(tokenize).toHaveBeenCalledWith(withClosingLineEnding(
       ["first = 1", "second = 2", "third = 3"].join("\n"),
-    );
+    ));
   });
 
   it("consolidates quoted surface and presentation into one line semantic", () => {
@@ -190,7 +195,7 @@ describe("Markdown editor semantic cache", () => {
     const one = view.state.doc.toString().indexOf("1");
     view.dispatch({ changes: { from: one, to: one + 1, insert: "2" } });
     expect(tokenize).toHaveBeenCalledTimes(2);
-    expect(tokenize).toHaveBeenLastCalledWith("value = 2");
+    expect(tokenize).toHaveBeenLastCalledWith(withClosingLineEnding("value = 2"));
   });
 
   it("invalidates cached semantics when a language runtime revision changes", async () => {
