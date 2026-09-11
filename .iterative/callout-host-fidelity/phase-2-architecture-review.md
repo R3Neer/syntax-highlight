@@ -36,17 +36,23 @@ La misma tabla efectiva alimenta `effectiveStreamParser` y extracción manual.
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del plan completo ya corregido.
+Primera revisión limpia. Se contrastó el plan completo contra las APIs oficiales de StreamParser/StringStream/Highlighter, ViewPlugin y las variables CSS documentadas de código en Obsidian. No se encontró modificación necesaria.
 
-Se contrastó específicamente con APIs oficiales:
+## Revisión 5
 
-- `StreamParser`, `StringStream`, `tokenTable` y el contrato de `token()` son públicos;
-- `HighlightStyle` puede emitir clases estáticas y `Highlighter.style(tags)` es público;
-- `syntaxHighlighting()` consume el mismo highlighter en EditorViews propios;
-- Obsidian recomienda ViewPlugin cuando las decorations pueden limitarse al viewport;
-- Obsidian documenta `--code-background`, `--code-normal` y la familia `--code-*` para styling de código;
-- la propia documentación de Obsidian advierte que Editing y Reading usan librerías de highlighting distintas, lo que respalda dejar de usar dos taxonomías host-specific para nuestros ranges manuales.
+Resultado: SIN CAMBIOS.
 
-Se revisó además que la surface negra no imita un selector interno: es styling propio sobre líneas marcadas por nuestra Decoration.line y solo redefine variables públicas dentro de ese scope.
+Segunda revisión limpia, centrada en failure modes y portabilidad:
 
-No se encontró modificación necesaria. Es la primera revisión limpia del estado actual.
+- estado multilinea, CRLF, blank lines y token sin avance tienen contrato explícito;
+- un stream parser con `tokenTable` propio conserva su autoridad;
+- style desconocido falla localmente;
+- no se asume soporte nativo top-level de todos los common languages;
+- SourceView mantiene la ruta nativa de CodeMirror y no se reinventa parsing incremental;
+- la surface negra usa únicamente decorations + variables CSS scoped y no introduce APIs desktop-only;
+- themes/snippets pueden sobrescribir variables `--syntax-*` sin ramas por tema;
+- la metadata de PowerShell es declarativa y el renderer sigue agnóstico.
+
+No se encontró modificación necesaria.
+
+Revisiones **4 y 5 son consecutivas sin cambios**: el plan arquitectónico de Fase 2 queda estabilizado según TM y se autoriza crear el plan de implementación con checkboxes.
