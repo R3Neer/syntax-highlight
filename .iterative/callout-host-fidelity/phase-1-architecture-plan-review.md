@@ -19,33 +19,51 @@ Corrección incorporada:
 - surface no pertenece al contrast manager;
 - mantener settings preview y configured profiles fuera de la normalización común como hasta ahora.
 
-También se explicitó que recomendaciones generales de lifecycle detectadas durante la revisión (watchers del vault, modernización de views, lint específico de Obsidian) se registran como deuda fuera de alcance y no se mezclan con esta refactorización de rendering/runtime.
+También se explicitó que recomendaciones generales de lifecycle detectadas durante la revisión se registran como deuda fuera de alcance.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-La revisión de rendimiento/ownership del ViewPlugin detectó una incoherencia: el plan proponía materializar decorations solo para `visibleRanges`, pero el modelo documental ya contenía todos los token spans, lo que obligaba a parsear/tokenizar todos los bloques del documento en cada cambio de documento.
+La revisión de rendimiento/ownership del ViewPlugin detectó una incoherencia: el plan proponía materializar decorations solo para `visibleRanges`, pero el modelo documental ya contenía todos los token spans, obligando a parsear/tokenizar todos los bloques del documento en cada cambio.
 
 Corrección incorporada:
 
-- el modelo documental pasa a ser estructural/resuelto, sin tokenizar todos los bloques;
+- modelo documental estructural/resuelto, sin tokenizar todos los bloques;
 - solo bloques que intersectan `view.visibleRanges` se parsean/tokenizan;
 - cada bloque visible se procesa sobre su cuerpo lógico completo para conservar estado multilinea;
-- la semántica se cachea por bloque + revisión y se reutiliza al hacer scroll;
-- la materialización se recalcula ante viewport/model/revision y, cuando sea necesario, selección.
+- semántica cacheada por bloque + revisión;
+- materialización recalculada ante viewport/model/revision y, cuando sea necesario, selección.
 
 ## Revisión 3
 
 Resultado: SIN CAMBIOS.
 
-Se revisó el plan contra la documentación oficial de decorations, la frontera de runtime del sample oficial y la ruta soportada de code-block processors en Live Preview.
+Se revisó el plan contra documentación oficial de decorations, frontera de runtime del sample oficial y ruta soportada de code-block processors en Live Preview.
 
 Comprobaciones:
 
-- marks, line decorations y widgets inline pueden seguir siendo proporcionados por ViewPlugin; no se introducen block widgets/replacements que obliguen a StateField directo;
-- el sample oficial externaliza CodeMirror y Lezer conjuntamente, y el paquete `obsidian` declara Lezer como peer;
-- `registerMarkdownCodeBlockProcessor` es la API soportada para rendered code blocks en Reading/Live Preview, por lo que no hay razón arquitectónica para conservar el MutationObserver del DOM de CodeMirror;
-- las variables `--code-background` y `--code-*` forman parte de la superficie temática de código de Obsidian y son una frontera adecuada para styling propio.
+- marks, line decorations y widgets inline pueden seguir siendo proporcionados por ViewPlugin;
+- el sample oficial externaliza CodeMirror y Lezer conjuntamente, y `obsidian` declara Lezer como peer;
+- `registerMarkdownCodeBlockProcessor` es la API soportada para rendered code blocks en Reading/Live Preview;
+- `--code-background` y `--code-*` son una frontera temática adecuada para styling propio.
 
 No se encontró una modificación necesaria.
+
+## Revisión 4
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente del plan estabilizado, centrada en ownership y contratos host:
+
+- no queda ninguna mutación funcional del DOM de CodeMirror;
+- ninguna funcionalidad production depende de `.cm-embed-block`, `.cm-callout` o `HyperMD-codeblock*`;
+- source queda íntegramente en editor extensions/decorations;
+- rendered queda en Markdown APIs soportadas;
+- contraste JS se limita a DOM creado por Syntax Highlight;
+- la separación modelo estructural / semántica visible / materialización evita trabajo global innecesario sin perder parsers multilinea;
+- runtime CodeMirror/Lezer comparte identidad con Obsidian;
+- los aliases no soportados por la API no justifican un fallback privado de DOM;
+- diagnostics privados permanecen únicamente como herramienta temporal hasta el gate real.
+
+No se encontró una modificación necesaria. Revisiones 3 y 4 son consecutivas sin cambios; plan arquitectónico estable según TM.
