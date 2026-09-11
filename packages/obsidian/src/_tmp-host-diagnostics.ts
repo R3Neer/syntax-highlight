@@ -250,6 +250,10 @@ function truncateText(value: string): string {
   return value.length <= MAX_TEXT ? value : `${value.slice(0, MAX_TEXT)}…`;
 }
 
+function sanitizeDiagnosticValue(value: string): string {
+  return truncateText(value.replace(/url\([^)]*\)/gi, "url(<redacted>)"));
+}
+
 function keepDiagnosticAttribute(name: string): boolean {
   return (
     name === "class" ||
@@ -271,7 +275,7 @@ function filteredAttributes(element: Element): Record<string, string> {
   return Object.fromEntries(
     [...element.attributes]
       .filter(({ name }) => keepDiagnosticAttribute(name))
-      .map(({ name, value }) => [name, truncateText(value)]),
+      .map(({ name, value }) => [name, sanitizeDiagnosticValue(value)]),
   );
 }
 
@@ -284,7 +288,7 @@ function computedStyleSnapshot(element: Element): HostDiagnosticComputedStyle {
       position: style.position,
       color: style.color,
       backgroundColor: style.backgroundColor,
-      backgroundImage: style.backgroundImage,
+      backgroundImage: sanitizeDiagnosticValue(style.backgroundImage),
       textAlign: style.textAlign,
       whiteSpace: style.whiteSpace,
       borderRadius: style.borderRadius,
