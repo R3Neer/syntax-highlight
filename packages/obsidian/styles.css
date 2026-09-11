@@ -42,6 +42,27 @@
   text-align-last: var(--syntax-presentation-text-align-last, auto);
 }
 
+/*
+ * Live Preview source remains owned by CodeMirror. We only contribute line
+ * classes through Decoration.line and style those classes with Obsidian's
+ * public code variables. Themes/snippets may override the two plugin variables
+ * without depending on private HyperMD or callout DOM classes.
+ */
+.cm-line.syntax-editor-code-source {
+  background: var(--syntax-editor-code-background, var(--code-background));
+  color: var(--syntax-editor-code-color, var(--code-normal, var(--text-normal)));
+}
+
+.cm-line.syntax-editor-code-source-opening {
+  border-start-start-radius: var(--syntax-editor-code-radius, var(--radius-s));
+  border-start-end-radius: var(--syntax-editor-code-radius, var(--radius-s));
+}
+
+.cm-line.syntax-editor-code-source-closing {
+  border-end-start-radius: var(--syntax-editor-code-radius, var(--radius-s));
+  border-end-end-radius: var(--syntax-editor-code-radius, var(--radius-s));
+}
+
 .has-line-numbers .syntax-code-line::before {
   content: attr(data-line-number);
   padding-right: 1em;
