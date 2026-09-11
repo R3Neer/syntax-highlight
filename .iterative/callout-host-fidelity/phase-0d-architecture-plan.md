@@ -23,21 +23,33 @@ Crear un componente temporal, conceptualmente `LivePreviewPostFrameDiagnostics`,
 Responsabilidades:
 
 1. recibir el `EditorView` real;
-2. detectar cambios relevantes de lifecycle (`docChanged`, `selectionSet`, `viewportChanged` y actualizaciones que puedan recrear widgets/source);
-3. programar una única captura batched mediante `requestAnimationFrame`;
-4. reconstruir los fenced blocks reconocidos desde `view.state.doc` usando la fuente de verdad actual `findCodeBlocks()`;
-5. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
-6. capturar únicamente estructura/clases/estilos necesarios;
-7. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
-8. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado.
+2. programar captura inicial cuando diagnostics esté habilitado;
+3. reaccionar a cualquier `ViewUpdate` relevante y también a mutaciones DOM scoped a `view.dom` que puedan ocurrir sin transacción de editor;
+4. batir todos esos triggers en una sola captura post-frame;
+5. reconstruir los fenced blocks reconocidos desde `view.state.doc` usando la fuente de verdad actual `findCodeBlocks()`;
+6. limitar la inspección a bloques materializados en/near `view.visibleRanges` o que contengan la selección, con un cap duro adicional;
+7. localizar opening/body/closing en DOM por posición documental con `view.domAtPos()` y ascenso controlado hasta `.cm-line`;
+8. capturar únicamente estructura/clases/estilos necesarios;
+9. publicar eventos en `window.SyntaxHighlightHostDiagnostics` mediante el helper temporal existente;
+10. no añadir/quitar clases, estilos, atributos ni listeners al DOM observado, salvo el propio `MutationObserver` scoped que no muta el subtree.
 
-## Momento de captura
+## Triggers y settling
 
 La captura NO se realiza dentro de `buildSyntaxDecorations()`.
 
-Secuencia:
+Triggers:
 
-`ViewUpdate` → `requestAnimationFrame` → resolver posiciones → inspeccionar DOM final.
+- constructor/start del diagnostic ViewPlugin si diagnostics ya está habilitado;
+- `ViewUpdate` con `docChanged`, `selectionSet`, `viewportChanged`, `geometryChanged` o `focusChanged` cuando exista;
+- `MutationObserver` scoped a `view.dom` para `childList`, `subtree` y atributos `class`/`style`.
+
+Todos los triggers llaman a un único scheduler idempotente.
+
+Secuencia mínima:
+
+`trigger` → `requestAnimationFrame` → resolver posiciones → inspeccionar DOM final.
+
+Si el observer recibe otra mutación antes/durante la captura, se agenda un nuevo frame posterior. No se encadenan timers arbitrarios ni polling.
 
 Si durante el frame una posición pertenece a un widget/replaced range y no existe `.cm-line`, se registra explícitamente como `materialized: false` en vez de inventar una estructura.
 
@@ -49,7 +61,7 @@ Por cada fenced block reconocido visible/relevante:
 - `quoteDepth`;
 - posiciones físicas de opening/body/closing;
 - estado de selección respecto del bloque (`outside`, `opening`, `body`, `closing`);
-- representación (`source-line`, `rendered-widget`, `not-materialized`) cuando pueda determinarse sin heurística global.
+- representación (`source-line`, `rendered-widget`, `not-materialized`) cuando pueda determinarse sin búsqueda global.
 
 Por cada línea materializada:
 
@@ -79,26 +91,30 @@ Texto de líneas/tokens se limita a fragmentos del propio bloque y se trunca. At
 
 ## Integración con el helper diagnóstico
 
-Extender `_tmp-host-diagnostics.ts` con un tipo/evento separado, por ejemplo `live-preview-post-frame`, en lugar de sobrecargar semánticamente `live-preview-source`.
+Extender `_tmp-host-diagnostics.ts` con un tipo/evento separado `live-preview-post-frame`, en lugar de sobrecargar semánticamente `live-preview-source`.
+
+Añadir una consulta barata `hostDiagnosticsEnabled()` para que el ViewPlugin pueda evitar observer/scans cuando diagnostics esté deshabilitado. Al pasar de disabled → enabled, el primer `ViewUpdate` o una llamada explícita de captura debe poder iniciar el diagnóstico sin reiniciar Obsidian.
 
 El API global mantiene:
 
 - `enable()`;
+- `disable()`;
 - `clear()`;
 - `dump()`;
 - `events`.
 
-No se añade persistencia ni configuración permanente.
+Puede añadirse `capture()` si resulta necesario para disparar una captura inmediata de todos los diagnostic ViewPlugins registrados; si se añade, será temporal y no persistente.
 
 ## Lifecycle y coste
 
-- inerte cuando diagnostics está deshabilitado;
+- cero scans y observer desconectado mientras diagnostics esté deshabilitado;
 - como máximo un `requestAnimationFrame` pendiente por `EditorView`;
-- sin `MutationObserver` global;
-- no escanear `document.body`;
-- trabajar desde posiciones de bloques reconocidos del documento;
-- `destroy()` cancela el frame pendiente;
-- limitar número de bloques/líneas/eventos para evitar dumps explosivos.
+- `MutationObserver` únicamente scoped a `view.dom`, nunca `document.body`;
+- no escanear el DOM global;
+- filtrar por `view.visibleRanges`/selección y cap de bloques;
+- `destroy()` desconecta observer y cancela frame pendiente;
+- eventos deduplicados o limitados para que una ráfaga de mutaciones no llene el dump con snapshots idénticos;
+- límites de líneas, descendientes, atributos y longitud de texto.
 
 ## Decisión posterior basada en evidencia
 
@@ -128,14 +144,16 @@ Considerar una capa temática propia basada en variables/estilos computados del 
 
 Los tests de Fase 0D verifican la instrumentación, no el fix visual:
 
-- scheduling batched post-frame;
+- scheduling batched post-frame desde ViewUpdate;
+- scheduling desde mutaciones DOM scoped;
+- observer desconectado cuando diagnostics está off y al `destroy()`;
 - resolución por posición documental a `.cm-line`;
 - `materialized: false` cuando una posición está reemplazada/no visible;
 - captura de clases/estilos/tokens sin mutación;
 - selección outside/body;
-- cancelación en `destroy()`;
-- diagnostics disabled = cero trabajo/cero eventos;
-- límite/sanitización de texto y atributos.
+- filtros visibleRanges/selección y cap de bloques;
+- diagnostics disabled = cero scans/cero eventos;
+- límite, deduplicación y sanitización de texto/atributos.
 
 Un test con `EditorView` genérico sigue siendo válido para el **probe**, pero no se usará para afirmar fidelidad de Obsidian.
 
