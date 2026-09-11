@@ -2,48 +2,66 @@
 
 Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza final.
 
-Este ledger registra tests existentes adaptados o retirados durante implementación porque su contrato production cambie. Los tests nuevos se crean después del TM de implementación, en Fase 8.
+Este ledger registra los contratos antiguos que cambiaron durante Fase 2 y su cobertura concreta posterior. No sustituye el gate de Obsidian real.
 
 ## `common-languages.test.ts`
 
-| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| Contrato antiguo | Tratamiento | Cobertura concreta |
 | --- | --- | --- |
-| Text se identifica por ausencia de `support` | adaptar a `engine.kind === "plain"` y `commonLanguageSupport() === undefined` | semantic engine · Text plain |
-| Markdown/PowerShell exponen `support()` directamente | adaptar a `commonLanguageSupport(language)` | support común · helper tree/stream |
-| PowerShell manual debe pasar por `parseCommonLanguageTree()` + EditorState y no `parser.parse()` | retirar como garantía: la ruta manual deja de usar árbol StreamLanguage; conservar solo que PowerShell es engine stream y su support nativo existe | semantic engine PowerShell directo + SourceView usa support nativo |
+| Text se identifica por ausencia de `support` | migrado a `engine.kind === "plain"` y `commonLanguageSupport() === undefined` | `common-languages.test.ts`; `common-semantic-engine.test.ts` |
+| Markdown/PowerShell exponen `support()` directamente | migrado a `commonLanguageSupport(language)` | `common-languages.test.ts`; `common-source-view-highlighting.test.ts` |
+| PowerShell manual debe pasar por `parseCommonLanguageTree()` + EditorState | retirado: manual usa scanner `StreamParser`; SourceView conserva support nativo | `common-semantic-engine.test.ts`; `common-source-view-highlighting.test.ts`; `common-semantic-architecture.test.mjs` |
 
 ## `reading.test.ts`
 
-| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| Contrato antiguo | Tratamiento | Cobertura concreta |
 | --- | --- | --- |
-| Text parserless inferido por `support === undefined` | adaptar a engine plain | Text plain |
-| Bash/Nushell/PowerShell rendered incluyen clases Prism `token *` además de `syntax-common-*` | retirar clases Prism de expectativas y mantener el rol `syntax-common-*` | Reading manual sin `token *`; convergencia Bash/PowerShell |
-| PowerShell comment se prueba mediante `.token.comment` | adaptar a `.syntax-common-comment` | PowerShell stream roles |
+| Text parserless inferido por `support === undefined` | migrado a engine plain | `common-semantic-engine.test.ts`; `reading.test.ts` |
+| Bash/Nushell/PowerShell rendered incluyen clases Prism `token *` | retirado: manual rendered usa solo `syntax-common-*` | `theme-compat.test.ts`; `common-semantic-consumers.test.ts`; `powershell-semantic-bridge.test.ts` |
+| PowerShell comment se prueba mediante `.token.comment` | migrado a `syntax-common-comment` | `common-semantic-engine.test.ts`; `powershell-semantic-bridge.test.ts`; `reading.test.ts` |
 
 ## `theme-compat.test.ts`
 
-| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| Contrato antiguo | Tratamiento | Cobertura concreta |
 | --- | --- | --- |
-| dos highlighters manuales distintos Reading/Editor generan `token *` y `cm-*` | adaptar a la taxonomía única `COMMON_SEMANTIC_HIGHLIGHT_STYLE` / `commonSemanticRanges()` | manual ranges solo `syntax-common-*` |
-| PowerShell editor se valida a través de árbol StreamLanguage y `cm-comment` | adaptar al semantic engine directo y clase propia | PowerShell stream directo |
-| declaration compara Prism/CodeMirror compatibility classes | conservar el rol semántico `syntax-common-declaration`, retirar host classes | highlighter semántico único |
+| highlighters Reading/Editor generan `token *` y `cm-*` | sustituidos por `COMMON_SEMANTIC_HIGHLIGHTER` + `syntax-common-*` | `theme-compat.test.ts`; `common-semantic-architecture.test.mjs`; `common-semantic-engine.test.ts` |
+| PowerShell editor se valida vía árbol StreamLanguage y `cm-comment` | manual PowerShell usa scanner directo; SourceView usa support nativo | `common-semantic-engine.test.ts`; `common-source-view-highlighting.test.ts` |
+| declaration compara compatibility classes Prism/CM | se conserva solo `syntax-common-declaration` | `theme-compat.test.ts`; `common-semantic-consumers.test.ts` |
 
 ## `powershell-semantic-bridge.test.ts`
 
-| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| Contrato antiguo | Tratamiento | Cobertura concreta |
 | --- | --- | --- |
-| Reading PowerShell debe exponer Prism `token variable/number/operator/string/comment/builtin` | conservar las mismas categorías usando únicamente `syntax-common-*` | PowerShell stream produce todos los roles |
-| quoted editor PowerShell debe exponer `cm-variable/number/operator/string/comment/builtin` | conservar equivalencia semántica usando únicamente `syntax-common-*` | Reading/editor convergen en los mismos roles y editor manual no emite `cm-*` |
+| Reading PowerShell expone Prism `token variable/number/operator/string/comment/builtin` | mismos roles, solo `syntax-common-*` | `powershell-semantic-bridge.test.ts`; `common-semantic-engine.test.ts` |
+| quoted editor PowerShell expone `cm-variable/number/operator/string/comment/builtin` | mismos roles, solo `syntax-common-*` | `powershell-semantic-bridge.test.ts`; `common-semantic-engine.test.ts` |
 
 ## `reading-fallback.test.ts`
 
-| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| Contrato antiguo | Tratamiento | Cobertura concreta |
 | --- | --- | --- |
-| fallback PowerShell demuestra syntax mediante `.token.comment` | adaptar a `.syntax-common-comment`; se conserva badge, line numbers y contenido | Reading PowerShell usa engine stream y no Prism manual |
+| fallback PowerShell demuestra syntax mediante `.token.comment` | migrado a `.syntax-common-comment`; badge/line numbers/contenido se conservan | `reading-fallback.test.ts`; `powershell-semantic-bridge.test.ts` |
 
-## Regla
+## Garantías nuevas de Fase 2
 
-- Toda expectativa antigua sobre clases manuales `cm-*` o `token *` que se retire debe apuntar a una garantía nueva `syntax-common-*` de Fase 8.
-- Una garantía host-real no puede sustituirse por un fixture happy-dom y se mantiene en gate real.
-- No registrar como “migrada” una aserción que siga existiendo sin cambios.
-- El ledger se cierra en Fase 8 únicamente cuando cada fila tenga prueba nueva o referencia concreta a cobertura conservada.
+| Garantía | Cobertura concreta |
+| --- | --- |
+| `parser.tokenTable > engine.tokenTags` | `common-semantic-engine.test.ts` |
+| `engine.tokenTags` rellena styles ausentes y alimenta también parser nativo | `common-stream-token-tags.test.ts` |
+| synthetic names evitan colisión con aliases legacy | `common-semantic-engine.test.ts` |
+| campos públicos de `StreamParser` preservados | `common-semantic-engine.test.ts` |
+| LF/CRLF, state multilinea, blank física, source vacío/final virtual y zero-length guard | `common-semantic-engine.test.ts` |
+| Bash tree atraviesa Reading y quoted source con roles propios | `common-semantic-consumers.test.ts` |
+| SourceView nativo usa support + highlighter único para PowerShell/Bash | `common-source-view-highlighting.test.ts`; `common-semantic-architecture.test.mjs` |
+| quoted surface negra, remapeo `--code-*`, contraste AA, invalid y line numbers | `quoted-source-dark-palette.test.mjs`; `live-preview-source-surface.test.ts` |
+| sin private selectors/bridge DOM/`!important` como dependencia funcional | `architecture-boundaries.test.mjs`; `quoted-source-dark-palette.test.mjs` |
+| routing rendered oficial en Obsidian real | **gate manual**; no se sustituye por happy-dom |
+
+## Estado del ledger
+
+CERRADO para Fase 8: cada garantía migrada tiene cobertura concreta o está explícitamente reservada al gate real.
+
+Reglas mantenidas:
+
+- una garantía host-real no se sustituye por un fixture happy-dom;
+- no se considera cobertura la mera existencia de una clase o comentario sin test asociado;
+- este ledger sigue siendo temporal y se elimina tras el gate satisfactorio y la limpieza final.
