@@ -2,8 +2,8 @@
 
 Host-neutral syntax highlighting and deterministic formatting, with MUD as the
 reference language pack. The monorepo keeps language knowledge separate from
-renderers and host integrations, so the same spans and edits can be used in a
-CLI, CodeMirror 6, Obsidian, an MCP App, or a server.
+renderers and host integrations so the same semantic spans and edits can be used
+from a CLI, CodeMirror 6, Obsidian, an MCP App, or a server.
 
 ## Packages
 
@@ -15,7 +15,25 @@ CLI, CodeMirror 6, Obsidian, an MCP App, or a server.
 | `@r3nner/syntax-highlight-codemirror` | CodeMirror 6 decorations and formatting changes |
 | `@r3nner/syntax-highlight-mcp` | MCP App resource and tool-result helpers |
 | `@r3nner/syntax-highlight-cli` | Headless `highlight` and `format` commands |
-| `@r3nner/syntax-highlight-obsidian` | Obsidian reading and editing integration |
+| `@r3nner/syntax-highlight-obsidian` | Obsidian Reading/Live Preview/source integration |
+
+## Obsidian adapter
+
+The Obsidian package supports common programming languages plus configured
+language packs, including PowerShell stream-mode highlighting, fenced blocks
+inside blockquotes/callouts, and configurable Text/Markdown presentation
+families. Markdown source is decorated through CodeMirror's public extension
+APIs; rendered Markdown uses Obsidian's code-block processors plus a structural
+Reading fallback. Theme integration is based on stable `syntax-common-*` classes
+and public Obsidian CSS variables rather than private Live Preview DOM.
+
+See:
+
+- [`packages/obsidian/README.md`](packages/obsidian/README.md) for usage and local installation;
+- [`docs/architecture.md`](docs/architecture.md) for package/host boundaries;
+- [`docs/theme-integration.md`](docs/theme-integration.md) for semantic classes,
+  quoted-source styling and contrast behavior;
+- [`docs/migration.md`](docs/migration.md) for the legacy Obsidian plugin migration.
 
 ## Development
 
@@ -33,5 +51,4 @@ The MUD pack embeds a tested grammar snapshot. Check it against a MUD checkout:
 node scripts/check-mud-compat.mjs --mud-root ../Mud
 ```
 
-Architecture, language-pack authoring, MCP integration, and migration are in
-[`docs/`](docs/architecture.md). All packages are MIT licensed.
+All packages are MIT licensed.
