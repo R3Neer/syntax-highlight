@@ -50,6 +50,7 @@
  * an ancestor.
  */
 .cm-line.syntax-editor-code-source {
+  --blockquote-background-color: var(--syntax-editor-code-background, #000);
   --code-background: transparent;
   --code-normal: var(--syntax-editor-code-color, #d4d4d4);
   --code-comment: var(--syntax-common-comment, #6a9955);
@@ -415,12 +416,51 @@
   font-weight: 600;
 }
 
+.syntax-common-language-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.syntax-common-language-item {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.syntax-common-language-item > strong,
+.syntax-common-language-item > small {
+  display: block;
+}
+
+.syntax-common-language-item > small {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.3;
+}
+
+.mud-syntax-colors {
+  margin-top: 0.75rem;
+}
+
+.mud-syntax-colors summary {
+  padding: 0.5rem 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.syntax-color-grid,
 .mud-syntax-color-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 0.5rem;
 }
 
+.syntax-color-row,
 .mud-syntax-color-row {
   padding: 0.5rem;
   border: 1px solid var(--background-modifier-border);
@@ -428,6 +468,7 @@
   background: var(--background-primary);
 }
 
+.syntax-color-row > span,
 .mud-syntax-color-row > span {
   display: block;
   margin-bottom: 0.25rem;
@@ -435,6 +476,7 @@
   font-weight: 600;
 }
 
+.syntax-color-row > small,
 .mud-syntax-color-row > small {
   display: block;
   min-height: 2.5em;
