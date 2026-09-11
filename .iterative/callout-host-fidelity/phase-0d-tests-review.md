@@ -39,7 +39,7 @@ Tras separar el contrato temporal del wiring, la suite completa quedó verde. La
 
 Corrección requerida:
 
-- añadir una regresión con dos `.cm-line` donde la primera falle al inspeccionar `classList` y la segunda siga apareciendo sana;
+- añadir una regresión con dos `.cm-line` donde la primera falle durante su snapshot y la segunda siga apareciendo sana;
 - añadir una regresión que cambie el conjunto devuelto por `acceptedFences` entre dos capturas del mismo view y compruebe que los fences lógicos se recalculan;
 - no tocar producción para satisfacer estas pruebas.
 
@@ -47,10 +47,21 @@ Corrección requerida:
 
 Resultado: CAMBIOS NECESARIOS.
 
-La regresión de provider dinámico pasó. La regresión de aislamiento por línea falló porque la preparación del test sustituía `classList` por un getter que lanzaba **antes** de que `view.dom.querySelectorAll(".cm-line")` enumerase los nodos. Por tanto el fallo ocurría al descubrir las líneas del view y producía correctamente `captureError:true`; no estaba alcanzando `captureLineSafely()`.
+La regresión de provider dinámico pasó. La primera regresión de aislamiento por línea falló porque sustituía `classList` por un getter que lanzaba **antes** de que `view.dom.querySelectorAll(".cm-line")` pudiera completar la enumeración. Por tanto el fallo ocurría al descubrir las líneas del view y producía correctamente `captureError:true`; no estaba alcanzando `captureLineSafely()`.
 
-Corrección requerida:
+Corrección aplicada:
 
 - mantener el mismo objetivo de prueba, sin cambiar producción;
-- interceptar únicamente la llamada del root a `querySelectorAll(".cm-line")`, obtener primero el NodeList válido y volver tóxica la primera línea inmediatamente después de esa enumeración;
-- así el root puede descubrir ambas líneas y la excepción se produce después, durante el snapshot individual, que es el límite fail-soft que se pretende verificar.
+- dejar intacta la enumeración del root y provocar la excepción después, al recorrer `parentElement` de la primera línea durante `styledAncestors()`;
+- de este modo ambas `.cm-line` se descubren normalmente y solo el snapshot individual de la primera atraviesa el límite fail-soft.
+
+## Revisión 5
+
+Resultado: SIN CAMBIOS.
+
+Las dos regresiones adversariales añadidas pasan dentro de `npm run check`:
+
+- una línea cuyo ancestry falla produce `snapshotError:true` con placeholder `<unavailable>` y no impide capturar la segunda línea sana del mismo view;
+- el callback `acceptedFences` se evalúa de nuevo en una captura posterior del mismo view y permite descubrir un fence que no estaba aceptado en la primera.
+
+Se revisó además la suite completa contra el contrato de Fase 0D: controller v2 e inerte por defecto, dos frames aislados del batching de otras extensiones, wiring mediante `createMarkdownEditorExtensions`, lifecycle de destroy/unregister, top-level + quoted, roles físicos, descendants semánticos, embedded host, sanitización de URL, ancestry sin texto, no-mutación, aislamiento por view y aislamiento por nodo. No se encontró un cambio adicional necesario.
