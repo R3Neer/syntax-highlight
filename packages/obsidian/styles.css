@@ -46,11 +46,22 @@
  * Live Preview source remains owned by CodeMirror. Syntax Highlight contributes
  * only its Decoration.line classes and scopes styling through public CSS
  * variables. The dark surface is a plugin-owned default; themes and snippets
- * can override the --syntax-editor-code-* variables from an ancestor.
+ * can override the --syntax-editor-code-* and --syntax-common-* variables from
+ * an ancestor.
  */
 .cm-line.syntax-editor-code-source {
   --code-background: transparent;
   --code-normal: var(--syntax-editor-code-color, #d4d4d4);
+  --code-comment: var(--syntax-common-comment, #6a9955);
+  --code-function: var(--syntax-common-callable, #dcdcaa);
+  --code-important: var(--syntax-common-regex, #d16969);
+  --code-keyword: var(--syntax-common-keyword, #c586c0);
+  --code-string: var(--syntax-common-string, #ce9178);
+  --code-value: var(--syntax-common-number, #b5cea8);
+  --code-operator: var(--syntax-common-operator, #d4d4d4);
+  --code-property: var(--syntax-common-property, #9cdcfe);
+  --code-punctuation: var(--syntax-common-punctuation, #d4d4d4);
+  --code-tag: var(--syntax-common-meta, #c586c0);
   --caret-color: var(--syntax-editor-code-caret, #d4d4d4);
   background-color: var(--syntax-editor-code-background, #000);
   color: var(--syntax-editor-code-color, #d4d4d4);
@@ -139,7 +150,7 @@
 }
 
 .cm-line.syntax-editor-code-source .syntax-editor-line-number {
-  color: var(--syntax-editor-code-line-number, #6b7280);
+  color: var(--syntax-editor-code-line-number, #858c99);
 }
 
 /*
@@ -167,8 +178,8 @@
 
 /*
  * Quoted Live Preview source deliberately uses a dark plugin-owned surface.
- * Give every semantic role a readable final fallback instead of falling back
- * to --text-normal, which may be dark in light-paper themes.
+ * Public --code-* variables are remapped above to the same dark-safe palette so
+ * host furniture and Syntax Highlight semantic spans share one visual contract.
  */
 .cm-line.syntax-editor-code-source .syntax-common-plain {
   color: var(--syntax-common-text, var(--code-normal, #d4d4d4));
@@ -180,7 +191,7 @@
   color: var(--syntax-common-keyword, var(--code-keyword, #c586c0));
 }
 .cm-line.syntax-editor-code-source .syntax-common-type {
-  color: var(--syntax-common-type, var(--code-tag, #4ec9b0));
+  color: var(--syntax-common-type, #4ec9b0);
 }
 .cm-line.syntax-editor-code-source .syntax-common-variable {
   color: var(--syntax-common-variable, #9cdcfe);
@@ -218,7 +229,7 @@
   color: var(--syntax-common-meta, var(--code-tag, #c586c0));
 }
 .cm-line.syntax-editor-code-source .syntax-common-invalid {
-  color: var(--syntax-common-invalid, var(--text-error, #f44747));
+  color: var(--syntax-common-invalid, #f44747);
 }
 
 .syntax-token-comment {
