@@ -10,10 +10,20 @@ import {
 import { commonFenceMatch } from "./block-presentation";
 import type { LanguageRegistry } from "./languages";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
+import {
+  RENDERED_PROCESSED_ATTRIBUTE,
+  collectUnprocessedRenderedCodeBlocks,
+  replaceRenderedCodeBlockCandidate,
+} from "./rendered-code-candidate";
 import type { SyntaxPluginSettings } from "./settings";
 
-export const READING_PROCESSED_ATTRIBUTE = "data-syntax-highlight-processed";
+export const READING_PROCESSED_ATTRIBUTE = RENDERED_PROCESSED_ATTRIBUTE;
 export const READING_FALLBACK_SORT_ORDER = 100;
+export {
+  collectUnprocessedRenderedCodeBlocks,
+  replaceRenderedCodeBlockCandidate,
+} from "./rendered-code-candidate";
+export type { RenderedCodeBlockCandidate } from "./rendered-code-candidate";
 
 export type EnableReadingBlockEditing = (
   element: HTMLElement,
@@ -28,13 +38,6 @@ export type ReadingFenceHandler = (
   context: MarkdownPostProcessorContext,
   fence: string,
 ) => boolean;
-
-export interface RenderedCodeBlockCandidate {
-  pre: HTMLPreElement;
-  code: HTMLElement;
-  fence: string;
-  source: string;
-}
 
 function renderPlainReadingBlock(source: string, element: HTMLElement): void {
   const pre = document.createElement("pre");
@@ -96,7 +99,7 @@ export function renderReadingFence(
     );
   }
 
-  element.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
+  element.setAttribute(RENDERED_PROCESSED_ATTRIBUTE, "true");
   if (!settings.markdownReading || !recognized) {
     renderPlainReadingBlock(source, element);
   } else {
@@ -112,69 +115,6 @@ export function renderReadingFence(
     "rendered",
   );
   return true;
-}
-
-function exactFenceClass(code: HTMLElement): string | undefined {
-  const fences = new Set<string>();
-  for (const className of code.classList) {
-    if (!className.startsWith("language-")) continue;
-    const fence = className.slice("language-".length);
-    if (!fence) continue;
-    fences.add(fence.toLocaleLowerCase());
-  }
-  return fences.size === 1 ? [...fences][0] : undefined;
-}
-
-function directCodeChild(pre: HTMLPreElement): HTMLElement | undefined {
-  const codeChildren = [...pre.children].filter(
-    (child): child is HTMLElement =>
-      child instanceof HTMLElement && child.tagName === "CODE",
-  );
-  return codeChildren.length === 1 ? codeChildren[0] : undefined;
-}
-
-function alreadyProcessed(pre: HTMLPreElement): boolean {
-  return (
-    pre.closest(`[${READING_PROCESSED_ATTRIBUTE}], .syntax-highlight-frame`) !== null
-  );
-}
-
-export function collectUnprocessedRenderedCodeBlocks(
-  root: HTMLElement,
-): RenderedCodeBlockCandidate[] {
-  const pres = new Set<HTMLPreElement>();
-  if (root instanceof HTMLPreElement) pres.add(root);
-  root.querySelectorAll("pre").forEach((pre) => {
-    if (pre instanceof HTMLPreElement) pres.add(pre);
-  });
-
-  const candidates: RenderedCodeBlockCandidate[] = [];
-  for (const pre of pres) {
-    if (alreadyProcessed(pre)) continue;
-    const code = directCodeChild(pre);
-    if (code === undefined) continue;
-    const fence = exactFenceClass(code);
-    if (fence === undefined) continue;
-    candidates.push({
-      pre,
-      code,
-      fence,
-      source: code.textContent ?? "",
-    });
-  }
-  return candidates;
-}
-
-export function replaceRenderedCodeBlockCandidate(
-  candidate: RenderedCodeBlockCandidate,
-  host: HTMLElement,
-): void {
-  const auxiliaryChildren = [...candidate.pre.children].filter(
-    (child) => child !== candidate.code,
-  );
-  const renderedPre = host.querySelector("pre");
-  if (renderedPre !== null) renderedPre.append(...auxiliaryChildren);
-  candidate.pre.replaceWith(host);
 }
 
 export function createReadingFallbackPostProcessor(
@@ -210,7 +150,7 @@ export function createReadingFallbackPostProcessor(
         candidate.source,
         candidate.pre,
       );
-      host.setAttribute(READING_PROCESSED_ATTRIBUTE, "true");
+      host.setAttribute(RENDERED_PROCESSED_ATTRIBUTE, "true");
       replaceRenderedCodeBlockCandidate(candidate, host);
     }
   };
