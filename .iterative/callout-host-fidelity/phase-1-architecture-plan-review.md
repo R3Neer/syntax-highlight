@@ -54,16 +54,35 @@ No se encontró una modificación necesaria.
 
 Resultado: SIN CAMBIOS.
 
-Segunda revisión independiente del plan estabilizado, centrada en ownership y contratos host:
+Segunda revisión independiente del plan estabilizado, centrada en ownership y contratos host. No se encontró una modificación necesaria. Revisiones 3 y 4 fueron consecutivas sin cambios.
 
-- no queda ninguna mutación funcional del DOM de CodeMirror;
-- ninguna funcionalidad production depende de `.cm-embed-block`, `.cm-callout` o `HyperMD-codeblock*`;
-- source queda íntegramente en editor extensions/decorations;
-- rendered queda en Markdown APIs soportadas;
-- contraste JS se limita a DOM creado por Syntax Highlight;
-- la separación modelo estructural / semántica visible / materialización evita trabajo global innecesario sin perder parsers multilinea;
-- runtime CodeMirror/Lezer comparte identidad con Obsidian;
-- los aliases no soportados por la API no justifican un fallback privado de DOM;
-- diagnostics privados permanecen únicamente como herramienta temporal hasta el gate real.
+## Revisión 5
 
-No se encontró una modificación necesaria. Revisiones 3 y 4 son consecutivas sin cambios; plan arquitectónico estable según TM.
+Resultado: CAMBIOS NECESARIOS.
+
+Se volvió a contrastar el plan con el `esbuild.config.mjs` **actual** del sample oficial de Obsidian y con la documentación/foro oficial sobre Markdown processing vs Live Preview. Esta comprobación reabre el TM arquitectónico: la estabilidad anterior estaba basada en dos simplificaciones inexactas.
+
+### Cambio A · frontera completa de externals
+
+El sample oficial no externaliza únicamente CodeMirror + Lezer. Su frontera completa incluye:
+
+- `obsidian`;
+- `electron`;
+- `@codemirror/autocomplete`, `collab`, `commands`, `language`, `lint`, `search`, `state`, `view`;
+- `@lezer/common`, `highlight`, `lr`;
+- todos los built-ins de Node (`builtinModules`).
+
+El plan se corrigió para seguir esa frontera completa. `electron`/built-ins son externals de bundle aunque hoy no los importemos; no se convierten automáticamente en peerDependencies npm.
+
+### Cambio B · significado de “Reading fallback”
+
+La documentación oficial describe `registerMarkdownPostProcessor` como herramienta de Reading View y exige editor extension para Live Preview, mientras `registerMarkdownCodeBlockProcessor` sí está soportado en ambos modos. La evidencia capturada en esta investigación mostró, sin embargo, que un subtree Markdown rendered dentro de Live Preview puede llegar a ejecutar el postprocessor incidentalmente.
+
+La arquitectura se corrigió para expresar el contrato correcto:
+
+- el fallback estructural tiene **garantía funcional de Reading**;
+- Live Preview rendered depende únicamente del code-block processor oficial;
+- si el host ejecuta incidentalmente el postprocessor en otro subtree rendered, este debe ser seguro/idempotente, pero esa ejecución no forma parte del contrato de corrección de Live Preview;
+- queda prohibido compensar su ausencia mediante scanning/mutación privada del DOM del EditorView.
+
+Por tanto las antiguas Revisiones 3–4 ya no cuentan como el par limpio final; el plan necesita dos nuevas revisiones consecutivas sin cambios después de estas correcciones.
