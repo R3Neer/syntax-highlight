@@ -65,3 +65,13 @@ Las dos regresiones adversariales añadidas pasan dentro de `npm run check`:
 - el callback `acceptedFences` se evalúa de nuevo en una captura posterior del mismo view y permite descubrir un fence que no estaba aceptado en la primera.
 
 Se revisó además la suite completa contra el contrato de Fase 0D: controller v2 e inerte por defecto, dos frames aislados del batching de otras extensiones, wiring mediante `createMarkdownEditorExtensions`, lifecycle de destroy/unregister, top-level + quoted, roles físicos, descendants semánticos, embedded host, sanitización de URL, ancestry sin texto, no-mutación, aislamiento por view y aislamiento por nodo. No se encontró un cambio adicional necesario.
+
+## Revisión 6
+
+Resultado: SIN CAMBIOS.
+
+Revisión independiente centrada en evitar pruebas que simulen más host del que realmente conocemos. La suite cubre el contrato observable de la instrumentación sin intentar reproducir el loader de plugins de Obsidian: verifica controller v2 e identidad global de la carga actual, y la implementación reinstala explícitamente ese controller al evaluarse el bundle. Añadir una simulación de reload dentro de Vitest introduciría otra representación ficticia del host sin mejorar la evidencia post-frame que esta fase pretende obtener.
+
+Se revisaron nuevamente timing, lifecycle, provider dinámico, mapeo fuente↔DOM, embedded hosts, sanitización, no-mutación y aislamiento de fallos. No se encontró una modificación necesaria.
+
+**ESTABLE según TM:** revisiones 5 y 6 consecutivas sin cambios.
