@@ -52,3 +52,13 @@ La siguiente fase no modifica más planes de 0D salvo que la revisión de implem
 Resultado: SIN CAMBIOS.
 
 Se contrastaron ambos planes con el objetivo único de 0D. La captura manual doble-rAF cubre el gate real sin lifecycle diagnóstico persistente y reduce superficie temporal. No se encontró un requisito imprescindible del diseño observer que la solución manual necesite para obtener la evidencia prevista.
+
+## Revisión de reconciliación 2
+
+Resultado: SIN CAMBIOS.
+
+Se repitió la comparación centrándose en los riesgos que motivaron el diseño observer: cambios sin ViewUpdate, ranges reemplazados, `clear()`/dedup y destrucción de panes. Al ser la captura explícita y puntual, no existe dependencia de ViewUpdate ni deduplicación; los ranges reemplazados se observan mediante `.cm-embed-block`; y el registro se elimina en `destroy()`. La captura por view es fail-soft para que un pane inconsistente no invalide los demás.
+
+No se encontró una razón para mantener el observer como arquitectura efectiva de una herramienta temporal manual.
+
+**ESTABLE según TM:** revisiones 1 y 2 consecutivas sin cambios.
