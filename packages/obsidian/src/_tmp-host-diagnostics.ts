@@ -325,6 +325,7 @@ function styledAncestors(
   let current = element.parentElement;
   while (current !== null && result.length < MAX_ANCESTORS) {
     result.push(styledElementSnapshot(current, viewDom));
+    if (current === viewDom) break;
     current = current.parentElement;
   }
   return result;
