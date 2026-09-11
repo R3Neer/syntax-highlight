@@ -83,3 +83,11 @@ Corrección requerida:
 - los snapshots de ancestors conservan tag/clases/atributos/estilos, pero fuerzan `text: ""`;
 - si un valor contiene `url(`, redaccionarlo completo como `<url-redacted>` en vez de intentar reescribir solo el argumento;
 - mantener el texto únicamente en la `.cm-line`, descendants relevantes y embedded host observados, donde sí sirve para identificar el contenido del probe.
+
+## Revisión 7
+
+Resultado: SIN CAMBIOS.
+
+Se revisó la implementación ya corregida contra el plan estabilizado: controller nuevo por carga, registro/desregistro en el ViewPlugin existente, captura manual tras dos animation frames, fail-soft por view y por nodo, ancestry limitado al EditorView, atributos filtrados, URLs redaccionadas por valor completo, límites de tamaño, mapeo `posAtDOM`, anotación contra fences lógicos y snapshot adicional de `.cm-embed-block`.
+
+No se encontró una corrección adicional dentro del alcance diagnóstico de Fase 0D. La implementación sigue sin tocar CSS, parser, presentation, Reading View ni normalización de contraste.
