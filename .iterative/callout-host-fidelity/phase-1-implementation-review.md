@@ -10,41 +10,66 @@ Se revisó el diff funcional completo contra el plan arquitectónico estabilizad
 
 ### Cambio A · fallback de color source demasiado frágil
 
-La primera versión de la surface propia usaba:
-
-- `background` como shorthand;
-- `--code-normal` como fallback del color base de línea y de `syntax-common-variable`.
-
-La revisión detectó dos problemas:
-
-1. usar el shorthand `background` puede borrar capas/background-image aportadas por el tema, cuando la arquitectura solo pretende aportar una superficie de color;
-2. un tema puede definir `--code-normal` con un valor sintácticamente inválido. Un custom property definido pero inválido no ofrece la misma robustez que una variable ausente; depender de él como último fallback puede dejar la línea heredando un color host no deseado.
+La primera versión de la surface propia usaba `background` como shorthand y `--code-normal` como fallback del color base de línea y de `syntax-common-variable`.
 
 Corrección aplicada:
 
 - usar `background-color`;
 - color base de `syntax-editor-code-source` -> `--syntax-editor-code-color`, con fallback estable `--text-normal`;
 - `syntax-common-variable` -> `--syntax-common-variable`, con fallback estable `--text-normal`;
-- mantener variables `--code-*` para categorías semánticas específicas (keyword, callable, number, operator, etc.) y no introducir ninguna rama por tema.
+- mantener variables `--code-*` para categorías semánticas específicas;
+- no introducir ninguna rama por tema.
 
 ### Cambio B · consulta de contraste todavía demasiado global
 
 Aunque `CommonContrastManager` ya filtraba escrituras a nodos bajo `.syntax-highlight-frame`, `commonTokens()` seguía consultando todos los `.syntax-common-*` del root y descartando después los que no eran propios.
 
-Eso no violaba ownership al escribir, pero conservaba una consulta innecesariamente global sobre DOM ajeno.
-
 Corrección aplicada:
 
-- construir un selector compuesto `.syntax-highlight-frame .syntax-common-*`;
-- `commonTokens()` consulta directamente solo tokens de DOM propio;
-- conservar el selector semántico simple únicamente para detectar que un nodo previamente ajustado perdió su clase y restaurar su color original.
+- construir selector compuesto `.syntax-highlight-frame .syntax-common-*`;
+- consultar directamente solo tokens de DOM propio;
+- conservar el selector semántico simple únicamente para restaurar un nodo previamente ajustado que perdió su clase.
 
-### Estado
+La siguiente revisión se realizó sobre el estado corregido completo. Esta revisión no cuenta como revisión limpia.
 
-Los cambios no alteran el plan arquitectónico. Refuerzan sus invariantes:
+## Revisión 2
 
-- CodeMirror conserva ownership del DOM source;
-- surface propia usa únicamente clases/variables públicas;
-- el normalizador perceptual inspecciona y modifica solo DOM rendered de Syntax Highlight.
+Resultado: CAMBIOS NECESARIOS.
 
-La siguiente revisión se realizará sobre el estado corregido completo. Esta revisión no cuenta como revisión limpia.
+Se revisó la frontera entre el artifact Obsidian y el contrato npm del adapter.
+
+### Hallazgo
+
+El artifact construido y empaquetado deja imports externos reales para:
+
+- `obsidian`;
+- `@codemirror/autocomplete`;
+- `@codemirror/commands`;
+- `@codemirror/language`;
+- `@codemirror/search`;
+- `@codemirror/state`;
+- `@codemirror/view`;
+- `@lezer/common`;
+- `@lezer/highlight`;
+- `@lezer/lr`.
+
+Sin embargo `packages/obsidian/package.json` declaraba únicamente `obsidian` como peer. Eso era suficiente para una carga directa dentro de la aplicación pero dejaba incompleto el contrato del paquete npm publicado, cuyo `dist/main.js` requiere también los módulos host anteriores.
+
+### Corrección aplicada
+
+Se añadieron como `peerDependencies` todos los módulos externos que el artifact requiere realmente:
+
+- familia CodeMirror con rango `^6.0.0`;
+- familia Lezer con rango `^1.0.0`;
+- `obsidian` conserva `^1.7.2`.
+
+No se añadieron `electron`, `@codemirror/collab`, `@codemirror/lint` ni built-ins de Node como peers porque forman parte de la frontera preventiva de externals del sample oficial pero el artifact actual no los importa.
+
+La separación queda explícita:
+
+- **externals de build**: frontera completa recomendada por el sample oficial;
+- **peers npm**: módulos externos que el artifact publicado necesita resolver.
+
+`npm ci`, `npm run check` y `pack:all` pasan después del cambio. El lockfile no necesitó modificación para este cambio de metadata de peer del workspace.
+
+Esta revisión tampoco cuenta como limpia.
