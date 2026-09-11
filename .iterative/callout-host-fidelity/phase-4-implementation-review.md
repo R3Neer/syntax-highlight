@@ -21,3 +21,20 @@ Se revisó el diff funcional completo respecto al baseline aprobado:
 No se identificó ninguna corrección adicional.
 
 Falta una segunda revisión limpia consecutiva.
+
+## Revisión 2
+
+Resultado: SIN CAMBIOS.
+
+Segunda revisión independiente centrada en compatibilidad de cascada:
+
+- `--syntax-editor-code-background` sigue siendo la fuente de verdad propia;
+- tanto la propiedad directa como la variable pública del host consumen el mismo valor;
+- themes/snippets pueden sobrescribir la variable propia desde ancestros sin conocer internals del host;
+- no existe acoplamiento a Nier ni a otra theme concreta;
+- la paleta semántica, line numbers, foreground y presentation permanecen intactos;
+- rendered y Reading no reciben ninguna regla nueva.
+
+No se identificó ninguna corrección adicional.
+
+Revisiones 1 y 2 consecutivas SIN CAMBIOS: implementación Fase 4 estable según TM.
