@@ -15,3 +15,11 @@ Corrección requerida:
 - hacer que el snapshot de un view completo sea fail-soft desde la primera lectura;
 - permitir un registro mínimo `{timestamp, viewId, captureError:true}` cuando ni siquiera pueda leerse el estado básico, sin inventar selection/viewport/document length;
 - mantener las capturas sanas de los demás views en el mismo `captureLivePreview()`.
+
+## Revisión 2
+
+Resultado: CAMBIOS NECESARIOS.
+
+La corrección de aislamiento se aplicó, pero el CI detectó un error TypeScript en `captureEmbeddedHost()`: una expresión que combinaba `host.matches(...)` y `host.querySelector(...)` acababa estrechando el tipo a `never` en una de las ramas.
+
+La lógica no necesita esa complejidad: el root ya es un `.cm-embed-block`. Se simplifican los flags para consultar clases propias con `classList.contains()` y presencia de `pre`, `code`, `.cm-line` y `.cm-inline-code` mediante `querySelector()` de descendientes. Esto evita depender de narrowing incidental sin cambiar el significado del snapshot.
