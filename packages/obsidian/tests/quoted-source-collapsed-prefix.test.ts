@@ -27,10 +27,6 @@ function settings() {
   return value;
 }
 
-function registry() {
-  return new LanguageRegistry(settings(), () => Promise.resolve(""));
-}
-
 function quotedPrefixRanges(doc: Text): DecorationSet {
   const ranges = [];
   for (let number = 1; number <= doc.lines; number += 1) {
