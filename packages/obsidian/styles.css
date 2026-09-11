@@ -43,14 +43,18 @@
 }
 
 /*
- * Live Preview source remains owned by CodeMirror. We only contribute line
- * classes through Decoration.line and style those classes with Obsidian's
- * public code variables. Themes/snippets may override the two plugin variables
- * without depending on private HyperMD or callout DOM classes.
+ * Live Preview source remains owned by CodeMirror. Syntax Highlight contributes
+ * only its Decoration.line classes and scopes styling through public CSS
+ * variables. The dark surface is a plugin-owned default; themes and snippets
+ * can override the --syntax-editor-code-* variables from an ancestor.
  */
 .cm-line.syntax-editor-code-source {
-  background-color: var(--syntax-editor-code-background, var(--code-background));
-  color: var(--syntax-editor-code-color, var(--text-normal));
+  --code-background: transparent;
+  --code-normal: var(--syntax-editor-code-color, #d4d4d4);
+  --caret-color: var(--syntax-editor-code-caret, #d4d4d4);
+  background-color: var(--syntax-editor-code-background, #000);
+  color: var(--syntax-editor-code-color, #d4d4d4);
+  caret-color: var(--syntax-editor-code-caret, #d4d4d4);
 }
 
 .cm-line.syntax-editor-code-source-opening {
@@ -135,10 +139,10 @@
 }
 
 /*
- * Theme-agnostic semantic fallbacks for common languages. Reading and editing
- * tokens also carry Obsidian's native Prism/CodeMirror classes, so an active
- * community theme can style them directly. Vault snippets may override any
- * --syntax-common-* variable without modifying the plugin.
+ * Theme-agnostic semantic fallbacks for common languages. Manual highlighting
+ * uses only Syntax Highlight's own semantic classes. Obsidian's public code
+ * variables remain the theme integration surface, while vault snippets may
+ * override any --syntax-common-* variable directly.
  */
 .syntax-common-plain { color: var(--syntax-common-text, var(--text-normal)); }
 .syntax-common-comment { color: var(--syntax-common-comment, var(--code-comment, var(--text-muted))); font-style: italic; }
@@ -155,6 +159,59 @@
 .syntax-common-delimiter { color: var(--syntax-common-delimiter, var(--code-punctuation, var(--text-muted))); }
 .syntax-common-punctuation { color: var(--syntax-common-punctuation, var(--code-punctuation, var(--text-muted))); }
 .syntax-common-meta { color: var(--syntax-common-meta, var(--code-tag, var(--color-red))); }
+
+/*
+ * Quoted Live Preview source deliberately uses a dark plugin-owned surface.
+ * Give every semantic role a readable final fallback instead of falling back
+ * to --text-normal, which may be dark in light-paper themes such as Nier.
+ */
+.cm-line.syntax-editor-code-source .syntax-common-plain {
+  color: var(--syntax-common-text, var(--code-normal, #d4d4d4));
+}
+.cm-line.syntax-editor-code-source .syntax-common-comment {
+  color: var(--syntax-common-comment, var(--code-comment, #6a9955));
+}
+.cm-line.syntax-editor-code-source .syntax-common-keyword {
+  color: var(--syntax-common-keyword, var(--code-keyword, #c586c0));
+}
+.cm-line.syntax-editor-code-source .syntax-common-type {
+  color: var(--syntax-common-type, var(--code-tag, #4ec9b0));
+}
+.cm-line.syntax-editor-code-source .syntax-common-variable {
+  color: var(--syntax-common-variable, #9cdcfe);
+}
+.cm-line.syntax-editor-code-source .syntax-common-callable,
+.cm-line.syntax-editor-code-source .syntax-common-declaration {
+  color: var(--syntax-common-callable, var(--code-function, #dcdcaa));
+}
+.cm-line.syntax-editor-code-source .syntax-common-declaration {
+  color: var(--syntax-common-declaration, var(--code-function, #dcdcaa));
+}
+.cm-line.syntax-editor-code-source .syntax-common-property {
+  color: var(--syntax-common-property, var(--code-property, #9cdcfe));
+}
+.cm-line.syntax-editor-code-source .syntax-common-string {
+  color: var(--syntax-common-string, var(--code-string, #ce9178));
+}
+.cm-line.syntax-editor-code-source .syntax-common-regex {
+  color: var(--syntax-common-regex, var(--code-important, #d16969));
+}
+.cm-line.syntax-editor-code-source .syntax-common-number {
+  color: var(--syntax-common-number, var(--code-value, #b5cea8));
+}
+.cm-line.syntax-editor-code-source .syntax-common-operator {
+  color: var(--syntax-common-operator, var(--code-operator, #d4d4d4));
+}
+.cm-line.syntax-editor-code-source .syntax-common-delimiter,
+.cm-line.syntax-editor-code-source .syntax-common-punctuation {
+  color: var(--syntax-common-delimiter, var(--code-punctuation, #d4d4d4));
+}
+.cm-line.syntax-editor-code-source .syntax-common-punctuation {
+  color: var(--syntax-common-punctuation, var(--code-punctuation, #d4d4d4));
+}
+.cm-line.syntax-editor-code-source .syntax-common-meta {
+  color: var(--syntax-common-meta, var(--code-tag, #c586c0));
+}
 
 .syntax-token-comment {
   font-style: italic;
