@@ -6,27 +6,32 @@ Estado: TEMPORAL. Eliminar al cerrar el ciclo.
 
 Resultado: CAMBIOS NECESARIOS.
 
-La primera revisión se centró en si el orden operativo podía ejecutar la arquitectura sin introducir garantías implícitas o perder cobertura durante la migración.
-
-Cambios incorporados:
-
-1. invalidación de caché conservadora (`docChanged`/revision limpian; viewport/selection reutilizan);
-2. ledger de garantías retiradas antes de eliminar tests/APIs del bridge;
-3. excepción temporal de selectors privados solo para `_tmp-host-diagnostics.ts` hasta el gate;
-4. gate manual específico para nested rendered sin bridge DOM.
+Se incorporaron invalidación conservadora, ledger de garantías retiradas, excepción temporal de selectors privados solo para diagnostics y gate manual de nested rendered.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-El plan de implementación había quedado desfasado al reabrirse y corregirse el plan arquitectónico en sus Revisiones 5–7.
+Se reconcilió el plan con la reapertura arquitectónica:
 
-Reconciliación incorporada:
+- frontera completa de externals oficial;
+- peers separados de externals;
+- fallback Markdown con garantía Reading y sin dependencia LP;
+- gate LP basado en code-block processor;
+- tests futuros alineados con esos contratos.
 
-1. **Frontera de build completa.** Fase 1 enumera ahora `obsidian`, `electron`, la familia CodeMirror del sample oficial, Lezer y `builtinModules`. `electron`/built-ins se tratan como externals preventivos, no como peerDependencies automáticos.
-2. **Peers separados de externals.** El paquete npm solo declara peers que correspondan a runtime imports/identidad compartida; la lista de externals del artifact sigue el sample oficial completo.
-3. **Fallback Markdown correctamente acotado.** Su garantía contractual es Reading View. No se intenta bloquear una ejecución incidental en otro renderer Markdown, pero LP no depende de ella.
-4. **Gate LP corregido.** Se exige validar `registerMarkdownCodeBlockProcessor` como ruta oficial de nested rendered sin considerar necesario que el generic postprocessor aparezca en LP.
-5. **Tests de arquitectura actualizados.** La futura verificación de externals comprueba la lista oficial adoptada completa y el gate real cubre el contrato que no debe simularse con DOM ficticio.
+## Revisión 3
 
-El orden general de ejecución no cambia.
+Resultado: SIN CAMBIOS.
+
+Se revisó el orden operativo y las dependencias entre fases:
+
+- unificar runtime primero garantiza que el resto se valida ya contra la identidad host correcta;
+- extraer el detector PRE/CODE antes de retirar el bridge conserva la lógica estructural útil;
+- retirar el bridge antes de rehacer source fuerza una frontera nítida: LP editable solo puede depender de editor extensions/decorations;
+- la invalidación conservadora evita introducir a la vez un algoritmo incremental difícil de auditar;
+- surface/presentation se estabiliza antes de restringir contraste, permitiendo comprobar ownership por capas;
+- tests nuevos esperan a implementación estable, mientras el ledger evita borrar garantías silenciosamente;
+- el gate real cubre el contrato de code-block processor que no se debe fingir con happy-dom.
+
+No se encontró un cambio necesario.
