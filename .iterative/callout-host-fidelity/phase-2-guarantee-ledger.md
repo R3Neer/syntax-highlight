@@ -28,6 +28,19 @@ Este ledger registra tests existentes adaptados o retirados durante implementaci
 | PowerShell editor se valida a través de árbol StreamLanguage y `cm-comment` | adaptar al semantic engine directo y clase propia | PowerShell stream directo |
 | declaration compara Prism/CodeMirror compatibility classes | conservar el rol semántico `syntax-common-declaration`, retirar host classes | highlighter semántico único |
 
+## `powershell-semantic-bridge.test.ts`
+
+| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| --- | --- | --- |
+| Reading PowerShell debe exponer Prism `token variable/number/operator/string/comment/builtin` | conservar las mismas categorías usando únicamente `syntax-common-*` | PowerShell stream produce todos los roles |
+| quoted editor PowerShell debe exponer `cm-variable/number/operator/string/comment/builtin` | conservar equivalencia semántica usando únicamente `syntax-common-*` | Reading/editor convergen en los mismos roles y editor manual no emite `cm-*` |
+
+## `reading-fallback.test.ts`
+
+| Contrato antiguo | Tratamiento durante implementación | Destino Fase 8 |
+| --- | --- | --- |
+| fallback PowerShell demuestra syntax mediante `.token.comment` | adaptar a `.syntax-common-comment`; se conserva badge, line numbers y contenido | Reading PowerShell usa engine stream y no Prism manual |
+
 ## Regla
 
 - Toda expectativa antigua sobre clases manuales `cm-*` o `token *` que se retire debe apuntar a una garantía nueva `syntax-common-*` de Fase 8.
