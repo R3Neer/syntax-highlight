@@ -18,27 +18,28 @@ Par limpio del plan anterior, invalidado como par final por el cambio cromático
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se reconcilió el plan con la arquitectura reabierta/reestabilizada:
-
-- semántica Fase 2 permanece completada;
-- se reabre únicamente la paleta quoted source;
-- toda variable pública `--code-*` relevante se remapea a `--syntax-common-*` heredable + literal dark-safe;
-- valores/fallbacks quedaron fijados, incluido `--code-tag -> syntax-common-meta`, invalid y line numbers;
-- tests nuevos permanecen bloqueados hasta estabilizar implementación.
+Se reconcilió el plan con la arquitectura reabierta/reestabilizada: semántica ya completada, paleta quoted reabierta, familia `--code-*` remapeada conceptualmente a `--syntax-common-*` + literal dark-safe y valores finales fijados.
 
 ## Revisión 6
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del plan reconciliado.
+Primera revisión limpia del plan reconciliado. Orden/rollback y separación tests/implementación quedan determinados.
 
-Se revisó orden y rollback:
+## Revisión 7
 
-- solo queda completar la paleta scoped de 5.2 antes de volver al TM de implementación;
-- un fallo CSS no obliga a deshacer el engine stream ya verde;
-- routing rendered, scanner Markdown, contrast JS, configured languages y build boundary no participan;
-- no existe una fase intermedia que requiera cobertura nueva;
-- Fase 8 sigue siendo el único punto de creación de tests nuevos;
-- todos los colores/fallbacks del tramo pendiente están determinados y no dejan decisiones al implementador.
+Resultado: SIN CAMBIOS.
 
-No se encontró modificación necesaria. Es la primera revisión limpia vigente.
+Segunda revisión limpia, centrada en failure modes CSS:
+
+- theme con variables públicas oscuras no puede volver a contaminar la surface negra porque esas variables se remapean dentro del scope propio;
+- un snippet/theme puede definir `--syntax-common-*` o `--syntax-editor-code-*` en un ancestro y conservar control explícito;
+- ausencia total de variables theme cae a literales dark-safe;
+- furniture host que use variables públicas consume la misma paleta que nuestros spans;
+- no hace falta seleccionar descendants privados, usar `!important` ni medir DOM source con JS;
+- mobile y desktop comparten la misma frontera CM6/CSS;
+- tests nuevos siguen bloqueados hasta estabilizar código.
+
+No se encontró modificación necesaria.
+
+Revisiones **6 y 7 son consecutivas sin cambios**: el plan de implementación Fase 2 vuelve a quedar estabilizado según TM y se autoriza completar únicamente el tramo 5.2 antes de reanudar el TM de implementación.
