@@ -67,23 +67,27 @@ Ruta primaria:
 
 `registerMarkdownCodeBlockProcessor(fence) -> renderResolvedFence()`.
 
-Ruta secundaria soportada:
+Ruta secundaria:
 
-`registerMarkdownPostProcessor` tardío, **solo Reading fallback**, para PRE/CODE reconocidos que hayan quedado nativos.
+`registerMarkdownPostProcessor` tardío para PRE/CODE reconocidos que hayan quedado nativos. **Su garantía contractual es Reading View**, que es el uso documentado de Markdown postprocessors.
+
+El fallback debe ser estructural, idempotente y seguro si el host lo invoca incidentalmente durante otro `MarkdownRenderer` (por ejemplo un subtree rendered o una llamada de otro plugin), pero la corrección de Live Preview **no puede depender** de que ese postprocessor se ejecute allí.
 
 ### 3.2 Live Preview · rendered
 
 Ownership: Obsidian.
 
-Syntax Highlight participa únicamente mediante `registerMarkdownCodeBlockProcessor`, API soportada también en Live Preview.
+Syntax Highlight participa de forma garantizada mediante `registerMarkdownCodeBlockProcessor`, API que Obsidian soporta en Reading y Live Preview.
+
+No se usa `registerMarkdownPostProcessor` como requisito de Live Preview, aunque el mismo processor estructural pueda ser llamado incidentalmente por un renderer Markdown interno y deba permanecer inocuo/idempotente.
 
 Se elimina:
 
 - `MutationObserver` sobre `view.dom` para descubrir rendered code;
 - dependencia funcional de `.cm-embed-block`/`.cm-callout`;
-- reemplazo manual de DOM gestionado por CodeMirror.
+- reemplazo manual de DOM gestionado por CodeMirror fuera de callbacks de Markdown rendering proporcionados por Obsidian.
 
-Si un alias no puede registrarse de forma segura con la API oficial, Live Preview rendered queda nativo para ese alias. No se recupera mediante DOM privado.
+Si un alias no puede registrarse de forma segura con `registerMarkdownCodeBlockProcessor`, Live Preview rendered queda nativo para ese alias. No se recupera mediante DOM privado.
 
 ### 3.3 Live Preview · source
 
@@ -245,9 +249,9 @@ Validar spans para variable, operator, number, builtin/cmdlet, comment y string.
 
 El editor de archivos comunes puede seguir usando `syntaxHighlighting(COMMON_EDITOR_HIGHLIGHT_STYLE)` contra el mismo runtime Lezer del host.
 
-## 8. Reading fallback estructural
+## 8. Fallback estructural de Markdown rendered
 
-Separar el detector PRE/CODE de Live Preview en un módulo provisional `rendered-code-candidate.ts`.
+Separar el detector PRE/CODE de cualquier concepto de Live Preview en un módulo provisional `rendered-code-candidate.ts`.
 
 Debe:
 
@@ -258,7 +262,7 @@ Debe:
 - respetar processed markers;
 - no conocer `.cm-embed-block`.
 
-`reading-host.ts` lo consume para el postprocessor tardío.
+`reading-host.ts` lo consume desde el Markdown postprocessor tardío. La garantía funcional del fallback es Reading View; si Obsidian lo invoca en otro contexto rendered, debe seguir siendo seguro pero no se considera una dependencia de Live Preview.
 
 ## 9. Lifecycle y diagnostics
 
@@ -302,7 +306,7 @@ La revisión oficial también detecta recomendaciones generales no causales para
 - una line decoration propia por línea;
 - prohibición de `HyperMD-codeblock`, `.cm-embed-block`, `.cm-callout` en funcionalidad production;
 - contraste: source nunca recibe inline mutation del manager, rendered propio sí puede normalizarse;
-- Reading fallback PRE-only/CODE-only/agreement/conflict;
+- fallback PRE-only/CODE-only/agreement/conflict;
 - gate manual para comportamiento real de `registerMarkdownCodeBlockProcessor` en Live Preview.
 
 ## 11. Flujo final
@@ -327,23 +331,26 @@ Markdown source / EditorState
         +---------> CSS/theme <-------+--------+
         |
  rendered-only contrast normalization
+
+Reading guarantee additionally has:
+Markdown postprocessor fallback -> untouched PRE/CODE -> same renderer
 ```
 
-Reading fallback cuelga solo del lado rendered mediante postprocessor oficial.
+Live Preview correctness does not depend on the generic Markdown postprocessor.
 
 ## 12. Criterios arquitectónicos de aceptación
 
 El plan solo pasa a implementación cuando dos revisiones consecutivas confirmen sin cambios que:
 
 1. coincide con el sample oficial en la frontera completa de externals (`obsidian`, `electron`, CodeMirror, Lezer y built-ins de Node);
-2. ningún componente de producción muta DOM gestionado por CodeMirror;
-3. Markdown APIs resuelven rendered y editor extensions resuelven source;
-4. funcionalidad no depende de `.cm-embed-block`, `.cm-callout` ni `HyperMD-codeblock*`;
-5. no hardcodea tema;
-6. mantiene una taxonomía semántica compartida;
-7. cada línea tiene una sola line semantics propia;
-8. el ViewPlugin limita materialización/parseo caro a bloques visibles y cachea semántica;
-9. Reading fallback usa API soportada;
+2. ningún componente de producción muta DOM gestionado por CodeMirror fuera de callbacks de rendering soportados por Obsidian;
+3. `registerMarkdownCodeBlockProcessor` resuelve rendered Live Preview y editor extensions resuelven source;
+4. el generic Markdown postprocessor se considera garantía de Reading, no dependencia de Live Preview;
+5. funcionalidad no depende de `.cm-embed-block`, `.cm-callout` ni `HyperMD-codeblock*`;
+6. no hardcodea tema;
+7. mantiene una taxonomía semántica compartida;
+8. cada línea tiene una sola line semantics propia;
+9. el ViewPlugin limita materialización/parseo caro a bloques visibles y cachea semántica;
 10. contraste JS queda restringido a DOM propio;
 11. conserva mobile compatibility;
 12. existe gate de Obsidian real antes de limpiar diagnostics/temporales.
