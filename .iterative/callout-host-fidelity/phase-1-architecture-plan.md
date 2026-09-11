@@ -84,33 +84,49 @@ Syntax Highlight participa solo mediante `registerEditorExtension()` y decoratio
 
 ## 4. Arquitectura source
 
-### 4.1 Dos etapas internas
+### 4.1 Tres etapas internas
 
-#### A. Modelo semántico del documento
+#### A. Modelo estructural del documento
 
-Entrada: `state.doc` + registry/settings revision.
+Entrada: `state.doc` + conjunto de fences aceptados.
 
 Salida por bloque:
 
 - `MudCodeBlock` físico/lógico;
-- runtime configurado o `CommonFenceMatch`;
-- token spans mapeados a offsets físicos;
-- política de line numbers;
-- line semantics propias.
+- identidad de fence;
+- runtime configurado o `CommonFenceMatch` resuelto;
+- política estable de presentation/line numbers.
 
-Se recalcula solo con documento/revision relevantes.
+**No tokeniza todos los bloques.** Se recalcula solo si cambia el documento o cambia la resolución de fences/registry.
 
-#### B. Materialización del viewport
+#### B. Semántica cacheada por bloque visible
 
-Entrada: modelo cacheado + `view.visibleRanges` + selección cuando importe para la reconciliación source/rendered del host.
+Cuando un bloque intersecta `view.visibleRanges`, se calcula su semántica sobre **todo el cuerpo lógico del bloque** para conservar correctamente parsers/stream modes multilinea.
+
+Resultado cacheable:
+
+- token spans lógicos/físicos;
+- clases semánticas;
+- line semantics derivadas.
+
+La caché se identifica con datos suficientes para invalidarse de forma determinista: lenguaje/runtime revision + identidad/rango/contenido del bloque. Un bloque no visible no se tokeniza solo por existir en el documento.
+
+#### C. Materialización del viewport
+
+Entrada: modelo estructural + semántica cacheada de bloques visibles + `view.visibleRanges`.
 
 Salida:
 
 - `Decoration.mark` visibles;
-- máximo una `Decoration.line` propia por línea;
+- máximo una `Decoration.line` propia por línea visible;
 - widgets inline visibles.
 
-Se recalcula en model change, `viewportChanged` y `selectionSet` cuando corresponda.
+Recalcular materialización en:
+
+- cambio del modelo;
+- `viewportChanged`;
+- `selectionSet` cuando Live Preview pueda cambiar source/rendered materializado sin cambiar el documento;
+- cambio de revision/settings relevante.
 
 ### 4.2 Módulos
 
@@ -118,13 +134,21 @@ Se recalcula en model change, `viewportChanged` y `selectionSet` cuando correspo
 
 Crear un módulo puro provisional `editor-block-model.ts` con:
 
-- tipos de modelo;
+- tipos del modelo estructural/resuelto;
 - resolución configured/common;
-- spans físicos;
-- line semantics;
-- intersección con visible ranges.
+- clave de caché semántica;
+- construcción de line semantics;
+- helpers de intersección con visible ranges.
 
-`editor.ts` queda como adapter CodeMirror: lifecycle del ViewPlugin, cache/revision, materialización DecorationSet y composición de Smart Editing.
+La producción de token spans reutiliza tokenizers/`parseCommonLanguageTree()` existentes, no inventa un tercer motor.
+
+`editor.ts` queda como adapter CodeMirror:
+
+- lifecycle del ViewPlugin;
+- modelo y caché semántica por view;
+- materialización DecorationSet;
+- invalidación por doc/viewport/selection/revision;
+- composición de Smart Editing.
 
 ### 4.3 Una sola line decoration propia por línea
 
@@ -147,7 +171,7 @@ Opening/closing reciben surface, no alignment del body salvo decisión explícit
 
 Configured profiles mantienen sus clases/paletas propias.
 
-Common languages siempre emiten `syntax-common-*` y, adicionalmente, `cm-*` en source / `token *` en rendered para interoperabilidad. La legibilidad básica no dependerá de ancestors privados de Obsidian.
+Common languages siempre emiten `syntax-common-*` y, adicionalmente, `cm-*` en source / `token *` en rendered para interoperabilidad. La legibilidad básica no depende de ancestors privados de Obsidian.
 
 ### 4.5 Furniture
 
@@ -194,7 +218,7 @@ Arquitectura objetivo:
 - settings preview conserva su exclusión actual;
 - configured profiles siguen fuera de este normalizador común.
 
-La implementación debe reducir el scope del observer/normalización cuando sea posible, pero no convertir esta fase en una reescritura del motor perceptual.
+La implementación debe reducir el scope del observer/normalización cuando sea posible, sin reescribir el motor perceptual.
 
 ## 7. Common-language highlighting
 
@@ -243,7 +267,7 @@ Tras validación real:
 
 ### 9.3 Deuda observada fuera de alcance
 
-La revisión oficial también detecta recomendaciones generales no causales para este bug (p. ej. cuándo registrar ciertos watchers del vault o modernizar lifecycle de custom views). Se documentan como deuda futura y **no** se mezclan con esta refactorización para mantener una frontera verificable.
+La revisión oficial también detecta recomendaciones generales no causales para este bug (p. ej. cuándo registrar ciertos watchers del vault, modernizar lifecycle de custom views o incorporar lint específico de Obsidian). Se documentan como deuda futura y no se mezclan con esta refactorización para mantener una frontera verificable.
 
 ## 10. Migración de tests
 
@@ -265,7 +289,7 @@ La revisión oficial también detecta recomendaciones generales no causales para
 
 - guardrail de build/metafile para runtime host;
 - PowerShell semantic spans con runtime unificado;
-- cache/modelo + visible materialization;
+- modelo estructural + tokenización solo de bloques visibles + caché;
 - una line decoration propia por línea;
 - prohibición de `HyperMD-codeblock`, `.cm-embed-block`, `.cm-callout` en funcionalidad production;
 - contraste: source nunca recibe inline mutation del manager, rendered propio sí puede normalizarse;
@@ -283,13 +307,15 @@ Markdown source / EditorState
         |                           |
  code-block processor           editor extension
         |                           |
- renderResolvedFence            cached block model
+ renderResolvedFence            structural block model
         |                           |
- plugin-owned DOM               visible decorations
-        |                      /       |       \
-        |                    marks    lines    widgets
-        |                      |        |        |
-        +----------> CSS/theme <--------+--------+
+ plugin-owned DOM               visible block semantics cache
+        |                           |
+        |                    visible decorations
+        |                    /      |       \
+        |                  marks   lines    widgets
+        |                    |       |        |
+        +---------> CSS/theme <-------+--------+
         |
  rendered-only contrast normalization
 ```
@@ -307,7 +333,8 @@ El plan solo pasa a implementación cuando dos revisiones consecutivas confirmen
 5. no hardcodea tema;
 6. mantiene una taxonomía semántica compartida;
 7. cada línea tiene una sola line semantics propia;
-8. Reading fallback usa API soportada;
-9. contraste JS queda restringido a DOM propio;
-10. conserva mobile compatibility;
-11. existe gate de Obsidian real antes de limpiar diagnostics/temporales.
+8. el ViewPlugin limita materialización/parseo caro a bloques visibles y cachea semántica;
+9. Reading fallback usa API soportada;
+10. contraste JS queda restringido a DOM propio;
+11. conserva mobile compatibility;
+12. existe gate de Obsidian real antes de limpiar diagnostics/temporales.
