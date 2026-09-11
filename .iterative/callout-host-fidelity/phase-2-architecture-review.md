@@ -6,42 +6,47 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-Cambios principales:
-
-- no copiar aliases internos de `StreamLanguage`; usar metadata explícita style → Tag y API pública;
-- conservar `SyntaxSourceView` en la ruta oficial `StreamLanguage + syntaxHighlighting()` en vez de inventar un parser incremental manual;
-- fijar offsets LF/CRLF, blankLine, múltiples styles y guard de tokens sin avance.
-
-No cuenta como revisión limpia.
+- no copiar aliases internos de `StreamLanguage`; metadata explícita style → Tag y API pública;
+- conservar `SyntaxSourceView` en la ruta oficial `StreamLanguage + syntaxHighlighting()`;
+- fijar LF/CRLF, blankLine, múltiples styles y guard de tokens sin avance.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-Cambios principales:
-
-- el engine de `CommonLanguage` pasa a ser también la fuente de verdad para construir `LanguageSupport`; ya no puede existir un `support()` paralelo que diverja;
-- `commonLanguageSupport()` crea tree/stream support desde la misma metadata usada por la extracción manual;
-- quoted source integra furniture interno del host mediante variables públicas de código (`--code-background`, `--code-normal`, `--caret-color`) scoped a nuestra line decoration, sin selectores privados ni `!important`;
-- la propia surface conserva variables `--syntax-*` y fondo negro explícito solicitado por producto.
-
-La documentación oficial de Obsidian confirma que `--code-background` y la familia `--code-*` son la interfaz pública de styling para código y advierte que Editing/Reading usan librerías de highlighting distintas.
-
-No cuenta como revisión limpia.
+- engine y `LanguageSupport` pasan a compartir una única metadata;
+- `commonLanguageSupport()` construye tree/stream support;
+- quoted source integra furniture host mediante variables públicas de código scoped, sin selectores privados ni `!important`;
+- surface propia mantiene fondo negro explícito y variables `--syntax-*`.
 
 ## Revisión 3
 
 Resultado: CAMBIOS NECESARIOS.
 
-La arquitectura todavía no fijaba precedencia si un futuro `StreamParser` define `parser.tokenTable` y el engine de Syntax Highlight aporta una entrada con la misma clave.
+Se fijó precedencia de tablas stream:
 
-Corrección:
-
-1. `parser.tokenTable` explícito del autor del parser tiene prioridad;
-2. `engine.tokenTags` rellena nombres no definidos por el parser;
-3. después se intentan nombres/modificadores públicos de `tags`;
+1. `parser.tokenTable`;
+2. `engine.tokenTags` como relleno;
+3. nombres/modificadores públicos de `tags`;
 4. desconocidos fallan localmente.
 
-La misma tabla efectiva y la misma precedencia alimentan `effectiveStreamParser` y el resolver manual, evitando divergencia entre CodeMirror nativo y semantic ranges manuales.
+La misma tabla efectiva alimenta `effectiveStreamParser` y extracción manual.
 
-No cuenta como revisión limpia. La siguiente revisión se realiza sobre el plan completo ya corregido.
+## Revisión 4
+
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del plan completo ya corregido.
+
+Se contrastó específicamente con APIs oficiales:
+
+- `StreamParser`, `StringStream`, `tokenTable` y el contrato de `token()` son públicos;
+- `HighlightStyle` puede emitir clases estáticas y `Highlighter.style(tags)` es público;
+- `syntaxHighlighting()` consume el mismo highlighter en EditorViews propios;
+- Obsidian recomienda ViewPlugin cuando las decorations pueden limitarse al viewport;
+- Obsidian documenta `--code-background`, `--code-normal` y la familia `--code-*` para styling de código;
+- la propia documentación de Obsidian advierte que Editing y Reading usan librerías de highlighting distintas, lo que respalda dejar de usar dos taxonomías host-specific para nuestros ranges manuales.
+
+Se revisó además que la surface negra no imita un selector interno: es styling propio sobre líneas marcadas por nuestra Decoration.line y solo redefine variables públicas dentro de ese scope.
+
+No se encontró modificación necesaria. Es la primera revisión limpia del estado actual.
