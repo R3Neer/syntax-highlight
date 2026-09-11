@@ -1,11 +1,6 @@
-import { highlightTree } from "@lezer/highlight";
-
 import { commonFenceMatch, presentationClassNames } from "./block-presentation";
-import {
-  COMMON_READING_HIGHLIGHT_STYLE,
-  parseCommonLanguageTree,
-  type CommonLanguage,
-} from "./common-languages";
+import { commonSemanticRanges } from "./common-semantic-ranges";
+import type { CommonLanguage } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
 import type { LanguageRuntime } from "./languages";
 import {
@@ -207,13 +202,7 @@ export function renderCommonCode(
   showLineNumbers = true,
   fence = language.fences[0] ?? language.id,
 ): void {
-  const ranges: RenderedRange[] = [];
-  const tree = parseCommonLanguageTree(language, source);
-  if (tree !== undefined) {
-    highlightTree(tree, COMMON_READING_HIGHLIGHT_STYLE, (from, to, classes) => {
-      ranges.push({ from, to, classes });
-    });
-  }
+  const ranges = commonSemanticRanges(language, source);
   const effectiveLineNumbers =
     showLineNumbers && (language.presentation?.lineNumbers ?? true);
   const badge = language.presentation?.badge === false
