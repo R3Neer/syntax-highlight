@@ -8,68 +8,74 @@ Resultado: CAMBIOS NECESARIOS.
 
 - separar engine tree/stream/plain explícitamente;
 - no copiar aliases internos de `StreamLanguage`;
-- conservar `SyntaxSourceView` sobre la ruta nativa `StreamLanguage + syntaxHighlighting()` en vez de sustituirla por un parser manual.
+- conservar `SyntaxSourceView` sobre la ruta nativa `StreamLanguage + syntaxHighlighting()`.
 
 ## Revisión 2
 
 Resultado: CAMBIOS NECESARIOS.
 
-La tabla semántica dejó de modelarse como `HighlightStyle` host-specific y pasó a un único `Highlighter` creado mediante la API pública `tagHighlighter()`. Ese mismo highlighter se usa en `highlightTree`, scanner stream y `syntaxHighlighting()`.
+La tabla semántica pasó a un único `Highlighter` creado con `tagHighlighter()`, compartido por tree, stream y `syntaxHighlighting()`.
 
 ## Revisión 3
 
 Resultado: CAMBIOS NECESARIOS.
 
-- se explicitó que Obsidian documenta motores de highlighting diferentes en Editing/Reading y no se promete identidad visual pixel-perfect con highlighting nativo top-level;
-- se cerró la semántica física de LF/CRLF/terminador final para no crear una blank line sintética.
+- no prometer identidad pixel-perfect entre los dos motores de highlighting que Obsidian documenta como distintos;
+- fijar LF/CRLF/terminador final sin blank line sintética.
 
 ## Revisión 4
 
 Resultado: CAMBIOS NECESARIOS.
 
-Una simple fusión de `tokenTable` todavía podía depender de la precedencia interna de aliases legacy de `StreamLanguage`.
-
-Corrección: `effectiveStreamParser.token()` reescribe styles cubiertos por `parser.tokenTable`/`engine.tokenTags` a nombres sintéticos privados y los publica por el `tokenTable` efectivo. El scanner manual usa el mismo resolver. La precedencia queda en Syntax Highlight pero se implementa exclusivamente por API pública.
+`effectiveStreamParser.token()` reescribe styles declarados a nombres sintéticos privados para no depender de la precedencia interna de aliases legacy. Scanner manual y StreamLanguage usan el mismo resolver.
 
 ## Revisión 5
 
 Resultado: CAMBIOS NECESARIOS.
 
-`StreamParser.startState` es opcional en la API pública y su fallback interno no es un contrato que el scanner manual deba copiar.
-
-Corrección: un engine stream manualmente escaneable exige estado inicial explícito. PowerShell ya lo aporta. `startState` y `StringStream` reciben un `indentUnit` explícito y coherente.
+El engine stream exige estado inicial explícito; no se copia el fallback interno de `StreamLanguage` cuando `startState` falta.
 
 ## Revisión 6
 
 Resultado: CAMBIOS NECESARIOS.
 
-Una surface negra fija no puede heredar ciegamente una paleta de theme light.
-
-Corrección: paleta dark plugin-owned, sobrescribible mediante variables propias y con defaults contrastados sobre negro. Bajo la línea quoted, las variables públicas `--code-*` se reasignan a esa paleta para integrar furniture del host sin selectores privados ni `!important`.
+Se añadió paleta dark plugin-owned y remapeo scoped de variables públicas `--code-*` para que una surface negra no herede una paleta ilegible de un theme light.
 
 ## Revisión 7
 
 Resultado: CAMBIOS NECESARIOS.
 
-El wrapper stream debe preservar todo el contrato público ajeno al styling.
-
-Corrección: conservar/delegar `name`, `startState`, `copyState`, `blankLine`, `indent`, `languageData`, `mergeTokens` y demás campos públicos aplicables, sustituyendo únicamente `token()`/`tokenTable` en la frontera de styles.
+El wrapper efectivo debe preservar/delegar todo el contrato público del parser ajeno al styling (`name`, estado, copyState, blankLine, indent, languageData, mergeTokens, etc.).
 
 ## Revisión 8
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del estado de entonces. Se contrastó el plan contra documentación oficial de Obsidian y CodeMirror/Lezer, pero quedó invalidada por cambios de la Revisión 9.
+Primera revisión limpia del estado de entonces; quedó invalidada por la Revisión 9 posterior.
 
 ## Revisión 9
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se encontraron dos huecos en la taxonomía/paleta:
+- añadir `syntax-common-invalid` para `tags.invalid`;
+- incluir `--code-important`/`--syntax-editor-code-important` en la paleta dark scoped;
+- exigir tests de contraste para la paleta completa, incluido invalid/error.
 
-- `error -> tags.invalid` estaba declarado para stream, pero el highlighter no tenía un rol `syntax-common-invalid`; se añadió como categoría explícita con fallback de error;
-- la surface dark no había incluido `--code-important`, usado por regex/importantes; se añadió `--syntax-editor-code-important` y el remapeo scoped de la variable pública.
+El contador de revisiones limpias se reinicia.
 
-También se exige test de contraste para invalid/error y la paleta completa sobre negro.
+## Revisión 10
 
-Como hubo cambios después de la Revisión 8, el contador de revisiones limpias se reinicia.
+Resultado: SIN CAMBIOS.
+
+Primera revisión limpia del plan actual.
+
+Comprobaciones:
+
+- todo tag declarado por el engine stream tiene destino semántico visible, incluido `invalid`;
+- todos los roles `syntax-common-*` tienen vía de color rendered y paleta dark scoped en quoted source;
+- `--code-important` está cubierto;
+- opening/closing son legibles aunque no tengan semantic ranges;
+- el wrapper stream conserva todo el contrato del parser y adapta solo la frontera de style names;
+- no se requieren cambios en scanner Markdown, cache, Smart Editing, contrast manager ni routing rendered.
+
+No se encontró modificación necesaria. Esta es la primera revisión limpia del estado actual.
