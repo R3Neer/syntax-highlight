@@ -6,30 +6,39 @@ Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza fin
 
 Resultado: CAMBIOS NECESARIOS.
 
-- separar estrictamente implementación y tests nuevos;
-- usar fallbacks `var(--syntax-*, literal)` para que themes/snippets puedan sobrescribir variables propias;
-- mantener ledger de tests antiguos adaptados/retirados durante la migración.
+El plan existente había quedado por detrás de la arquitectura finalmente estabilizada.
+
+Se reconciliaron explícitamente:
+
+- `COMMON_SEMANTIC_HIGHLIGHTER` construido con `tagHighlighter()` en lugar de highlighters host-specific;
+- engine stream con estado inicial explícito;
+- resolver efectivo con precedencia `parser.tokenTable > engine.tokenTags > tags públicos`;
+- nombres sintéticos para no depender de aliases legacy internos de `StreamLanguage`;
+- preservación del contrato público completo del `StreamParser`;
+- scanner LF/CRLF/source vacío/newline final/zero-length;
+- `tags.invalid -> syntax-common-invalid`;
+- retirada de `cm-*`/`token *` de la taxonomía manual;
+- paleta dark quoted completa, incluido `important` e `invalid`, con contraste comprobable;
+- SourceView conservando la ruta nativa `commonLanguageSupport + syntaxHighlighting(COMMON_SEMANTIC_HIGHLIGHTER)`;
+- tests nuevos reservados para después del TM de implementación.
+
+Los pares limpios anteriores quedaron invalidados por estos cambios.
 
 ## Revisión 2
 
-Resultado: SIN CAMBIOS.
+Resultado: CAMBIOS NECESARIOS.
 
-Primera revisión limpia. Se validó el orden engine → ranges → consumidores → SourceView → CSS → retirada de taxonomía antigua, manteniendo routing/ownership fuera del alcance.
+Se detectó un riesgo de ciclo de módulos si la resolución stream efectiva vivía en `common-semantic-ranges.ts` y `common-languages.ts` necesitaba importarla para construir `StreamLanguage`.
 
-## Revisión 3
+Corrección operativa:
 
-Resultado: SIN CAMBIOS.
+- `common-languages.ts` queda como capa inferior y autoridad de catálogo, engines, highlighter, resolución de style words, nombres sintéticos y `effectiveStreamParser`;
+- `common-semantic-ranges.ts` importa esa autoridad y ejecuta tree/stream/plain manual;
+- `common-languages.ts` nunca importa `common-semantic-ranges.ts`;
+- nombres sintéticos se generan de forma determinista a partir de un orden estable de claves.
 
-Segunda revisión limpia, centrada en failure modes:
+También se precisó que el guard de tokens sin avance se reinicia cuando `StringStream` progresa.
 
-- una migración incompleta puede detenerse conservando temporalmente exports viejos;
-- `parser.tokenTable` y unknown styles tienen conducta determinista;
-- tests antiguos que fallen por contrato retirado se trazan antes de adaptarse;
-- custom properties conservan override por herencia;
-- un fallo del gate rendered no provoca reintroducción automática del bridge;
-- scanner Markdown, contrast manager, build boundary, Smart Editing y configured tokenizers permanecen fuera del alcance;
-- no hay tests nuevos antes de estabilizar implementación.
+No cuenta como revisión limpia.
 
-No se encontró cambio operativo necesario.
-
-Revisiones **2 y 3 son consecutivas sin cambios**: el plan de implementación de Fase 2 queda estabilizado según TM y se autoriza producción.
+Los pares limpios registrados en la versión anterior de este documento ya no son válidos porque precedían a las Revisiones 1–2 actuales.
