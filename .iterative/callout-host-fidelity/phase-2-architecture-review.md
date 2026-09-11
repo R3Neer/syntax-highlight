@@ -29,7 +29,7 @@ El gate no incrimina esa ruta y CodeMirror documenta precisamente `StreamLanguag
 
 Corrección:
 
-- `SyntaxSourceView` conserva `common.support() + syntaxHighlighting()`;
+- `SyntaxSourceView` conserva la ruta nativa `LanguageSupport + syntaxHighlighting()`;
 - solo cambia al highlighter semántico único `syntax-common-*`;
 - la extracción stream directa se limita a los caminos manuales de Markdown/Reading donde hoy falla `StreamLanguage tree -> highlightTree`.
 
@@ -49,4 +49,42 @@ Se añadió al plan:
 - Obsidian: decorations mediante ViewPlugin para trabajo limitado al viewport; CSS variables para styling de elementos propios.
 - CodeMirror: `StreamParser`, `StringStream`, `tokenTable`, `HighlightStyle` y `Highlighter.style(tags)` son APIs públicas documentadas.
 
-La siguiente revisión se hace sobre el plan corregido completo. Esta revisión no cuenta como limpia.
+No cuenta como revisión limpia.
+
+## Revisión 2
+
+Resultado: CAMBIOS NECESARIOS.
+
+Se revisó la coherencia entre metadata de lenguaje, soporte CodeMirror y el requisito visual real del quoted source.
+
+### Cambio A · engine y support no pueden ser fuentes paralelas
+
+El plan corregido todavía permitía `support()` por un lado y engine stream por otro. Eso podía volver a introducir dos configuraciones del mismo lenguaje.
+
+Corrección:
+
+- el engine de `CommonLanguage` pasa a ser la fuente de verdad;
+- tree-backed contiene su factory de support;
+- stream-backed contiene `StreamParser + tokenTags`;
+- un helper único `commonLanguageSupport()` construye el `LanguageSupport` de ambos engines;
+- para stream-backed se crea un parser efectivo sin mutar el importado y se incorpora la misma tabla pública token -> tag que usa la extracción manual.
+
+Así CodeMirror nativo y semantic ranges manuales comparten exactamente la misma metadata declarativa.
+
+### Cambio B · la línea negra no basta si el host conserva furniture inline
+
+Las capturas reales muestran fondos tipo inline-code dentro del quoted source. Pintar únicamente la `.cm-line` de negro podría dejar rectángulos claros encima.
+
+No se añadirán selectores `.cm-inline-code` ni otros internals. La documentación oficial de Obsidian confirma que `--code-background` y `--code-normal` son variables públicas de código, y además señala expresamente que Editing y Reading usan librerías de syntax highlighting distintas y su styling puede no coincidir perfectamente.
+
+Corrección arquitectónica:
+
+- la line decoration propia mantiene su fondo con `--syntax-editor-code-background`;
+- dentro de ese scope se redefine `--code-background: transparent` para que furniture host que consuma la variable se integre en la surface;
+- `--code-normal` y `--caret-color` se redirigen a foreground/caret propios y legibles;
+- no usar `!important` ni selector privado;
+- roles `syntax-common-*` siguen usando variables públicas/fallbacks propios.
+
+Esto usa precisamente la interfaz de CSS variables que Obsidian documenta, sin pretender conocer la estructura DOM interna que las consume.
+
+No cuenta como revisión limpia.
