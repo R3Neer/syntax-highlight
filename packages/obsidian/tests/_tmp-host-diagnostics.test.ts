@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { EditorState } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import type { MarkdownPostProcessorContext } from "obsidian";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +37,7 @@ function context(): MarkdownPostProcessorContext {
 
 function mountEditor(source: string, diagnosticsWiring = false): EditorView {
   const parent = document.body.appendChild(document.createElement("div"));
-  let extensions = [];
+  let extensions: Extension[] = [];
   if (diagnosticsWiring) {
     const settings = structuredClone(DEFAULT_SETTINGS);
     const registry = new LanguageRegistry(settings, () => Promise.resolve(""));
