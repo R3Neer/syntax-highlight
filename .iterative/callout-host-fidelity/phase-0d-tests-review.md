@@ -42,3 +42,15 @@ Corrección requerida:
 - añadir una regresión con dos `.cm-line` donde la primera falle al inspeccionar `classList` y la segunda siga apareciendo sana;
 - añadir una regresión que cambie el conjunto devuelto por `acceptedFences` entre dos capturas del mismo view y compruebe que los fences lógicos se recalculan;
 - no tocar producción para satisfacer estas pruebas.
+
+## Revisión 4
+
+Resultado: CAMBIOS NECESARIOS.
+
+La regresión de provider dinámico pasó. La regresión de aislamiento por línea falló porque la preparación del test sustituía `classList` por un getter que lanzaba **antes** de que `view.dom.querySelectorAll(".cm-line")` enumerase los nodos. Por tanto el fallo ocurría al descubrir las líneas del view y producía correctamente `captureError:true`; no estaba alcanzando `captureLineSafely()`.
+
+Corrección requerida:
+
+- mantener el mismo objetivo de prueba, sin cambiar producción;
+- interceptar únicamente la llamada del root a `querySelectorAll(".cm-line")`, obtener primero el NodeList válido y volver tóxica la primera línea inmediatamente después de esa enumeración;
+- así el root puede descubrir ambas líneas y la excepción se produce después, durante el snapshot individual, que es el límite fail-soft que se pretende verificar.
