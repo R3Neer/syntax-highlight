@@ -1,195 +1,43 @@
 # Active theme integration
 
 The Obsidian adapter keeps common-language highlighting independent from any
-specific community theme.
+specific community theme. The stable contract is the plugin's semantic taxonomy
+plus public Obsidian CSS variables; private Live Preview DOM classes are not part
+of the integration surface.
 
-## How it follows the active theme
+## Semantic classes
 
-Common-language parsers still produce the plugin's semantic classes such as
-`syntax-common-keyword` and `syntax-common-string`, but the rendered tokens also
-carry the classes that Obsidian themes already target:
+Common-language parsers resolve into classes such as:
 
-- Reading view uses Prism-compatible classes such as `token keyword`,
-  `token string`, and `token function`.
-- Editing view uses CodeMirror-compatible classes such as `cm-keyword`,
-  `cm-string`, and `cm-def`.
+- `syntax-common-comment`
+- `syntax-common-keyword`
+- `syntax-common-type`
+- `syntax-common-variable`
+- `syntax-common-callable`
+- `syntax-common-declaration`
+- `syntax-common-property`
+- `syntax-common-string`
+- `syntax-common-regex`
+- `syntax-common-number`
+- `syntax-common-operator`
+- `syntax-common-delimiter`
+- `syntax-common-punctuation`
+- `syntax-common-meta`
+- `syntax-common-invalid`
 
-That means the active Obsidian theme remains the source of syntax colors. The
-plugin never branches on a theme name or ships a compatibility table for
-community themes. If a theme does not style those token classes, `styles.css`
-falls back to Obsidian's semantic code variables (`--code-keyword`,
-`--code-string`, `--code-function`, `--code-operator`, and the rest).
+The same taxonomy is used by tree-backed languages, stream-backed languages such
+as PowerShell, and the manual Markdown/Reading renderers. Text is parserless and
+uses `syntax-common-plain` for its body.
 
-Some parsers intentionally leave parts of the source unclassified. Command
-sigils, paths, whitespace, or other grammar-specific fragments may therefore
-sit between highlighted ranges. Reading view keeps those fragments verbatim and
-wraps them with `syntax-common-plain`, whose default color is the active theme's
-`--text-normal`.
+Source and rendered Markdown are different host engines, so their DOM does not
+have to be pixel-identical. The plugin guarantees semantic roles and stable
+plugin classes, not the private token markup chosen by Obsidian in each mode.
 
-PowerShell is a parser-backed common language using CodeMirror's maintained
-legacy-mode package. The `powershell`, `pwsh`, and `ps1` fences and the `.ps1`,
-`.psm1`, and `.psd1` source extensions therefore enter the same semantic bridge,
-active-theme cascade, and automatic contrast policy as Bash, Nushell, and the
-other common languages.
+## Theme variables and fallbacks
 
-## Blockquotes and Obsidian callouts
-
-The Markdown editor scanner understands fenced blocks inside blockquotes. This
-also covers Obsidian callouts without any callout-name table because a callout's
-body is a Markdown blockquote. A quoted fence such as `> ```powershell` or
-`> ```text-center` therefore enters the same language/presentation pipeline as
-the equivalent top-level fence.
-
-Editing view separates the *logical* code body from its physical Markdown
-container. The blockquote markers belonging to the container are removed before
-a language parser/tokenizer sees the body, then every logical token range is
-mapped back to its real document offsets. As a result, `>` markers are not
-misclassified as PowerShell/Bash/MUD operators and are not painted with syntax
-classes. The same mapper supports nested quote depths and preserves real line
-endings so multiline language state remains intact. Line-number widgets, when a
-language uses them, are anchored at the first source character after the quote
-prefix.
-
-Presentation fence discovery and preservation rewrites use the same quote-aware
-scanner, so Text/Markdown defaults and explicit variants work inside ordinary
-blockquotes and callouts as well. A rewrite still changes only the language label
-of the opening fence; quote markers, callout markers, body content, closing fence,
-and additional info text stay untouched.
-
-### Reading View host fallback
-
-Reading View cannot rely exclusively on Obsidian dispatching every nested fence
-to `registerMarkdownCodeBlockProcessor`. Syntax Highlight therefore keeps that
-specialized fast path and also registers a later Markdown postprocessor. The
-fallback inspects the HTML that remains after normal Markdown processing and
-looks structurally for untouched `<pre><code class="language-…">` blocks. A
-recognized fence is handed to exactly the same configured/common renderer as a
-normally dispatched top-level block, so theme classes, contrast normalization,
-line-number policy, Text/Markdown presentation and click-to-edit behavior do not
-diverge between host paths.
-
-The fallback deliberately fails closed. It ignores unknown languages, multiple
-distinct `language-*` classes, deceptive class names, `<pre>` elements with zero
-or multiple direct `<code>` children, and any subtree already produced by Syntax
-Highlight. Auxiliary direct children are treated as host furniture rather than as
-ambiguity: existing nodes such as `button.copy-code-button` are moved into the
-replacement `<pre>`, preserving node identity and listeners. Candidates are
-snapshotted before replacement and processed output is marked, making repeated
-postprocessor passes idempotent. The fallback also handles recognized aliases that
-cannot be registered as specialized processors, such as names containing
-characters rejected by Obsidian's processor selector.
-
-### Live Preview embedded-widget bridge
-
-The source-oriented CodeMirror decorations remain the primary path while fenced
-Markdown lines are directly represented in the editor. They are not assumed to
-own every visible DOM node, however. Obsidian can materialize a callout as a
-`.cm-embed-block` widget whose nested `<pre><code>` is separate from those source
-lines. Syntax Highlight therefore installs a second ViewPlugin scoped to each
-`EditorView`. It observes only that view's DOM for embedded-widget mutations and
-runs a requestAnimationFrame-batched scan of `.cm-embed-block` subtrees.
-
-Recognized widget code blocks reuse the same structural candidate detector and
-resolved fence renderer as Reading View. Unknown/ambiguous blocks remain native,
-Syntax Highlight output is skipped on later scans, auxiliary host controls are
-preserved, a failure in one widget does not prevent later widgets from being
-processed, and removal/recreation by CodeMirror is handled by the mutation-driven
-scan. The bridge is disconnected when its `EditorView` is destroyed. It does not
-replace the quote-aware source decorations; both representations are required
-because Live Preview can alternate between source DOM and rendered widget DOM.
-
-## Text and Markdown presentation families
-
-Text and Markdown fences share the theme/contrast infrastructure but deliberately
-opt out of code-only furniture. `text`, `plaintext`, and `txt` are parserless, so
-their whole body stays `syntax-common-plain`; `md` and `markdown` keep their
-Markdown parser and syntax colors. Neither family shows a language badge or
-plugin line numbers in Reading view or Markdown editing. Text remains block-only
-and does not claim `.txt` files, while `.md` continues to use Obsidian's native
-Markdown editor.
-
-Each family has independent vault defaults for two presentation dimensions:
-
-- alignment: `left`, `center`, or `right`;
-- flow: `ragged` or `justified`.
-
-Ragged uses the selected alignment directly. Justified stretches visually wrapped
-lines and uses the selected alignment for the final visual line of each source
-line. Presentational bodies use wrapping without changing their stored source or
-explicit line breaks.
-
-A fence without modifiers inherits both vault defaults. Hyphen modifiers can
-override either dimension or both for one block. The accepted canonical grammar
-is `base[-alignment][-flow]`, with alignment before flow whenever both are
-present. Examples include `text-center`, `text-ragged`,
-`text-right-justified`, `markdown-center-ragged`, and `md-justified`. The aliases
-remain aliases of the same Text or Markdown family rather than becoming separate
-languages.
-
-The DOM/CodeMirror representation stores only the family and explicit local
-overrides. Vault defaults are emitted as dynamic CSS variables by `ThemeManager`,
-so changing a default updates already rendered blocks without requiring a plugin
-restart. Explicit modifiers win over the family defaults.
-
-When a Text or Markdown default changes, the settings UI first scans the vault for
-blocks whose resolved appearance would actually change. If none are affected,
-the new default is saved directly. Otherwise the user can apply the new default,
-cancel, or preserve the current appearance. Preserving appearance rewrites only
-affected opening fence labels to the fully explicit canonical form using the old
-resolved alignment and flow, while preserving the original base alias, fence
-characters and length, indentation, body, closing fence, and any extra info on
-the opening line. The default is not committed if scanning or rewriting fails.
-
-## Automatic contrast normalization
-
-After the theme has resolved the actual color of a common-language token,
-Syntax Highlight checks that foreground against the effective CSS background
-behind the token. The runtime target is WCAG AA normal-text contrast, `4.5:1`.
-A token that already reaches the target is left exactly as the theme produced
-it. The background is never modified.
-
-When a foreground fails the target, the correction is deliberately perceptual
-rather than a fixed darkening step:
-
-1. Convert the resolved sRGB foreground to OKLab.
-2. Search independently toward lower and higher perceptual lightness.
-3. Preserve the original chromatic axes while possible. If a candidate leaves
-   the sRGB gamut, reduce chroma only as much as necessary to bring it back.
-4. Find the nearest passing candidate in each viable direction by binary search.
-5. Choose the candidate with the smallest OKLab distance from the theme color.
-
-This lets a pale token on a light background become darker while a dark token on
-a dark background becomes lighter. Only a foreground that actually fails the
-contrast constraint changes, and the selected correction is the smallest of the
-two viable perceptual-lightness moves. Very translucent text keeps its alpha
-when possible; opacity is allowed to rise only if no `4.5:1` solution exists at
-the original alpha.
-
-The effective background is built by alpha-compositing declared CSS
-`background-color` values from the token through its ancestors. Background
-images are not raster-sampled, so a theme that exposes a strongly varying image
-through transparent code surfaces is an approximation: the declared color
-layers are used, with the document canvas as the final fallback.
-
-Most computed colors arrive from Chromium as `rgb()`/`rgba()`. If a theme uses a
-CSS Color 4 value that remains serialized as `oklab()`, `oklch()`, or `color()`,
-the browser itself converts that resolved value through a one-pixel sRGB canvas
-fallback instead of the plugin maintaining theme- or syntax-specific parsers.
-
-The normalizer watches newly rendered or reclassified syntax spans, root theme
-and light/dark changes, and stylesheet changes in the document head. Ordinary
-editor mutations are processed only for affected subtrees and batched to the
-next animation frame; a full pass is reserved for changes that can alter the
-active theme globally. If CodeMirror reuses a previously adjusted span for a
-different class, the original theme color is restored before reuse. Settings
-previews are excluded because they are supposed to display the selected semantic
-preset exactly. Configured language profiles such as MUD also remain outside
-this common-language normalizer and keep their explicit semantic palettes.
-
-## Vault-level overrides
-
-A vault or theme snippet can override the plugin's semantic bridge without
-modifying the plugin. For example:
+Outside the quoted-source dark surface, common semantic classes use public
+Obsidian code/text variables as fallbacks. Vault snippets can override the
+plugin variables directly:
 
 ```css
 .theme-dark {
@@ -200,7 +48,180 @@ modifying the plugin. For example:
 }
 ```
 
-The `--syntax-common-*` variables participate in exactly the same pipeline as a
-community theme's own token selectors. Their resolved foreground is accepted
-unchanged when it reaches `4.5:1`; otherwise it is contrast-normalized like any
-other common-language color.
+The plugin never switches on a community-theme name and does not ship a theme
+compatibility table.
+
+## Quoted fences in Live Preview source
+
+Fences inside blockquotes and callouts remain editable source in the same
+CodeMirror `EditorView`. Syntax Highlight adds `Decoration.line` classes to
+opening/body/closing lines and maps semantic marks only over the logical code
+body, never over the quote prefix.
+
+Quoted source deliberately uses a dark, continuous code surface. The line scope
+sets plugin-owned dark-safe defaults for code colors and line numbers while
+keeping `--code-background: transparent`, preventing Obsidian's inline-code
+spans from creating separate light rectangles.
+
+The line also bridges its source background through Obsidian's documented
+blockquote variable:
+
+```css
+.cm-line.syntax-editor-code-source {
+  --blockquote-background-color:
+    var(--syntax-editor-code-background, #000);
+  --code-background: transparent;
+  background-color: var(--syntax-editor-code-background, #000);
+}
+```
+
+This matters because a quoted line is simultaneously Syntax Highlight code
+source and an Obsidian blockquote. The plugin supplies the value through the
+host's public variable instead of competing with Obsidian using private selectors
+or `!important`.
+
+A theme or vault snippet can replace the default dark surface by defining:
+
+```css
+--syntax-editor-code-background
+--syntax-editor-code-color
+--syntax-editor-code-caret
+--syntax-editor-code-line-number
+```
+
+The same surface contract applies to quoted Bash, PowerShell, configured
+languages and Text/Markdown presentation fences.
+
+## Blockquotes and Obsidian callouts
+
+The Markdown scanner treats blockquote prefixes as container syntax. Language
+parsers receive a logical body with those prefixes stripped; token ranges are
+then mapped back to physical document offsets. Nested quote depth, real line
+endings and opening/closing fence coordinates are preserved.
+
+This means:
+
+- `>` markers are never syntax-highlighted as code;
+- line-number widgets anchor after the quote prefix;
+- configured/common languages use the same semantics as top-level fences;
+- Text/Markdown alignment and flow work inside normal blockquotes and callouts;
+- preservation rewrites change only the opening fence label.
+
+No callout-name table is required.
+
+## Rendered Markdown and Reading View
+
+Rendered code is owned by Syntax Highlight inside `.syntax-highlight-frame`.
+Obsidian's registered code-block processors are the primary route. A structural
+Markdown postprocessor provides a fail-closed fallback for recognized native
+`<pre><code class="language-…">` blocks that remain unclaimed in rendered
+Markdown.
+
+The fallback validates PRE/CODE structure and language metadata before replacing
+anything. Unknown or ambiguous blocks stay native. Existing direct host furniture,
+including copy controls, is preserved and processed output is marked for
+idempotence.
+
+There is no production MutationObserver bridge for private `.cm-embed-block`
+widgets. Live Preview source is handled through CodeMirror decorations, while
+rendered Markdown uses Obsidian's supported Markdown processing path.
+
+## Text and Markdown presentation families
+
+Text and Markdown fences are presentation families rather than ordinary code
+furniture:
+
+- `text`, `plaintext`, `txt`: parserless Text family;
+- `md`, `markdown`: Markdown family with syntax highlighting.
+
+Neither family shows a language badge or plugin line numbers in Markdown blocks.
+Each has independent vault defaults for:
+
+- alignment: `left`, `center`, `right`;
+- flow: `ragged`, `justified`.
+
+Hyphen modifiers override one block. Canonical full form is
+`base-alignment-flow`, for example:
+
+```text
+text-right-justified
+text-center
+markdown-ragged
+md-center-ragged
+```
+
+Changing a default can either let inheriting blocks adopt it or preserve their
+appearance. Preservation rewrites only affected opening fence labels to explicit
+canonical modifiers while keeping the original alias, fence characters and
+length, quote prefix, body, closing fence and extra opening-line info.
+
+Text remains Markdown-block only and does not claim `.txt` files. `.md` remains
+owned by Obsidian's Markdown editor.
+
+## PowerShell and stream-backed languages
+
+PowerShell uses CodeMirror's `StreamParser`, but manual Markdown/Reading
+highlighting does not depend on private legacy token aliases. The common-language
+catalog declares an explicit mapping from PowerShell stream token names to
+public Lezer tags. Those tags feed the same `COMMON_SEMANTIC_HIGHLIGHTER` used by
+source editing.
+
+Supported PowerShell fences are `powershell`, `pwsh`, and `ps1`; source
+extensions are `.ps1`, `.psm1`, and `.psd1`.
+
+## Automatic contrast normalization
+
+Runtime contrast normalization is intentionally limited to rendered DOM owned by
+Syntax Highlight under `.syntax-highlight-frame`. CodeMirror source DOM is never
+rewritten by JavaScript.
+
+For rendered common-language tokens, the normalizer compares the resolved
+foreground against the effective CSS background and targets WCAG AA normal-text
+contrast (`4.5:1`). Passing theme colors remain unchanged. Failing colors are
+adjusted by the smallest viable OKLab-lightness move, searching both lighter and
+darker directions and reducing chroma only when needed to remain in gamut.
+Backgrounds are never modified.
+
+The effective background is built by alpha-compositing computed
+`background-color` values through ancestors. CSS Color 4 values that Chromium
+does not serialize as `rgb()`/`rgba()` are converted through a one-pixel sRGB
+canvas fallback.
+
+Settings previews and configured-language semantic palettes are excluded from
+this common-language normalizer.
+
+## Theme-author guidance
+
+Prefer public variables and the plugin semantic variables. Do not target the
+plugin through private Obsidian Live Preview structure.
+
+Useful override hooks include:
+
+```text
+--syntax-common-text
+--syntax-common-comment
+--syntax-common-keyword
+--syntax-common-type
+--syntax-common-variable
+--syntax-common-callable
+--syntax-common-declaration
+--syntax-common-property
+--syntax-common-string
+--syntax-common-regex
+--syntax-common-number
+--syntax-common-operator
+--syntax-common-delimiter
+--syntax-common-punctuation
+--syntax-common-meta
+--syntax-common-invalid
+--syntax-editor-code-background
+--syntax-editor-code-color
+--syntax-editor-code-caret
+--syntax-editor-code-line-number
+--syntax-editor-code-radius
+```
+
+The quoted-source surface also feeds Obsidian's documented
+`--blockquote-background-color` locally, but themes should normally override the
+plugin's `--syntax-editor-code-background` rather than the blockquote variable
+globally.
