@@ -27,10 +27,11 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 - [ ] Recibir `EditorView` y `getAcceptedFences(): ReadonlySet<string>`; `editor.ts` será quien proporcione esa política desde la misma fuente de verdad que el highlighter existente.
 - [ ] Separar una función de solo lectura que devuelva snapshots sin publicarlos ni mutar controller/DOM.
 - [ ] Obtener bloques con `findCodeBlocks()`; no crear un segundo parser Markdown.
-- [ ] Filtrar primero por intersección con `view.viewport` y conservar además bloques que contengan la selección; aplicar cap duro de bloques.
-- [ ] Registrar por bloque si intersecta uno o varios `view.visibleRanges`; usarlo como señal de source directo, nunca como filtro excluyente.
-- [ ] Derivar `selectionRegion`: `outside | opening | body | closing`.
-- [ ] Resolver cada posición de línea mediante `view.domAtPos()` y ascender exclusivamente dentro de `view.dom` hasta `.cm-line`.
+- [ ] Construir por bloque un **rango físico completo** de observación: desde `openingLineFrom` hasta `closingLineTo` cuando haya cierre; para fence sin cierre, desde opening hasta el final físico conocido del body/documento. No usar solo `block.from/to` del body como extensión total.
+- [ ] Filtrar por intersección de ese rango físico completo con `view.viewport` y conservar además bloques cuya apertura/body/cierre contengan la selección; aplicar cap duro de bloques.
+- [ ] Registrar por bloque si el rango físico completo o sus subrangos intersectan uno o varios `view.visibleRanges`; usarlo como señal de source directo, nunca como filtro excluyente.
+- [ ] Derivar `selectionRegion`: `outside | opening | body | closing` a partir de los rangos físicos específicos, no solo del body.
+- [ ] Resolver opening, cada body line y closing mediante sus posiciones físicas y `view.domAtPos()`, ascendiendo exclusivamente dentro de `view.dom` hasta `.cm-line`.
 - [ ] Validar que la `.cm-line` resuelta representa realmente la posición/range esperado; un boundary vecino de un replaced range no cuenta como materialización del source.
 - [ ] Si `domAtPos()` falla o no produce línea representativa, devolver snapshot explícito `materialized: false` y conservar un resumen seguro del boundary local cuando exista.
 - [ ] Para línea materializada capturar tag/clases, allowlist de atributos, estilos computados seleccionados y ancestry limitado.
@@ -88,9 +89,11 @@ Los tests se desarrollarán **después de estabilizar la implementación**, sigu
 - [ ] Controller: enable/disable/cleared transitions, unsubscribe, capture-target register/unregister y fan-out.
 - [ ] Controller: `clear()` no captura, pero `clear(); capture()` permite republicar un snapshot idéntico.
 - [ ] Controller: compatibilidad con API anterior y límites/sanitización.
+- [ ] Probe: el rango físico completo incluye opening/body/closing y el viewport puede seleccionar un bloque por cualquiera de esas partes.
+- [ ] Probe: fence sin cierre usa opening→fin físico conocido sin inventar closing.
 - [ ] Probe: `view.viewport` conserva candidatos replaced aunque no estén en `visibleRanges`.
 - [ ] Probe: `visibleRanges` se registra como señal de source directo y no excluye candidatos.
-- [ ] Probe: selección conserva bloque pertinente en borde/fuera del filtro normal y cap sigue aplicándose.
+- [ ] Probe: selección sobre opening/body/closing conserva bloque pertinente en borde/fuera del filtro normal y cap sigue aplicándose.
 - [ ] Probe: domAtPos→cm-line, ancestry y estilos computados.
 - [ ] Probe: boundary vecino/replaced y excepción de `domAtPos()` producen `materialized:false` sin abortar otros bloques.
 - [ ] Probe: offsets repetidos (`$foo`) resueltos por posición, no por primer texto coincidente.
