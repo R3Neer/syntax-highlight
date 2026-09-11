@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 
-import { EditorState, StateField, type Text } from "@codemirror/state";
+import {
+  EditorState,
+  StateField,
+  type Extension,
+  type Text,
+} from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
@@ -68,7 +73,7 @@ function fullLineReplacementField(text: string) {
 
 function mount(
   source: string,
-  extraExtensions: Parameters<typeof EditorState.create>[0]["extensions"],
+  extraExtensions: readonly Extension[],
 ): { view: EditorView; languages: LanguageRegistry } {
   const currentSettings = settings();
   const languages = new LanguageRegistry(
@@ -80,7 +85,7 @@ function mount(
     state: EditorState.create({
       doc: source,
       extensions: [
-        ...(extraExtensions ?? []),
+        ...extraExtensions,
         createEditorHighlighter(languages, () => currentSettings),
       ],
     }),
