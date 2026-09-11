@@ -19,3 +19,11 @@ También se aclara que la instrumentación debe integrarse en el ViewPlugin ya e
 Resultado: SIN CAMBIOS.
 
 Se revisó el plan contra recargas del plugin, múltiples EditorView/panes, `markdownEditor` activo o inactivo, lifecycle `destroy()`, DOM desconectado durante reconciliación y el modelo alternativo en que el quoted source vive dentro de `.cm-embed-block`. El diseño ya conserva registro por carga, captura manual post-frame, errores locales no fatales y snapshot tanto de `.cm-line` como de embedded hosts. No se identificó un cambio justificable.
+
+## Revisión 3
+
+Resultado: SIN CAMBIOS.
+
+Revisión final del contrato de uso desde DevTools, aislamiento entre múltiples `EditorView`, versionado/reinstalación del controller, límites de captura y tolerancia a reconciliación concurrente. No se encontró una modificación necesaria.
+
+**ESTABLE según TM:** revisiones 2 y 3 consecutivas sin cambios.
