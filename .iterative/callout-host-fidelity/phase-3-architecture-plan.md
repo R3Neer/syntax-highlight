@@ -18,10 +18,10 @@ La arquitectura debe permitir que una quoted line reciba surface/presentation au
 1. **Mismo EditorView**: quoted source pertenece al EditorView exterior. No introducir editor bridge ni DOM ownership alternativo.
 2. **ViewPlugin sigue siendo la integración oficial**: no StateField nuevo en producción, no MutationObserver, no manipulación DOM.
 3. **Dos políticas de visibilidad explícitas**:
-   - line semantics → `viewport` + intersección de contenido con `visibleRanges`;
+   - line semantics → extent físico en `viewport` + visibility probe contra `visibleRanges`;
    - content semantics/widgets → `visibleRanges`.
 4. **La placement position de `Decoration.line` sigue siendo `line.from`**, aunque ese punto concreto esté oculto.
-5. **No decorar source completamente replaced**: una línea necesita contenido visible además de intersectar viewport.
+5. **No decorar source completamente replaced**: una línea necesita evidencia de source materializado además de intersectar viewport.
 6. **Semántica de Fase 2 intacta**: `commonSemanticRanges`, cache, parser engines y CSS dark-safe no cambian.
 7. **Top-level intacto**: solo bloques `quoteDepth > 0` tienen `syntax-editor-code-source` en el modelo actual; no se crea surface top-level propia.
 8. **Sin clases privadas del host en producción**.
@@ -30,23 +30,40 @@ La arquitectura debe permitir que una quoted line reciba surface/presentation au
 
 ### Cambio
 
-Extender `EditorLineSemantic`:
+Extender `EditorLineSemantic` separando placement/extent físico de la evidencia de contenido source:
 
 ```ts
 export interface EditorLineSemantic {
   from: number;
   to: number;
+  visibilityFrom: number;
+  visibilityTo: number;
   classes: readonly string[];
 }
 ```
 
 ### Autoridad de límites
 
-No calcular límites a partir del DOM. Usar únicamente el modelo Markdown ya existente:
+No calcular límites a partir del DOM. Usar únicamente el modelo Markdown ya existente.
 
-- opening → `openingLineFrom` / `openingLineTo`;
-- body → `bodyLines[].lineFrom` / `lineTo`;
-- closing → `closingLineFrom` / `closingLineTo`.
+#### Opening
+
+- placement/extent: `openingLineFrom` / `openingLineTo`;
+- visibility probe: `openingLineFrom` / `openingLineTo`.
+
+Aunque el prefijo quoted pueda ocultarse, el fence/info string deja contenido source dentro del rango físico.
+
+#### Body
+
+- placement/extent: `bodyLines[].lineFrom` / `lineTo`;
+- visibility probe: `bodyLines[].sourceFrom` / `sourceTo`.
+
+Esto es esencial para líneas lógicamente vacías. Una línea Markdown `> ` puede tener extent físico no vacío, pero `sourceFrom === sourceTo`; ese punto representa la posición source tras retirar el prefijo quoted.
+
+#### Closing
+
+- placement/extent: `closingLineFrom` / `closingLineTo`;
+- visibility probe: mismo rango físico.
 
 Presentation classes se fusionan en la misma entrada de body line, como hoy.
 
@@ -54,7 +71,7 @@ Presentation classes se fusionan en la misma entrada de body line, como hoy.
 
 ### A. Line decorations
 
-Introducir un helper puro, conceptualmente:
+Introducir un helper puro:
 
 ```ts
 lineSemanticIsMaterialized(line, viewport, visibleRanges)
@@ -63,9 +80,9 @@ lineSemanticIsMaterialized(line, viewport, visibleRanges)
 Contrato:
 
 ```text
-line overlaps viewport
+physical extent intersects viewport
 AND
-line has at least one materialized source point/range in visibleRanges
+visibility probe intersects/exists inside visibleRanges
 ```
 
 Si devuelve true:
@@ -78,25 +95,21 @@ No exigir `positionIsVisible(line.from, visibleRanges)`.
 
 ### Semántica de intersección
 
-No reutilizar ciegamente el predicado inclusivo histórico para decidir materialización de línea.
-
-Para una línea no vacía `[from, to)` y un rango CodeMirror `[range.from, range.to)` existe overlap real solo si:
+Para un rango no vacío `[from, to)` y un rango CodeMirror `[range.from, range.to)` existe overlap real solo si:
 
 ```text
 from < range.to && to > range.from
 ```
 
-Una línea completamente replaced que solo **toque** el inicio de un `visibleRange` adyacente no cuenta como visible.
-
-Para una línea física vacía (`from === to`), usar point containment explícito:
+Para un probe vacío (`from === to`) usar point containment explícito:
 
 ```text
 point >= range.from && point <= range.to
 ```
 
-Esto permite surface sobre blank lines reales sin convertir adyacencias en contenido visible.
+Esto permite surface sobre blank quoted source cuando el prefijo físico está oculto, siempre que el punto lógico siga dentro de un `visibleRange`.
 
-El mismo criterio se aplica al `viewport`: overlap half-open para líneas no vacías y point containment para líneas vacías.
+La misma semántica half-open/point se usa para comprobar el extent físico contra `viewport`.
 
 ### B. Semantic marks
 
@@ -127,19 +140,18 @@ openingLineFrom -> closingLineTo/bodyTo
 
 contra `visibleRanges`.
 
-Ese rango ya cubre opening/body/closing y basta como descarte grueso: si una line semantic válida tiene contenido visible, el bloque físico también intersecta algún `visibleRange`.
+Ese rango ya cubre opening/body/closing y basta como descarte grueso: si un visibility probe válido pertenece a source materializado, el rango físico del bloque intersecta algún `visibleRange`.
 
 No introducir un segundo fast path de bloque ni migrar todo el bloque a `viewport`; el cambio debe ocurrir **solo al decidir cada `Decoration.line`**.
 
 ## Helpers de rango
 
-Mantener la lógica host-neutral en `editor-block-model.ts` o un módulo puro equivalente:
+Mantener la lógica host-neutral en `editor-block-model.ts`:
 
 - conservar `rangeIntersectsVisible()` para consumers existentes;
-- añadir un helper específico de materialización de línea con semántica half-open/blank-point;
-- el helper recibe `EditorLineSemantic`, un `viewport` simple y `visibleRanges` simples.
-
-No introducir dependencia de `EditorView` dentro del modelo.
+- añadir un helper interno/puro para overlap half-open + point containment;
+- añadir `lineSemanticIsMaterialized(line, viewport, visibleRanges)`;
+- el helper recibe tipos simples `EditorVisibleRange`, nunca `EditorView`.
 
 El adapter `editor.ts` traduce:
 
@@ -203,7 +215,7 @@ Antes de probar Syntax Highlight, demostrar el escenario host:
 
 - `line.from` no pertenece a `view.visibleRanges` para al menos una quoted body line;
 - la línea sí intersecta `view.viewport`;
-- parte del `[line.from, line.to)` sí intersecta `visibleRanges`.
+- `visibilityFrom/visibilityTo` sí representa source materializado dentro de `visibleRanges`.
 
 Después verificar:
 
@@ -215,11 +227,17 @@ Después verificar:
 
 ### Fully replaced negative case
 
-Usar también una decoration directa para ocultar una quoted line completa y verificar que esa línea no recibe source surface propia, incluso si el replacement o un rango adyacente queda en el viewport.
+Usar también una decoration directa para ocultar una quoted line completa y verificar que su visibility probe no coincide con `visibleRanges` y esa línea no recibe source surface propia.
 
-Añadir además un caso de blank body line para demostrar que una línea física vacía visible sí puede recibir surface.
+### Blank quoted body
 
-Esto impide que la corrección degrade widgets rendered u otros reemplazos del host.
+Usar una línea `> ` / `>` cuyo logical body sea vacío:
+
+- `lineFrom < lineTo` puede seguir siendo cierto físicamente;
+- `visibilityFrom === visibilityTo` debe quedar en un punto visible;
+- la `.cm-line` recibe surface para mantener continuidad.
+
+Esto prueba el caso que un simple rango físico no puede distinguir.
 
 ### Existing regressions
 
@@ -261,7 +279,7 @@ Tras TM de implementación + tests:
 
 ## Criterio de rollback
 
-Si el test adversarial demuestra que `Decoration.line` no puede materializarse cuando su `from` está fuera de `visibleRanges`, o el gate real sigue sin clases de línea, detener implementación y volver a análisis.
+Si el test adversarial demuestra que `Decoration.line` no puede materializarse cuando su placement `from` está fuera de `visibleRanges`, o el gate real sigue sin clases de línea, detener implementación y volver a análisis.
 
 No usar como fallback:
 
