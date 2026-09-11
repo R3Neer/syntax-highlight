@@ -39,32 +39,44 @@ Cambio: cerrar trazabilidad del ledger y del plan con una matriz explícita de t
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del estado anterior. Se comprobó runtime/bundle, contrato npm, ownership DOM, ruta oficial de LP rendered, contraste, selectores privados, viewport/caché, lifecycle y ledger.
+Primera revisión limpia del estado anterior.
 
 ## Revisión 7
 
 Resultado: SIN CAMBIOS.
 
-Segunda revisión limpia del estado anterior. Revisiones 6 y 7 estabilizaron la implementación y autorizaron inicialmente el paso a Fase 9.
+Segunda revisión limpia del estado anterior. Revisiones 6 y 7 estabilizaron inicialmente implementación.
 
 ## Revisión 8
 
 Resultado: CAMBIOS NECESARIOS.
 
-La primera ejecución de los tests nuevos reveló que la política mode/settings estaba enterrada dentro de `main.ts` y solo podía probarse intentando cargar el módulo runtime `obsidian` en Vitest. Esa prueba no representa un host real y además el paquete `obsidian` del entorno de tests actúa como contrato de tipos, no como implementación JS ejecutable.
+Los tests nuevos revelaron que la política mode/settings estaba enterrada dentro de `main.ts` y solo podía probarse intentando cargar el runtime `obsidian` en Vitest.
 
-### Corrección de producción
+Corrección:
 
-Se extrajo una frontera pura y host-neutral:
+- nuevo `markdown-render-mode.ts` con `MarkdownRenderViewState` y `markdownHighlightEnabledForContext()`;
+- función pura recibe solo `mode`, `sourcePath`, `ownsElement` y settings;
+- `main.ts` conserva la traducción desde `MarkdownView` real mediante API pública;
+- semántica sin cambios: ownership primero, `sourcePath` único como fallback, ausencia/ambigüedad -> `markdownReading`.
 
-- nuevo `markdown-render-mode.ts` define `MarkdownRenderViewState` y `markdownHighlightEnabledForContext()`;
-- la función pura recibe únicamente `mode`, `sourcePath`, `ownsElement` y los dos settings;
-- `main.ts` sigue siendo el único adapter Obsidian: convierte `MarkdownView` reales mediante APIs públicas (`getMode()`, `file?.path`, `containerEl.contains(element)`) y delega la decisión;
-- se conserva exactamente la semántica estabilizada: owner por containment primero, único `sourcePath` como fallback y ausencia/ambigüedad -> `markdownReading`;
-- no se añade ninguna dependencia de DOM privado ni una nueva ruta de rendering.
+Este cambio reabrió TM de implementación.
 
-### Motivo arquitectónico
+## Revisión 9
 
-La extracción mejora la separación adapter host / política pura y permite probar la decisión sin inventar una implementación de `MarkdownView` ni cargar internals de Obsidian. El cambio fue provocado por la fase de tests y, por ello, **reabre el TM de implementación**. Las antiguas revisiones 6–7 dejan de ser el par limpio final; hacen falta dos nuevas revisiones consecutivas sin cambios sobre este estado.
+Resultado: SIN CAMBIOS.
 
-No se reanuda la expansión de tests hasta estabilizar de nuevo implementación.
+Primera revisión limpia después de la extracción host-neutral de la política rendered-mode.
+
+Se revisó específicamente la nueva frontera `markdown-render-mode.ts` / `main.ts`:
+
+- la función pura no conoce Obsidian, DOM, `MarkdownView` ni selectores;
+- `main.ts` sigue siendo la única frontera host y usa exclusivamente API pública: `getMode()`, `file?.path` y `containerEl.contains()`;
+- no cambia la semántica estabilizada en revisiones anteriores;
+- no introduce estado, caché, observers ni lifecycle nuevos;
+- owner por containment conserva prioridad para transclusiones;
+- único `sourcePath` sigue siendo fallback secundario;
+- ausencia/ambigüedad conserva `markdownReading` como decisión conservadora;
+- no cambia ninguna ruta de rendering, solo separa adapter host de política testeable.
+
+No se encontró modificación necesaria. Esta es la primera revisión limpia del nuevo estado de implementación.
