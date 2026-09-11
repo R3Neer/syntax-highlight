@@ -24,14 +24,17 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 
 - [ ] Separar una función pura/de lectura que reciba `EditorView`, registry/accepted fences y devuelva snapshots sin publicarlos.
 - [ ] Obtener bloques con `findCodeBlocks()`; no crear un segundo parser Markdown.
-- [ ] Filtrar a bloques que intersecten `view.visibleRanges` o contengan la selección; aplicar cap duro de bloques.
+- [ ] Filtrar primero por intersección con `view.viewport` y conservar además bloques que contengan la selección; aplicar cap duro de bloques.
+- [ ] Registrar por bloque si intersecta uno o varios `view.visibleRanges`; usarlo como señal de source directo, nunca como filtro excluyente.
 - [ ] Derivar `selectionRegion`: `outside | opening | body | closing`.
 - [ ] Resolver cada posición de línea mediante `view.domAtPos()` y ascender exclusivamente dentro de `view.dom` hasta `.cm-line`.
-- [ ] Si la línea no está materializada, devolver snapshot explícito `materialized: false`.
+- [ ] Validar que la `.cm-line` resuelta representa realmente la posición/range esperado; un boundary vecino de un replaced range no cuenta como materialización del source.
+- [ ] Si `domAtPos()` falla o no produce línea representativa, devolver snapshot explícito `materialized: false` y conservar un resumen seguro del boundary local cuando exista.
 - [ ] Para línea materializada capturar tag/clases, allowlist de atributos, estilos computados seleccionados y ancestry limitado.
 - [ ] Capturar descendientes relevantes de la línea con límites estrictos; incluir clases, texto truncado, color/background y estado de contraste.
 - [ ] Identificar tokens objetivo por offsets documentales derivados del body lógico→físico, no por búsqueda DOM global.
-- [ ] Registrar representación `source-line | rendered-widget | not-materialized` solo cuando sea demostrable localmente; en caso dudoso usar `not-materialized/unknown` en vez de heurística global.
+- [ ] Cuando un token aparece varias veces, conservar cada ocurrencia por posición documental; el texto es solo etiqueta/verificación.
+- [ ] Registrar representación `source-line | rendered-widget | not-materialized | unknown` solo cuando sea demostrable localmente; no inferir widget solo por ausencia de source.
 - [ ] El probe no muta DOM ni controller.
 
 ## 3. Lifecycle ViewPlugin temporal
@@ -42,7 +45,7 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 - [ ] Al enable posterior: conectar `MutationObserver` scoped a `view.dom` y schedule.
 - [ ] Al disable: desconectar observer y cancelar rAF pendiente.
 - [ ] Observer: `childList + subtree + attributes(class/style)` exclusivamente en `view.dom`.
-- [ ] `update()` agenda captura ante `docChanged`, `selectionSet`, `viewportChanged`, `geometryChanged` o `focusChanged`.
+- [ ] `update()` agenda captura ante `docChanged`, `selectionSet`, `viewportChanged`, `geometryChanged` o `focusChanged`, usando solo flags realmente disponibles en la versión TypeScript instalada.
 - [ ] Scheduler idempotente: máximo un rAF pendiente.
 - [ ] Si aparecen mutaciones durante/después del frame, permitir otro frame posterior sin polling.
 - [ ] Publicar snapshots como eventos `live-preview-post-frame` solo tras el rAF.
@@ -52,7 +55,7 @@ Crear `packages/obsidian/src/_tmp-live-preview-post-frame-diagnostics.ts`.
 ## 4. Integración temporal
 
 - [ ] Añadir la extensión post-frame a `createMarkdownEditorExtensions()` junto a las extensiones existentes.
-- [ ] Pasarle únicamente registry/accepted fences/getSettings necesarios; no duplicar política de lenguajes.
+- [ ] Pasarle únicamente registry/accepted fences necesarios; derivar common fences desde la misma fuente que `buildSyntaxDecorations()` y no duplicar una lista manual.
 - [ ] La extensión debe existir en builds normales de esta rama pero hacer cero scans/observer mientras diagnostics esté off.
 - [ ] No modificar `live-preview-host.ts`, surface CSS, `CommonContrastManager`, renderer Reading ni semántica de blocks como parte de Fase 0D.
 - [ ] Conservar temporalmente la implementación Fase 0C como estímulo observable.
@@ -64,7 +67,7 @@ Archivo de integración: `packages/obsidian/src/editor.ts`.
 - [ ] `npm run typecheck`.
 - [ ] `npm run lint`.
 - [ ] Inspección de diff: solo código diagnóstico temporal + wiring mínimo; no fix visual accidental.
-- [ ] Comprobar que diagnostics off no instala observer activo ni agenda frames.
+- [ ] Comprobar por inspección/lifecycle que diagnostics off no mantiene observer activo ni agenda frames.
 - [ ] Revisión TM de implementación hasta dos revisiones consecutivas sin cambios.
 
 ## 6. Tests de Fase 0D
@@ -73,9 +76,11 @@ Los tests se desarrollarán **después de estabilizar la implementación**, sigu
 
 - [ ] Controller: enable/disable transitions, unsubscribe, capture-target register/unregister y fan-out.
 - [ ] Controller: compatibilidad con API anterior y límites/sanitización.
-- [ ] Probe: filtros visibleRanges/selección/cap.
+- [ ] Probe: `view.viewport` conserva candidatos replaced aunque no estén en `visibleRanges`.
+- [ ] Probe: `visibleRanges` se registra como señal de source directo y no excluye candidatos.
+- [ ] Probe: selección conserva bloque pertinente en borde/fuera del filtro normal y cap sigue aplicándose.
 - [ ] Probe: domAtPos→cm-line, ancestry y estilos computados.
-- [ ] Probe: `materialized:false` cuando la posición no tiene línea visible/replaced.
+- [ ] Probe: boundary vecino/replaced y excepción de `domAtPos()` producen `materialized:false` sin abortar otros bloques.
 - [ ] Probe: offsets repetidos (`$foo`) resueltos por posición, no por primer texto coincidente.
 - [ ] Lifecycle: enable conecta observer + agenda sin ViewUpdate.
 - [ ] Lifecycle: disable/destroy desconectan observer y cancelan frames.
@@ -92,10 +97,10 @@ Los tests se desarrollarán **después de estabilizar la implementación**, sigu
 No implementar ningún nuevo fix de surface/color antes de completar estas capturas.
 
 - [ ] Instalar build común en vault de clases.
-- [ ] `SyntaxHighlightHostDiagnostics.clear(); enable(); capture();`.
+- [ ] `SyntaxHighlightHostDiagnostics.clear(); SyntaxHighlightHostDiagnostics.enable(); SyntaxHighlightHostDiagnostics.capture();`.
 - [ ] Capturar PowerShell top-level con cursor dentro.
-- [ ] `clear(); capture();` y capturar PowerShell quoted con cursor dentro.
-- [ ] `clear(); capture();` y capturar cursor fuera de ambos.
+- [ ] Cambiar cursor al quoted, esperar reconciliación, `clear(); capture();` y capturar PowerShell quoted con cursor dentro.
+- [ ] Mover cursor fuera de ambos, esperar reconciliación, `clear(); capture();` y capturar cursor fuera de ambos.
 - [ ] Exportar JSON post-frame sanitizado.
 - [ ] Clasificar evidencia contra ramas A/B/C/D/E del plan arquitectónico.
 - [ ] Solo después crear análisis/plan del fix real que corresponda.
