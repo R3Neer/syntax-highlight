@@ -43,7 +43,7 @@ describe("reading view rendering", () => {
 
   it("renders Text blocks as theme-aware plain source without code furniture", () => {
     const language = commonLanguageByFence("text");
-    expect(language?.support).toBeUndefined();
+    expect(language?.engine.kind).toBe("plain");
     const source = "Comando conceptual\n  salida literal: foo & bar";
     const container = document.createElement("div");
 
@@ -128,9 +128,9 @@ describe("reading view rendering", () => {
 
     const line = container.querySelector(".syntax-code-line-content");
     expect(line?.textContent).toBe(source);
-    expect(line?.querySelector(".syntax-common-callable.token.function")?.textContent)
+    expect(line?.querySelector(".syntax-common-callable")?.textContent)
       .toBe("./programa");
-    expect(line?.querySelector(".syntax-common-operator.token.operator")?.textContent)
+    expect(line?.querySelector(".syntax-common-operator")?.textContent)
       .toBe("&");
     expect(line?.querySelector(".syntax-common-plain")?.textContent).toBe(" ");
   });
@@ -145,9 +145,9 @@ describe("reading view rendering", () => {
 
     const line = container.querySelector(".syntax-code-line-content");
     expect(line?.textContent).toBe(source);
-    expect(line?.querySelector(".syntax-common-callable.token.function")?.textContent)
+    expect(line?.querySelector(".syntax-common-callable")?.textContent)
       .toBe("job");
-    expect(line?.querySelector(".syntax-common-string.token.string")?.textContent)
+    expect(line?.querySelector(".syntax-common-string")?.textContent)
       .toBe("spawn");
     const plainText = Array.from(
       line?.querySelectorAll(".syntax-common-plain") ?? [],
@@ -169,7 +169,7 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Nushell");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
-    expect(container.querySelector(".token.keyword")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-keyword")).not.toBeNull();
   });
 
   it("renders Bash with the Bash badge", () => {
@@ -186,10 +186,10 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("Bash");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
-    expect(container.querySelector(".token.keyword")).not.toBeNull();
+    expect(container.querySelector(".syntax-common-keyword")).not.toBeNull();
   });
 
-  it("renders PowerShell with theme-compatible semantic classes", () => {
+  it("renders PowerShell with plugin semantic classes", () => {
     const language = commonLanguageByFence("powershell");
     expect(language?.id).toBe("powershell");
     const container = document.createElement("div");
@@ -203,7 +203,7 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-language-badge-text")?.textContent)
       .toBe("PowerShell");
     expect(container.querySelector('[class*="syntax-common-"]')).not.toBeNull();
-    expect(container.querySelector(".token.comment")?.textContent).toBe("# comentario");
+    expect(container.querySelector(".syntax-common-comment")?.textContent).toBe("# comentario");
   });
 
   it("colors TOML through its configurable primary profile", () => {
