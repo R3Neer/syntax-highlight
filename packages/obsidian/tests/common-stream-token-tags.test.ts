@@ -1,4 +1,4 @@
-import type { StreamParser } from "@codemirror/language";
+import { StringStream, type StreamParser } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { describe, expect, it } from "vitest";
 
@@ -38,10 +38,10 @@ describe("stream engine tokenTags", () => {
     const engine = language.engine as CommonStreamEngine;
     const ranges = commonSemanticRanges(language, "x");
     const effective = effectiveCommonStreamParser(engine);
-    const nativeStyle = effective.token({
-      next: () => "x",
-    } as never, true);
+    const nativeStream = new StringStream("x", 4, 2);
+    const nativeStyle = effective.token(nativeStream, true);
 
+    expect(nativeStream.pos).toBe(1);
     expect(ranges).toEqual([
       { from: 0, to: 1, classes: "syntax-common-keyword" },
     ]);
