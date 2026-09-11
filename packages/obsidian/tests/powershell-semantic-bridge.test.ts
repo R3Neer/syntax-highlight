@@ -46,23 +46,23 @@ const BODY = [
 ].join("\n");
 
 describe("PowerShell semantic bridge", () => {
-  it("maps PowerShell semantic categories to distinct Reading classes", () => {
+  it("maps PowerShell semantic categories to distinct Reading roles", () => {
     const language = commonLanguageByFence("powershell");
     expect(language).toBeDefined();
     const container = document.createElement("div");
 
     renderCommonCode(BODY, container, language!);
 
-    expect(classForRenderedText(container, "$foo")).toContain("token variable");
-    expect(classForRenderedText(container, "42")).toContain("token number");
-    expect(classForRenderedText(container, "=")).toContain("token operator");
-    expect(classForRenderedText(container, '"hello"')).toContain("token string");
-    expect(classForRenderedText(container, "# comment")).toContain("token comment");
-    expect(classForRenderedText(container, "Write-Host")).toContain("token builtin");
+    expect(classForRenderedText(container, "$foo")).toContain("syntax-common-variable");
+    expect(classForRenderedText(container, "42")).toContain("syntax-common-number");
+    expect(classForRenderedText(container, "=")).toContain("syntax-common-operator");
+    expect(classForRenderedText(container, '"hello"')).toContain("syntax-common-string");
+    expect(classForRenderedText(container, "# comment")).toContain("syntax-common-comment");
     expect(classForRenderedText(container, "Write-Host")).toContain("syntax-common-callable");
+    expect(classForRenderedText(container, "$foo")).not.toContain("token ");
   });
 
-  it("maps the same PowerShell semantics to CodeMirror-compatible classes inside a quoted fence", () => {
+  it("maps the same PowerShell semantics to plugin roles inside a quoted fence", () => {
     const source = [
       "> [!task] PowerShell",
       "> ```powershell",
@@ -71,12 +71,14 @@ describe("PowerShell semantic bridge", () => {
     ].join("\n");
     const marks = editorMarks(source);
 
-    expect(marks.get("$foo")?.some((value) => value.includes("cm-variable"))).toBe(true);
-    expect(marks.get("42")?.some((value) => value.includes("cm-number"))).toBe(true);
-    expect(marks.get("=")?.some((value) => value.includes("cm-operator"))).toBe(true);
-    expect(marks.get('"hello"')?.some((value) => value.includes("cm-string"))).toBe(true);
-    expect(marks.get("# comment")?.some((value) => value.includes("cm-comment"))).toBe(true);
-    expect(marks.get("Write-Host")?.some((value) => value.includes("cm-builtin"))).toBe(true);
+    expect(marks.get("$foo")?.some((value) => value.includes("syntax-common-variable"))).toBe(true);
+    expect(marks.get("42")?.some((value) => value.includes("syntax-common-number"))).toBe(true);
+    expect(marks.get("=")?.some((value) => value.includes("syntax-common-operator"))).toBe(true);
+    expect(marks.get('"hello"')?.some((value) => value.includes("syntax-common-string"))).toBe(true);
+    expect(marks.get("# comment")?.some((value) => value.includes("syntax-common-comment"))).toBe(true);
     expect(marks.get("Write-Host")?.some((value) => value.includes("syntax-common-callable"))).toBe(true);
+    expect(
+      [...marks.values()].flat().some((value) => /(?:^|\s)cm-/.test(value)),
+    ).toBe(false);
   });
 });
