@@ -14,6 +14,7 @@ import {
 } from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
+import { markdownHighlightEnabledForContext } from "./markdown-render-mode";
 import {
   registerReadingFallbackPostProcessor,
   renderReadingFence as renderResolvedReadingFence,
@@ -186,23 +187,20 @@ export default class SyntaxHighlightPlugin extends Plugin {
   ): boolean {
     const views = this.app.workspace
       .getLeavesOfType("markdown")
-      .flatMap(({ view }) => view instanceof MarkdownView ? [view] : []);
-    const owner = views.find((view) => view.containerEl.contains(element));
-    if (owner !== undefined) {
-      return owner.getMode() === "source"
-        ? this.pluginSettings.markdownEditor
-        : this.pluginSettings.markdownReading;
-    }
-
-    const matchingSourceViews = views.filter(
-      (view) => view.file?.path === context.sourcePath,
+      .flatMap(({ view }) =>
+        view instanceof MarkdownView
+          ? [{
+              mode: view.getMode(),
+              sourcePath: view.file?.path,
+              ownsElement: view.containerEl.contains(element),
+            }]
+          : [],
+      );
+    return markdownHighlightEnabledForContext(
+      this.pluginSettings,
+      views,
+      context.sourcePath,
     );
-    const fallback = matchingSourceViews.length === 1
-      ? matchingSourceViews[0]
-      : undefined;
-    return fallback?.getMode() === "source"
-      ? this.pluginSettings.markdownEditor
-      : this.pluginSettings.markdownReading;
   }
 
   private renderReadingFence(
