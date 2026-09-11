@@ -10,9 +10,23 @@ La primera revisión se centró en si el orden operativo podía ejecutar la arqu
 
 Cambios incorporados:
 
-1. **Invalidación de caché conservadora.** El borrador dejaba abierta una reutilización sofisticada de semántica entre documentos editados. Para esta refactorización, cualquier `docChanged` o cambio de runtime/revision invalida la caché semántica completa del view. Viewport/selection sin cambio documental sí reutilizan. Esto reduce riesgo de offsets/tokens obsoletos y deja optimizaciones incrementales para un ciclo posterior.
-2. **Ledger de garantías retiradas.** Al eliminar `LivePreviewRenderedBlockBridge` habrá tests cuyo API deja de existir. Se permite adaptarlos/eliminarlos durante implementación solo después de registrar qué garantía útil cubrían y qué tarea de Fase 9 la sustituye. Así no se confunde “test obsoleto” con “garantía prescindible”.
-3. **Excepción temporal explícita para diagnostics.** La futura prohibición de `.cm-embed-block`, `.cm-callout` y `HyperMD-codeblock` aplica a funcionalidad production, pero `_tmp-host-diagnostics.ts` puede seguir mencionándolos hasta el gate real. Tras limpieza final no queda ninguna excepción.
-4. **Gate manual reforzado.** Se añade verificación específica de que nested rendered sigue entrando por el processor oficial después de retirar el bridge DOM privado.
+1. invalidación de caché conservadora (`docChanged`/revision limpian; viewport/selection reutilizan);
+2. ledger de garantías retiradas antes de eliminar tests/APIs del bridge;
+3. excepción temporal de selectors privados solo para `_tmp-host-diagnostics.ts` hasta el gate;
+4. gate manual específico para nested rendered sin bridge DOM.
 
-No se modificó la arquitectura estabilizada; se precisó su ejecución y trazabilidad.
+## Revisión 2
+
+Resultado: CAMBIOS NECESARIOS.
+
+El plan de implementación había quedado desfasado al reabrirse y corregirse el plan arquitectónico en sus Revisiones 5–7.
+
+Reconciliación incorporada:
+
+1. **Frontera de build completa.** Fase 1 enumera ahora `obsidian`, `electron`, la familia CodeMirror del sample oficial, Lezer y `builtinModules`. `electron`/built-ins se tratan como externals preventivos, no como peerDependencies automáticos.
+2. **Peers separados de externals.** El paquete npm solo declara peers que correspondan a runtime imports/identidad compartida; la lista de externals del artifact sigue el sample oficial completo.
+3. **Fallback Markdown correctamente acotado.** Su garantía contractual es Reading View. No se intenta bloquear una ejecución incidental en otro renderer Markdown, pero LP no depende de ella.
+4. **Gate LP corregido.** Se exige validar `registerMarkdownCodeBlockProcessor` como ruta oficial de nested rendered sin considerar necesario que el generic postprocessor aparezca en LP.
+5. **Tests de arquitectura actualizados.** La futura verificación de externals comprueba la lista oficial adoptada completa y el gate real cubre el contrato que no debe simularse con DOM ficticio.
+
+El orden general de ejecución no cambia.
