@@ -37,6 +37,7 @@ export type ReadingFenceHandler = (
   element: HTMLElement,
   context: MarkdownPostProcessorContext,
   fence: string,
+  sourceElement?: HTMLElement,
 ) => boolean;
 
 function renderPlainReadingBlock(source: string, element: HTMLElement): void {
@@ -82,6 +83,7 @@ export function renderReadingFence(
   fence: string,
   enableEditing: EnableReadingBlockEditing,
   claimUnknown = false,
+  highlightEnabled = settings.markdownReading,
 ): boolean {
   const normalizedFence = fence.toLocaleLowerCase();
   const recognized =
@@ -100,7 +102,7 @@ export function renderReadingFence(
   }
 
   element.setAttribute(RENDERED_PROCESSED_ATTRIBUTE, "true");
-  if (!settings.markdownReading || !recognized) {
+  if (!highlightEnabled || !recognized) {
     renderPlainReadingBlock(source, element);
   } else {
     renderResolvedFence(registry, settings, source, element, normalizedFence);
@@ -135,6 +137,7 @@ export function createReadingFallbackPostProcessor(
           host,
           context,
           candidate.fence,
+          candidate.pre,
         );
       } catch (error) {
         console.error(
