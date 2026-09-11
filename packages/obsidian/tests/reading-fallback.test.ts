@@ -164,7 +164,7 @@ describe("Reading View fallback rendering", () => {
 
     expect(root.querySelector(".syntax-language-badge-text")?.textContent).toBe("PowerShell");
     expect(root.querySelectorAll("[data-line-number]")).toHaveLength(2);
-    expect(root.querySelector(".token.comment")?.textContent).toBe("# comment");
+    expect(root.querySelector(".syntax-common-comment")?.textContent).toBe("# comment");
   });
 
   it("renders configured TOML through the same fallback path", () => {
