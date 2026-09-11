@@ -246,33 +246,56 @@ Un theme/snippet puede sobrescribir estas variables propias en un scope superior
 
 No se define una custom property mediante autorreferencia (`--x: var(--x, ...)`); el literal es únicamente fallback de consumo.
 
-### 10.2 Integrar furniture interno del host mediante variables públicas
+### 10.2 Paleta dark propia y furniture del host
 
-La documentación oficial confirma `--code-background`, `--code-normal` y la familia `--code-*` como variables públicas para código, y `--caret-color` como variable pública de caret.
+Una surface negra fija no puede heredar como primera opción una paleta `--code-*` diseñada para un fondo claro. Source tampoco puede usar el `CommonContrastManager`, porque ese manager solo posee DOM rendered.
 
-Dentro de `.cm-line.syntax-editor-code-source` se redefinen variables, no clases internas:
+Por ello `.cm-line.syntax-editor-code-source` establece una paleta scoped de variables plugin-owned, con defaults literales legibles sobre `#000` y sobrescribibles por themes/snippets. Nombre conceptual:
+
+```text
+--syntax-editor-code-color
+--syntax-editor-code-comment
+--syntax-editor-code-keyword
+--syntax-editor-code-function
+--syntax-editor-code-string
+--syntax-editor-code-value
+--syntax-editor-code-operator
+--syntax-editor-code-property
+--syntax-editor-code-punctuation
+--syntax-editor-code-tag
+--syntax-editor-code-caret
+```
+
+Los defaults concretos se eligen para cumplir al menos el mismo umbral de contraste de texto normal que ya usa el proyecto (`4.5:1`) sobre `#000` cuando la categoría representa texto legible ordinario. Roles puramente decorativos pueden documentar una excepción si procede; no se acepta una paleta ilegible por herencia accidental de theme light.
+
+Dentro de la línea quoted, las variables públicas de Obsidian se reasignan a esa paleta propia para que descendants/furniture nativos que ya consumen el contrato público de código se integren sin selectores privados:
 
 ```css
 --code-background: transparent;
 --code-normal: var(--syntax-editor-code-color, #d4d4d4);
+--code-comment: var(--syntax-editor-code-comment, <dark-safe>);
+--code-function: var(--syntax-editor-code-function, <dark-safe>);
+--code-keyword: var(--syntax-editor-code-keyword, <dark-safe>);
+--code-string: var(--syntax-editor-code-string, <dark-safe>);
+--code-value: var(--syntax-editor-code-value, <dark-safe>);
+--code-operator: var(--syntax-editor-code-operator, <dark-safe>);
+--code-property: var(--syntax-editor-code-property, <dark-safe>);
+--code-punctuation: var(--syntax-editor-code-punctuation, <dark-safe>);
+--code-tag: var(--syntax-editor-code-tag, <dark-safe>);
 --caret-color: var(--syntax-editor-code-caret, #d4d4d4);
 ```
 
-La propia línea usa `--syntax-editor-code-background`, así que neutralizar `--code-background` solo evita rectángulos claros de descendants/furniture que consuman esa variable.
+La línea usa `--syntax-editor-code-background`, no el `--code-background` neutralizado.
 
 No usar `!important`, `.cm-inline-code` ni `HyperMD-*`.
 
-### 10.3 Roles legibles sobre negro
+### 10.3 Roles `syntax-common-*` sobre negro
 
-Dentro de la surface, cada `syntax-common-*` usa:
+Dentro de `.cm-line.syntax-editor-code-source`, los roles propios consumen primero la paleta `--syntax-editor-code-*`, no los valores globales del theme. Así los manual ranges y el furniture nativo que consuma `--code-*` convergen en la misma paleta dark scoped.
 
-1. variable propia `--syntax-common-*`;
-2. variable pública `--code-*`/`--color-*` apropiada;
-3. fallback literal legible.
+Fuera de esta surface, `syntax-common-*` conserva su integración normal con las variables públicas del tema.
 
-Plain no cae finalmente a `--text-normal`, porque una theme light podría dar texto oscuro sobre nuestra surface negra.
-
-Opening/body/closing comparten surface; alignment/flow sigue solo en body presentacional.
+Opening/body/closing comparten surface y paleta. Solo body presentacional recibe alignment/flow.
 
 ## 11. Rendered / Reading
 
@@ -338,7 +361,9 @@ No tocar salvo imports/tipos inevitables:
 - highlighter único creado con `tagHighlighter` funciona en `highlightTree`, stream `.style()` y `syntaxHighlighting()`;
 - rendered manual sin `token *`; editor manual sin `cm-*`;
 - source view conserva support + syntaxHighlighting con highlighter único;
-- quoted source negro, foreground/caret legibles y `--code-background` neutralizado sin selector privado/`!important`;
+- quoted source negro, foreground/caret y semantic palette legibles;
+- las variables públicas `--code-*` quedan scoped a la paleta dark dentro de quoted source y `--code-background` transparente, sin selector privado/`!important`;
+- contrast tests verifican los defaults dark sobre `#000`;
 - gate lógico distingue nuestras categorías de cualquier color nativo adicional del host;
 - gate real con creación fresca para routing rendered.
 
@@ -357,7 +382,7 @@ Dos revisiones consecutivas sin cambios deben confirmar:
 9. no se sacrifica highlighting top-level common;
 10. no se promete igualdad pixel-perfect con highlighting nativo que Obsidian documenta como motor distinto;
 11. SourceView conserva camino nativo CodeMirror;
-12. quoted black es plugin-owned y sobrescribible;
+12. quoted black es plugin-owned, sobrescribible y tiene paleta propia legible;
 13. furniture host se integra con variables públicas scoped, sin internals ni `!important`;
 14. scanner stream preserva estado/offsets, no inventa blank final y evita loops;
 15. ownership DOM de Fase 1 permanece intacto;
