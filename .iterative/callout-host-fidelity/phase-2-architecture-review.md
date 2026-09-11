@@ -2,98 +2,55 @@
 
 Estado: TEMPORAL. Eliminar tras implementación, tests, gate real y limpieza final.
 
-## Revisión 1
+## Revisiones 1–3
 
 Resultado: CAMBIOS NECESARIOS.
 
-- separar engine tree/stream/plain explícitamente;
-- no copiar aliases internos de `StreamLanguage`;
-- conservar `SyntaxSourceView` sobre la ruta nativa `StreamLanguage + syntaxHighlighting()`.
+Se estabilizaron previamente estas decisiones:
 
-## Revisión 2
-
-Resultado: CAMBIOS NECESARIOS.
-
-La tabla semántica pasó a un único `Highlighter` creado con `tagHighlighter()`, compartido por tree, stream y `syntaxHighlighting()`.
-
-## Revisión 3
-
-Resultado: CAMBIOS NECESARIOS.
-
-- no prometer identidad pixel-perfect entre los dos motores de highlighting que Obsidian documenta como distintos;
-- fijar LF/CRLF/terminador final sin blank line sintética.
+- no copiar aliases internos de StreamLanguage;
+- engine como fuente única de support + extracción manual;
+- SourceView conserva ruta nativa CodeMirror;
+- scanner stream define LF/CRLF/blank/zero-length;
+- `parser.tokenTable` gana sobre engine tokenTags;
+- quoted source usa surface negra propia y variables CSS públicas, sin private selectors.
 
 ## Revisión 4
 
-Resultado: CAMBIOS NECESARIOS.
+Resultado: SIN CAMBIOS.
 
-`effectiveStreamParser.token()` reescribe styles declarados a nombres sintéticos privados para no depender de la precedencia interna de aliases legacy. Scanner manual y StreamLanguage usan el mismo resolver.
+Primera revisión limpia del estado arquitectónico anterior.
 
 ## Revisión 5
 
-Resultado: CAMBIOS NECESARIOS.
+Resultado: SIN CAMBIOS.
 
-El engine stream exige estado inicial explícito; no se copia el fallback interno de `StreamLanguage` cuando `startState` falta.
+Segunda revisión limpia del estado anterior; la arquitectura quedó inicialmente estabilizada y se autorizó implementación.
 
 ## Revisión 6
 
 Resultado: CAMBIOS NECESARIOS.
 
-Se añadió paleta dark plugin-owned y remapeo scoped de variables públicas `--code-*` para que una surface negra no herede una paleta ilegible de un theme light.
+La revisión de implementación cruzó la nueva surface negra con los valores reales del theme usado en el gate y encontró que el orden anterior `--syntax-common-* -> --code-* -> literal dark-safe` no garantiza contraste.
 
-## Revisión 7
+Evidencia concreta sobre `#000`:
 
-Resultado: CAMBIOS NECESARIOS.
+- `--code-property: rgb(51,77,190)` ≈ 2.95:1;
+- `--code-value: rgb(161,83,170)` ≈ 4.33:1.
 
-El wrapper efectivo debe preservar/delegar todo el contrato público del parser ajeno al styling (`name`, estado, copyState, blankLine, indent, languageData, mergeTokens, etc.).
+Son variables públicas válidas pero diseñadas para un papel claro. Al forzar una surface negra propia no pueden seguir siendo autoridad cromática dentro de ese scope.
 
-## Revisión 8
+### Corrección arquitectónica
 
-Resultado: SIN CAMBIOS.
+Dentro de `.cm-line.syntax-editor-code-source`:
 
-Primera revisión limpia del estado de entonces; quedó invalidada por la Revisión 9 posterior.
+- remapear la familia pública relevante `--code-*` hacia nuestra paleta dark-safe (`--syntax-common-*` heredable -> literal seguro);
+- mantener `--code-background: transparent` para furniture interno;
+- `--code-normal` y `--caret-color` también salen de variables propias con fallback claro;
+- nuestros roles `syntax-common-*` y el furniture del host consumen así la misma paleta compatible con la surface;
+- `syntax-common-invalid` no usa `--text-error` oscuro como autoridad final dentro del quoted source;
+- line numbers reciben un fallback claramente legible.
 
-## Revisión 9
+No se añade branch por theme, selector privado ni `!important`.
 
-Resultado: CAMBIOS NECESARIOS.
-
-- añadir `syntax-common-invalid` para `tags.invalid`;
-- incluir `--code-important`/`--syntax-editor-code-important` en la paleta dark scoped;
-- exigir tests de contraste para la paleta completa, incluido invalid/error.
-
-El contador de revisiones limpias se reinicia.
-
-## Revisión 10
-
-Resultado: SIN CAMBIOS.
-
-Primera revisión limpia del plan actual.
-
-Comprobaciones:
-
-- todo tag declarado por el engine stream tiene destino semántico visible, incluido `invalid`;
-- todos los roles `syntax-common-*` tienen vía de color rendered y paleta dark scoped en quoted source;
-- `--code-important` está cubierto;
-- opening/closing son legibles aunque no tengan semantic ranges;
-- el wrapper stream conserva todo el contrato del parser y adapta solo la frontera de style names;
-- no se requieren cambios en scanner Markdown, cache, Smart Editing, contrast manager ni routing rendered.
-
-No se encontró modificación necesaria.
-
-## Revisión 11
-
-Resultado: SIN CAMBIOS.
-
-Segunda revisión limpia, centrada en layering, packaging y portabilidad:
-
-- `common-languages.ts` puede ser autoridad de catálogo/engines/support/highlighter;
-- `common-semantic-ranges.ts` depende de esa autoridad sin crear ciclo inverso;
-- `reading.ts` y `editor-block-model.ts` quedan como consumidores de semantic ranges;
-- `source-view.ts` consume support + highlighter nativos, no el scanner manual;
-- common languages son estáticos durante el bundle y no requieren una nueva revision cache;
-- `StringStream`, `StreamParser`, `tagHighlighter` pertenecen a la frontera host ya externalizada/declarada como peer;
-- no se introducen APIs Node/Electron ni dependencia desktop-only.
-
-No se encontró modificación necesaria.
-
-Revisiones **10 y 11 son consecutivas sin cambios**: el plan arquitectónico de Fase 2 queda estabilizado según TM y se autoriza crear el plan de implementación con checkboxes.
+Este hallazgo modifica una decisión arquitectónica, por lo que las antiguas Revisiones 4–5 dejan de ser el par limpio final. Se requieren dos nuevas revisiones consecutivas sin cambios antes de continuar implementación.
