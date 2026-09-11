@@ -41,19 +41,23 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 - [ ] Mapear `error` a `tags.invalid`.
 - [ ] No introducir ningún `if (language.id === "powershell")` en renderer/materialización.
 
-### 1.4 `commonLanguageSupport()`
+### 1.4 Helpers stream y support en la capa de catálogo
 
+Para evitar ciclos, `common-languages.ts` es también la capa inferior compartida para metadata/resolución stream. `common-semantic-ranges.ts` puede importarla; nunca al revés.
+
+- [ ] Implementar en `common-languages.ts` (o helpers internos del mismo módulo) la resolución efectiva de style words y la construcción de `effectiveStreamParser`.
+- [ ] Los helpers no importan `common-semantic-ranges.ts`, renderer, DOM ni EditorView.
 - [ ] Crear helper único `commonLanguageSupport(language)`.
 - [ ] Tree devuelve el support de su factory.
 - [ ] Plain devuelve `undefined`.
-- [ ] Stream construye `effectiveStreamParser` sin mutar el parser importado.
+- [ ] Stream usa `effectiveStreamParser` sin mutar el parser importado.
 - [ ] Ejecutar typecheck + suite existente + build antes de avanzar a semantic ranges.
 
 ## 2. Resolver stream efectivo usando solo API pública
 
 ### 2.1 Precedencia de styles
 
-- [ ] Definir resolver común con precedencia: `parser.tokenTable > engine.tokenTags > vocabulario público tags/modifiers > unknown local`.
+- [ ] Definir resolver común en la capa `common-languages.ts` con precedencia: `parser.tokenTable > engine.tokenTags > vocabulario público tags/modifiers > unknown local`.
 - [ ] Resolver nombres públicos directos (`keyword`, `number`, `variableName`, etc.).
 - [ ] Resolver modificadores públicos con `.` (`variableName.standard`, etc.).
 - [ ] Resolver varios style words separados por espacios.
@@ -61,12 +65,12 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 
 ### 2.2 Nombres sintéticos para `StreamLanguage`
 
-- [ ] Precalcular nombres sintéticos estables para cada style cubierto por `parser.tokenTable` o `engine.tokenTags`.
+- [ ] Precalcular nombres sintéticos deterministas para cada style cubierto por `parser.tokenTable` o `engine.tokenTags` (orden estable de claves, no dependiente del orden incidental de iteración futura).
 - [ ] Los nombres sintéticos no colisionan con vocabulario público/legacy ni contienen espacios/modificadores.
 - [ ] `effectiveStreamParser.token()` llama al token original y reescribe cada style word cubierto a su nombre sintético.
 - [ ] `effectiveStreamParser.tokenTable` publica los nombres sintéticos con los `Tag | Tag[]` efectivos.
 - [ ] Styles públicos no cubiertos por tablas se dejan intactos.
-- [ ] El scanner manual usa el mismo resolver, no una segunda tabla.
+- [ ] El scanner manual importará y usará este mismo resolver; no tendrá una segunda tabla.
 
 ### 2.3 Preservar contrato completo del parser
 
@@ -82,11 +86,12 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 
 ## 3. `common-semantic-ranges.ts`
 
-### 3.1 Contrato puro
+### 3.1 Contrato puro y layering
 
 - [ ] Crear `CommonSemanticRange { from, to, classes }`.
 - [ ] Crear `commonSemanticRanges(language, source, options?)` dispatcher tree/stream/plain.
 - [ ] Módulo sin DOM, EditorView ni imports de `obsidian`.
+- [ ] Importar catálogo/highlighter/resolver stream desde `common-languages.ts`; `common-languages.ts` nunca importa este módulo.
 - [ ] Ranges siempre expresados en offsets del string de entrada original.
 
 ### 3.2 Tree-backed
@@ -116,7 +121,7 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 - [ ] Línea vacía física intermedia llama `blankLine` cuando exista.
 - [ ] Source vacío no llama token ni `blankLine`.
 - [ ] `stream.start/pos` se convierten a offsets absolutos reales.
-- [ ] Permitir token zero-length solo mientras el parser progrese de estado; guard finito evita loop infinito.
+- [ ] Permitir token zero-length durante un número finito de intentos para respetar el contrato de cambio de estado; resetear el guard cuando el stream avance.
 - [ ] Un parser que nunca avanza falla de forma controlada/local.
 - [ ] Semantic classes salen de `COMMON_SEMANTIC_HIGHLIGHTER.style(tags)`.
 
@@ -217,6 +222,7 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 ## 7. Revisión TM de implementación
 
 - [ ] Revisar diff completo contra arquitectura Fase 2.
+- [ ] Confirmar layering sin ciclo `common-languages -> common-semantic-ranges`.
 - [ ] Confirmar solo APIs públicas stream.
 - [ ] Confirmar engine/support no duplicados.
 - [ ] Confirmar wrapper preserva contrato completo del parser.
@@ -257,7 +263,7 @@ Este plan ejecuta el plan arquitectónico de Fase 2 estabilizado por TM. Los che
 - [ ] múltiples style words.
 - [ ] unknown style falla localmente.
 - [ ] nombre original que colisiona con alias legacy se reescribe a synthetic y mantiene la semántica declarada.
-- [ ] nombres sintéticos no aparecen en semantic classes/DOM.
+- [ ] nombres sintéticos son deterministas y no aparecen en semantic classes/DOM.
 - [ ] `effectiveStreamParser` preserva `name`.
 - [ ] preserva `languageData`.
 - [ ] preserva `indent`.
