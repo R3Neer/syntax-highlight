@@ -59,18 +59,17 @@ Corrección: conservar/delegar `name`, `startState`, `copyState`, `blankLine`, `
 
 Resultado: SIN CAMBIOS.
 
-Primera revisión limpia del plan actual.
+Primera revisión limpia del estado de entonces. Se contrastó el plan contra documentación oficial de Obsidian y CodeMirror/Lezer, pero quedó invalidada por cambios de la Revisión 9.
 
-Se contrastó de nuevo contra documentación oficial de Obsidian y CodeMirror/Lezer y contra los módulos actuales del adapter:
+## Revisión 9
 
-- ViewPlugin/decorations mantienen ownership correcto y trabajo por viewport;
-- styling propio se apoya en variables CSS y no muta DOM;
-- `tagHighlighter`, `Highlighter.style`, `syntaxHighlighting`, `StreamParser`, `StringStream` y `tokenTable` son APIs públicas suficientes;
-- nombres sintéticos no dependen de aliases/NodeProps/TokenTable internos;
-- wrapper conserva capacidades no relacionadas con highlighting;
-- scanner conserva offsets/estado y no inventa blank final;
-- SourceView mantiene parser incremental oficial;
-- no se reabre routing rendered sin evidencia fresca;
-- no se intenta suprimir highlighting nativo mediante internals o `!important`.
+Resultado: CAMBIOS NECESARIOS.
 
-No se encontró cambio necesario. Esta es la primera revisión limpia del estado actual; los pares limpios anteriores a las Revisiones 4–7 quedan invalidados por los cambios posteriores.
+Se encontraron dos huecos en la taxonomía/paleta:
+
+- `error -> tags.invalid` estaba declarado para stream, pero el highlighter no tenía un rol `syntax-common-invalid`; se añadió como categoría explícita con fallback de error;
+- la surface dark no había incluido `--code-important`, usado por regex/importantes; se añadió `--syntax-editor-code-important` y el remapeo scoped de la variable pública.
+
+También se exige test de contraste para invalid/error y la paleta completa sobre negro.
+
+Como hubo cambios después de la Revisión 8, el contador de revisiones limpias se reinicia.
