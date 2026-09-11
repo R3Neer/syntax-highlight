@@ -20,8 +20,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          base='d135d1dce7fa094734bb22ded9c9743880a3e40f'
           path='packages/obsidian/styles.css'
-          git show d135d1dce7fa094734bb22ded9c9743880a3e40f:"$path" > "$path"
+          git show "$base:$path" > "$path"
           python - <<'PY'
           from pathlib import Path
           p = Path('packages/obsidian/styles.css')
@@ -32,7 +33,7 @@ jobs:
           p.write_text(text.replace(needle, replacement), encoding='utf-8')
           PY
           git diff --check
-          test "$(git diff --numstat -- "$path")" = $'1\t0\tpackages/obsidian/styles.css'
+          test "$(git diff --numstat "$base" -- "$path")" = $'1\t0\tpackages/obsidian/styles.css'
       - name: Commit repair
         shell: bash
         run: |
