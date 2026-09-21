@@ -294,13 +294,13 @@ describe("settings, descriptors and themes", () => {
     const descriptor = structuredClone(BUILTIN_DESCRIPTORS.ebnf);
     descriptor.categories.push({ ...descriptor.categories[0] });
     expect(() => validateLanguageDescriptor(descriptor)).toThrow(
-      /categoría.*repetidos/i,
+      /duplicate category/i,
     );
 
     const dangling = structuredClone(BUILTIN_DESCRIPTORS.mud);
     dangling.grammarMappings[0].category = "missing";
     expect(() => validateLanguageDescriptor(dangling)).toThrow(
-      /categoría inexistente missing/,
+      /unknown category missing/,
     );
   });
 

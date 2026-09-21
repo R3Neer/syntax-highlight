@@ -67,7 +67,7 @@ describe("compilación EBNF del resaltado MUD", () => {
         'mud-source ::= missing ;',
         'mud-file ::= "thing" ;',
       ),
-    ).toThrow(/Producción indefinida: missing/);
+    ).toThrow(/Undefined production: missing/);
   });
 });
 
@@ -83,7 +83,7 @@ describe("parser EBNF", () => {
 
   it("informa línea y columna en errores sintácticos", () => {
     expect(() => parseEbnf('start ::= "a"\nother ::= "b" ;')).toThrow(
-      /Falta una coma.*2:1/,
+      /Missing comma.*2:1/,
     );
   });
 });

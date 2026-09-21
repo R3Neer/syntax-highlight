@@ -98,7 +98,7 @@ function tokenize(source: string): Token[] {
       const closing = source.indexOf("*)", cursor + 2);
       if (closing < 0) {
         throw new EbnfSyntaxError(
-          "Comentario EBNF sin cierre",
+          "Unterminated EBNF comment",
           positionAt(source, cursor),
         );
       }
@@ -173,7 +173,7 @@ function tokenize(source: string): Token[] {
       continue;
     }
     throw new EbnfSyntaxError(
-      `Carácter EBNF inesperado ${JSON.stringify(character)}`,
+      `Unexpected EBNF character ${JSON.stringify(character)}`,
       positionAt(source, cursor),
     );
   }
@@ -191,13 +191,13 @@ class Parser {
     const productions = new Map<string, EbnfProduction>();
     const order: string[] = [];
     while (!this.at("eof")) {
-      const name = this.consume("identifier", "Se esperaba una producción");
-      this.consume("definition", `Falta ::= después de ${name.value}`);
+      const name = this.consume("identifier", "Expected a production");
+      this.consume("definition", `Missing ::= after ${name.value}`);
       const expression = this.expression(new Set(["semicolon"]));
-      this.consume("semicolon", `Falta ; al cerrar ${name.value}`);
+      this.consume("semicolon", `Missing ; after ${name.value}`);
       if (productions.has(name.value)) {
         throw new EbnfSyntaxError(
-          `Producción duplicada: ${name.value}`,
+          `Duplicate production: ${name.value}`,
           name.position,
         );
       }
@@ -232,7 +232,7 @@ class Parser {
           continue;
         }
         throw new EbnfSyntaxError(
-          "Falta una coma entre términos EBNF",
+          "Missing comma between EBNF terms",
           this.current().position,
         );
       }
@@ -241,13 +241,13 @@ class Parser {
     }
     if (expectTerm && terms.length > 0) {
       throw new EbnfSyntaxError(
-        "La secuencia EBNF termina después de una coma",
+        "EBNF sequence ends after a comma",
         this.current().position,
       );
     }
     if (terms.length === 0) {
       throw new EbnfSyntaxError(
-        "Alternativa EBNF vacía",
+        "Empty EBNF alternative",
         this.current().position,
       );
     }
@@ -285,10 +285,10 @@ class Parser {
     if (group !== undefined) {
       this.cursor += 1;
       const expression = this.expression(new Set([group.close]));
-      this.consume(group.close, `Falta ${this.label(group.close)}`);
+      this.consume(group.close, `Missing ${this.label(group.close)}`);
       return { kind: group.kind, expression, position: token.position };
     }
-    throw new EbnfSyntaxError("Se esperaba un término EBNF", token.position);
+    throw new EbnfSyntaxError("Expected an EBNF term", token.position);
   }
 
   private current(): Token {
@@ -348,7 +348,7 @@ export function validateEbnf(
         !grammar.productions.has(reference)
       ) {
         diagnostics.push({
-          message: `Producción indefinida: ${reference}`,
+          message: `Undefined production: ${reference}`,
           position: production.position,
         });
       }
@@ -356,7 +356,7 @@ export function validateEbnf(
   }
   if (start !== undefined && !grammar.productions.has(start)) {
     diagnostics.push({
-      message: `Símbolo inicial inexistente: ${start}`,
+      message: `Unknown start symbol: ${start}`,
       position: { offset: 0, line: 1, column: 1 },
     });
   }

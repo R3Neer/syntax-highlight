@@ -25,6 +25,7 @@ import {
 import { TextFileView, type WorkspaceLeaf } from "obsidian";
 
 import type { LanguageRegistry } from "./languages";
+import { translate } from "./i18n";
 import {
   COMMON_SEMANTIC_HIGHLIGHTER,
   commonLanguageByExtension,
@@ -113,7 +114,9 @@ export class SyntaxSourceView extends TextFileView {
       cls: "syntax-source-status",
       text: this.languageName(),
     });
-    const saveButton = toolbar.createEl("button", { text: "Guardar" });
+    const saveButton = toolbar.createEl("button", {
+      text: translate(this.getSettings(), "Save", "Guardar"),
+    });
     saveButton.type = "button";
     saveButton.addEventListener("click", () => void this.saveNow());
     const host = this.contentEl.createDiv("syntax-source-editor");
@@ -229,14 +232,14 @@ export class SyntaxSourceView extends TextFileView {
 
   private async saveNow(): Promise<void> {
     await this.save();
-    this.setStatus("Guardado");
+    this.setStatus(translate(this.getSettings(), "Saved", "Guardado"));
   }
 
   private showPendingSave(): void {
-    this.setStatus("Cambios pendientes…");
+    this.setStatus(translate(this.getSettings(), "Pending changes…", "Cambios pendientes…"));
     if (this.statusTimer !== undefined) window.clearTimeout(this.statusTimer);
     this.statusTimer = window.setTimeout(() => {
-      this.setStatus("Guardado automáticamente");
+      this.setStatus(translate(this.getSettings(), "Saved automatically", "Guardado automáticamente"));
       this.statusTimer = undefined;
     }, 2200);
   }

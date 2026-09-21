@@ -179,63 +179,63 @@ function stringList(
     !Array.isArray(value) ||
     !value.every((entry) => typeof entry === "string" && pattern.test(entry))
   ) {
-    throw new Error(`${field} debe ser una lista de identificadores válidos.`);
+    throw new Error(`${field} must be a list of valid identifiers.`);
   }
   return [...new Set((value as unknown[]).map((entry) => String(entry)))];
 }
 
 export function validateLanguageDescriptor(value: unknown): LanguageDescriptor {
-  const source = objectValue(value, "El descriptor debe ser un objeto JSON.");
+  const source = objectValue(value, "The descriptor must be a JSON object.");
   if (source.schemaVersion !== 1) {
-    throw new Error("schemaVersion debe ser 1.");
+    throw new Error("schemaVersion must be 1.");
   }
-  const id = stringValue(source.id, "Falta id.");
-  if (!IDENTIFIER.test(id)) throw new Error(`Identificador de lenguaje inválido: ${id}`);
-  const name = stringValue(source.name, "Falta name.");
+  const id = stringValue(source.id, "Missing id.");
+  if (!IDENTIFIER.test(id)) throw new Error(`Invalid language id: ${id}`);
+  const name = stringValue(source.name, "Missing name.");
   if (typeof source.engine !== "string" || !ENGINES.has(source.engine as LanguageEngine)) {
-    throw new Error(`Motor de lenguaje inválido: ${String(source.engine)}`);
+    throw new Error(`Invalid language engine: ${String(source.engine)}`);
   }
   const engine = source.engine as LanguageEngine;
   const fences = stringList(source.fences, "fences");
   const extensions = stringList(source.extensions, "extensions");
 
   if (!Array.isArray(source.groups) || source.groups.length === 0) {
-    throw new Error("groups debe contener al menos un grupo.");
+    throw new Error("groups must contain at least one group.");
   }
   const groups: CategoryGroup[] = source.groups.map((entry, index) => {
-    const group = objectValue(entry, `Grupo ${index + 1} inválido.`);
-    const groupId = stringValue(group.id, `Falta id en el grupo ${index + 1}.`);
-    if (!IDENTIFIER.test(groupId)) throw new Error(`Id de grupo inválido: ${groupId}`);
+    const group = objectValue(entry, `Invalid group ${index + 1}.`);
+    const groupId = stringValue(group.id, `Missing id in group ${index + 1}.`);
+    if (!IDENTIFIER.test(groupId)) throw new Error(`Invalid group id: ${groupId}`);
     return {
       id: groupId,
-      name: stringValue(group.name, `Falta name en el grupo ${groupId}.`),
+      name: stringValue(group.name, `Missing name in group ${groupId}.`),
     };
   });
   const groupIds = new Set(groups.map(({ id: groupId }) => groupId));
-  if (groupIds.size !== groups.length) throw new Error("Hay identificadores de grupo repetidos.");
+  if (groupIds.size !== groups.length) throw new Error("Duplicate group identifiers.");
 
   if (!Array.isArray(source.categories) || source.categories.length === 0) {
-    throw new Error("categories debe contener al menos una categoría.");
+    throw new Error("categories must contain at least one category.");
   }
   const categories: CategoryDefinition[] = source.categories.map((entry, index) => {
-    const category = objectValue(entry, `Categoría ${index + 1} inválida.`);
-    const categoryId = stringValue(category.id, `Falta id en la categoría ${index + 1}.`);
+    const category = objectValue(entry, `Invalid category ${index + 1}.`);
+    const categoryId = stringValue(category.id, `Missing id in category ${index + 1}.`);
     if (!IDENTIFIER.test(categoryId)) {
-      throw new Error(`Id de categoría inválido: ${categoryId}`);
+      throw new Error(`Invalid category id: ${categoryId}`);
     }
-    const group = stringValue(category.group, `Falta group en ${categoryId}.`);
+    const group = stringValue(category.group, `Missing group in ${categoryId}.`);
     if (!groupIds.has(group)) {
-      throw new Error(`La categoría ${categoryId} referencia el grupo inexistente ${group}.`);
+      throw new Error(`Category ${categoryId} references unknown group ${group}.`);
     }
     if (typeof category.role !== "string" || !ROLES.has(category.role)) {
-      throw new Error(`Rol visual inválido en ${categoryId}: ${String(category.role)}`);
+      throw new Error(`Invalid visual role in ${categoryId}: ${String(category.role)}`);
     }
     return {
       id: categoryId,
-      name: stringValue(category.name, `Falta name en ${categoryId}.`),
+      name: stringValue(category.name, `Missing name in ${categoryId}.`),
       description: stringValue(
         category.description,
-        `Falta description en ${categoryId}.`,
+        `Missing description in ${categoryId}.`,
       ),
       group,
       role: category.role as VisualRole,
@@ -243,59 +243,59 @@ export function validateLanguageDescriptor(value: unknown): LanguageDescriptor {
   });
   const categoryIds = new Set(categories.map(({ id: categoryId }) => categoryId));
   if (categoryIds.size !== categories.length) {
-    throw new Error("Hay identificadores de categoría repetidos.");
+    throw new Error("Duplicate category identifiers.");
   }
   const missingCategories = ENGINE_REQUIRED_CATEGORIES[engine].filter(
     (categoryId) => !categoryIds.has(categoryId),
   );
   if (missingCategories.length > 0) {
     throw new Error(
-      `Faltan categorías requeridas por el motor ${engine}: ${missingCategories.join(", ")}.`,
+      `Missing categories required by the ${engine} engine: ${missingCategories.join(", ")}.`,
     );
   }
 
   if (!Array.isArray(source.grammarMappings)) {
-    throw new Error("grammarMappings debe ser una lista.");
+    throw new Error("grammarMappings must be a list.");
   }
   const grammarMappings: GrammarCategoryMapping[] = source.grammarMappings.map(
     (entry, index) => {
-      const mapping = objectValue(entry, `Mapeo ${index + 1} inválido.`);
+      const mapping = objectValue(entry, `Invalid mapping ${index + 1}.`);
       if (typeof mapping.slot !== "string" || !SLOTS.has(mapping.slot as GrammarMappingSlot)) {
-        throw new Error(`Slot de gramática inválido: ${String(mapping.slot)}`);
+        throw new Error(`Invalid grammar slot: ${String(mapping.slot)}`);
       }
       if (mapping.grammar !== "lexical" && mapping.grammar !== "syntax") {
-        throw new Error(`Origen de gramática inválido en ${mapping.slot}.`);
+        throw new Error(`Invalid grammar source in ${mapping.slot}.`);
       }
       const expectedGrammar =
         mapping.slot === "declaration-name" ? "syntax" : "lexical";
       if (mapping.grammar !== expectedGrammar) {
         throw new Error(
-          `El slot ${mapping.slot} debe usar la gramática ${expectedGrammar}.`,
+          `Slot ${mapping.slot} must use the ${expectedGrammar} grammar.`,
         );
       }
       const category = stringValue(
         mapping.category,
-        `Falta category en ${mapping.slot}.`,
+        `Missing category in ${mapping.slot}.`,
       );
       if (!categoryIds.has(category)) {
-        throw new Error(`El mapeo ${mapping.slot} referencia la categoría inexistente ${category}.`);
+        throw new Error(`Mapping ${mapping.slot} references unknown category ${category}.`);
       }
       return {
         slot: mapping.slot as GrammarMappingSlot,
         grammar: mapping.grammar,
         production: stringValue(
           mapping.production,
-          `Falta production en ${mapping.slot}.`,
+          `Missing production in ${mapping.slot}.`,
         ),
         category,
       };
     },
   );
   if (new Set(grammarMappings.map(({ slot }) => slot)).size !== grammarMappings.length) {
-    throw new Error("Hay slots de gramática repetidos.");
+    throw new Error("Duplicate grammar slots.");
   }
   if ((engine === "mud" || engine === "grammar") && grammarMappings.length === 0) {
-    throw new Error(`El motor ${engine} requiere grammarMappings.`);
+    throw new Error(`The ${engine} engine requires grammarMappings.`);
   }
 
   return {

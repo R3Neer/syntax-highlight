@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Completed the bilingual Obsidian interface coverage for settings, source-editor
+  status messages, block editing, validation actions, and theme controls. User-facing
+  strings now go through the locale helper instead of being fixed in Spanish, while
+  parser and descriptor diagnostics use English as their portable baseline.
+
 ## 1.2.0
 
 - Rebuilt the Obsidian Markdown integration around supported host boundaries:

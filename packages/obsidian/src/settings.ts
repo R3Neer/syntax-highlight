@@ -321,7 +321,7 @@ function legacyBundledMudDescriptor(
   descriptor.categories = descriptor.categories.filter(({ id }) => !semantic.has(id));
   if (variant === "standalone-1.0") {
     descriptor.previewSource =
-      'abstract thing Place {}\n\nthing Alexandria as City, Place {\n    name = "Alejandría"\n}\n\naction Inspect for target: Thing {}';
+      'abstract thing Place {}\n\nthing Alexandria as City, Place {\n    name = "Alexandria"\n}\n\naction Inspect for target: Thing {}';
     return descriptor;
   }
   const character = descriptor.categories.find(({ id }) => id === "character");

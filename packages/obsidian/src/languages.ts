@@ -9,6 +9,7 @@ import {
   validateLanguageDescriptor,
   type LanguageDescriptor,
 } from "./descriptor";
+import { translate } from "./i18n";
 import { tokenizeAsdl } from "./asdl-tokenizer";
 import { tokenizeEbnf } from "./ebnf-tokenizer";
 import { tokenizeToml } from "./toml-tokenizer";
@@ -75,15 +76,18 @@ function comparablePath(path: string): string {
 export class LanguageRegistry {
   private readonly runtimes = new Map<string, InternalRuntime>();
   private readonly listeners = new Set<Listener>();
+  private settings: SyntaxPluginSettings;
 
   constructor(
     settings: SyntaxPluginSettings,
     private readonly loadSource: SourceLoader,
   ) {
+    this.settings = settings;
     this.replaceSettings(settings);
   }
 
   replaceSettings(settings: SyntaxPluginSettings): void {
+    this.settings = settings;
     const incoming = new Set(settings.languages.map(({ id }) => id));
     for (const id of this.runtimes.keys()) {
       if (!incoming.has(id)) this.runtimes.delete(id);
@@ -97,7 +101,11 @@ export class LanguageRegistry {
           descriptor,
           status: {
             state: "ready",
-            message: `Descriptor integrado: ${descriptor.categories.length} categorías`,
+            message: translate(
+              this.settings,
+              `Built-in descriptor: ${descriptor.categories.length} categories`,
+              `Descriptor integrado: ${descriptor.categories.length} categorías`,
+            ),
             updatedAt: Date.now(),
           },
           revision: 0,
@@ -128,7 +136,11 @@ export class LanguageRegistry {
     if (runtime === undefined) return;
     runtime.status = {
       state: "loading",
-      message: "Cargando descriptor y gramáticas…",
+      message: translate(
+        this.settings,
+        "Loading descriptor and grammars…",
+        "Cargando descriptor y gramáticas…",
+      ),
       updatedAt: runtime.status.updatedAt,
     };
     this.notify();
@@ -136,7 +148,11 @@ export class LanguageRegistry {
       const descriptor = await this.loadDescriptor(runtime.settings);
       if (descriptor.id !== runtime.settings.id) {
         throw new Error(
-          `El descriptor declara el id ${descriptor.id}, pero el perfil usa ${runtime.settings.id}.`,
+          translate(
+            this.settings,
+            `The descriptor declares id ${descriptor.id}, but the profile uses ${runtime.settings.id}.`,
+            `El descriptor declara el id ${descriptor.id}, pero el perfil usa ${runtime.settings.id}.`,
+          ),
         );
       }
       let highlightConfig = runtime.highlightConfig;
@@ -163,7 +179,11 @@ export class LanguageRegistry {
       runtime.revision += 1;
       runtime.status = {
         state: "ready",
-        message: `${descriptor.categories.length} categorías · descriptor válido`,
+        message: translate(
+          this.settings,
+          `${descriptor.categories.length} categories · valid descriptor`,
+          `${descriptor.categories.length} categorías · descriptor válido`,
+        ),
         updatedAt: Date.now(),
       };
     } catch (error) {
@@ -293,9 +313,15 @@ export class LanguageRegistry {
         value = JSON.parse(source);
       } catch (error) {
         throw new Error(
-          `JSON inválido en ${profile.descriptorPath}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          translate(
+            this.settings,
+            `Invalid JSON in ${profile.descriptorPath}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            `JSON inválido en ${profile.descriptorPath}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          ),
           { cause: error },
         );
       }
@@ -308,7 +334,13 @@ export class LanguageRegistry {
   }
 
   private async loadRequired(path: string, label: string): Promise<string> {
-    if (!path) throw new Error(`Falta la ruta de la ${label}.`);
+    if (!path) {
+      throw new Error(translate(
+        this.settings,
+        `Missing path for ${label}.`,
+        `Falta la ruta de ${label === "lexical grammar" ? "la gramática léxica" : "la gramática sintáctica"}.`,
+      ));
+    }
     return this.loadSource(path);
   }
 
@@ -325,7 +357,7 @@ export class LanguageRegistry {
       kind === "lexical"
         ? profile.lexicalGrammarPath
         : profile.syntaxGrammarPath,
-      kind === "lexical" ? "gramática léxica" : "gramática sintáctica",
+      kind === "lexical" ? "lexical grammar" : "syntax grammar",
     );
   }
 

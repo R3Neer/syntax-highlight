@@ -102,7 +102,7 @@ function appendLanguageBadge(frame: HTMLElement, badge: LanguageBadge): void {
   const element = document.createElement("span");
   element.className = "syntax-language-badge";
   element.title = badge.mud ? "MUD" : badge.label;
-  element.setAttribute("aria-label", `Lenguaje ${badge.label}`);
+  element.setAttribute("aria-label", `Language ${badge.label}`);
 
   if (badge.mud) {
     frame.classList.add("has-mud-badge");

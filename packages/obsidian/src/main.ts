@@ -14,6 +14,7 @@ import {
 } from "./blocks";
 import { createMarkdownEditorExtensions } from "./editor";
 import { LanguageRegistry } from "./languages";
+import { descriptorName, translate } from "./i18n";
 import { markdownHighlightEnabledForContext } from "./markdown-render-mode";
 import {
   registerReadingFallbackPostProcessor,
@@ -40,7 +41,13 @@ export default class SyntaxHighlightPlugin extends Plugin {
   override async onload(): Promise<void> {
     this.pluginSettings = loadSettings(await this.loadData());
     this.registry = new LanguageRegistry(this.pluginSettings, async (path) => {
-      if (!path) throw new Error("Falta la ruta de una gramática.");
+      if (!path) {
+        throw new Error(translate(
+          this.pluginSettings,
+          "A grammar path is required.",
+          "Falta la ruta de una gramática.",
+        ));
+      }
       return this.app.vault.adapter.read(normalizePath(path));
     });
     this.themeManager = new ThemeManager();
@@ -115,8 +122,8 @@ export default class SyntaxHighlightPlugin extends Plugin {
     if (!notify || status === undefined) return;
     new Notice(
       status.state === "ready"
-        ? `${this.registry.get(id)?.descriptor.name}: configuración válida.`
-        : `${this.registry.get(id)?.descriptor.name}: ${status.message}`,
+        ? `${descriptorName(this.pluginSettings, this.registry.get(id)!.descriptor)}: ${translate(this.pluginSettings, "valid configuration.", "configuración válida.")}`
+        : `${descriptorName(this.pluginSettings, this.registry.get(id)!.descriptor)}: ${status.message}`,
     );
   }
 
@@ -241,7 +248,11 @@ export default class SyntaxHighlightPlugin extends Plugin {
       element.querySelector<HTMLElement>("pre");
     if (block === null) return;
     block.classList.add("is-click-editable");
-    block.title = "Haz clic para editar este bloque";
+    block.title = translate(
+      this.pluginSettings,
+      "Click to edit this block",
+      "Haz clic para editar este bloque",
+    );
     block.addEventListener("click", (event) => {
       const selection = window.getSelection();
       if (selection !== null && !selection.isCollapsed) return;
@@ -350,7 +361,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     } catch (error) {
       this.occupiedExtensions.add(extension);
       console.warn(
-        `[Syntax Highlight] Se omite .${extension}: otra vista ya usa esta extensión.`,
+        `[Syntax Highlight] Skipping .${extension}: another view already uses this extension.`,
         error,
       );
     }

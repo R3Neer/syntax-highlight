@@ -157,7 +157,7 @@ function semanticRules(
   const result: SemanticKeyword[] = [];
   for (const definition of MUD_SEMANTIC_KEYWORDS) {
     if (!categoryIds.has(definition.category)) {
-      throw new Error(`Falta la categoría semántica MUD ${definition.category}`);
+      throw new Error(`Missing MUD semantic category ${definition.category}`);
     }
     for (const word of definition.words) {
       if (!known.has(word)) continue;
@@ -205,7 +205,7 @@ export function compileGrammarHighlightConfig(
     const mapping = mappings.get(slot);
     if (mapping === undefined) {
       diagnostics.push({
-        message: `Falta el mapeo de gramática ${slot}`,
+        message: `Missing grammar mapping ${slot}`,
         position: { offset: 0, line: 1, column: 1 },
       });
       continue;
@@ -213,7 +213,7 @@ export function compileGrammarHighlightConfig(
     const grammar = mapping.grammar === "syntax" ? syntax : lexical;
     if (!grammar.productions.has(mapping.production)) {
       diagnostics.push({
-        message: `La producción configurada para ${slot} no existe: ${mapping.production}`,
+        message: `The production configured for ${slot} does not exist: ${mapping.production}`,
         position: { offset: 0, line: 1, column: 1 },
       });
     }

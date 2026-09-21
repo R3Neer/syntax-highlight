@@ -87,7 +87,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.pluginSettings.locale =
               value === "en" || value === "es" ? value : "auto";
-            await this.plugin.commitSettings(false);
+            await this.plugin.commitSettings(true);
             this.display();
           }),
       );
@@ -170,10 +170,13 @@ export class SyntaxSettingTab extends PluginSettingTab {
     renderCommonLanguageCatalog(languages, tr);
 
     new Setting(languages)
-      .setName("Añadir lenguaje")
-      .setDesc("Crea un perfil genérico con un descriptor JSON integrado y gramáticas EBNF.")
+      .setName(tr("Add language", "Añadir lenguaje"))
+      .setDesc(tr(
+        "Creates a generic profile with an embedded JSON descriptor and EBNF grammars.",
+        "Crea un perfil genérico con un descriptor JSON integrado y gramáticas EBNF.",
+      ))
       .addButton((button) =>
-        button.setButtonText("Nuevo perfil").setCta().onClick(async () => {
+        button.setButtonText(tr("New profile", "Nuevo perfil")).setCta().onClick(async () => {
           const profile = newGenericProfile(this.uniqueId());
           this.plugin.pluginSettings.languages.push(profile);
           await this.plugin.commitSettings(false);
@@ -495,12 +498,12 @@ export class SyntaxSettingTab extends PluginSettingTab {
       text: descriptorName(this.plugin.pluginSettings, descriptor),
     });
     heading.createSpan({
-      text: runtime?.status.message ?? "Sin cargar",
+      text: runtime?.status.message ?? tr("Not loaded", "Sin cargar"),
       cls: `mud-syntax-status is-${runtime?.status.state ?? "loading"}`,
     });
 
     new Setting(card)
-      .setName("Activado")
+      .setName(tr("Enabled", "Activado"))
       .addToggle((toggle) =>
         toggle.setValue(language.enabled).onChange(async (value) => {
           language.enabled = value;
@@ -519,10 +522,13 @@ export class SyntaxSettingTab extends PluginSettingTab {
 
     new Setting(card)
       .setName("Descriptor JSON")
-      .setDesc("Ruta dentro de la bóveda. Déjala vacía para usar el descriptor integrado del perfil.")
+      .setDesc(tr(
+        "Path inside the vault. Leave it empty to use the profile's built-in descriptor.",
+        "Ruta dentro de la bóveda. Déjala vacía para usar el descriptor integrado del perfil.",
+      ))
       .addText((text) =>
         text
-          .setPlaceholder("ruta/lenguaje.json")
+          .setPlaceholder(tr("path/language.json", "ruta/lenguaje.json"))
           .setValue(language.descriptorPath)
           .onChange(async (value) => {
             language.descriptorPath = value.trim();
@@ -530,15 +536,18 @@ export class SyntaxSettingTab extends PluginSettingTab {
           }),
       )
       .addButton((button) =>
-        button.setButtonText("Cargar").onClick(async () => {
+        button.setButtonText(tr("Load", "Cargar")).onClick(async () => {
           await this.plugin.reloadLanguage(language.id, true);
           this.display();
         }),
       )
       .addButton((button) =>
-        button.setButtonText("Importar").onClick(async () => {
+        button.setButtonText(tr("Import", "Importar")).onClick(async () => {
           if (!language.descriptorPath) {
-            new Notice("Escribe primero la ruta de un descriptor JSON.");
+            new Notice(tr(
+              "Enter the path to a JSON descriptor first.",
+              "Escribe primero la ruta de un descriptor JSON.",
+            ));
             return;
           }
           try {
@@ -547,7 +556,10 @@ export class SyntaxSettingTab extends PluginSettingTab {
             );
             const imported = validateLanguageDescriptor(JSON.parse(source));
             if (imported.id !== language.id) {
-              throw new Error(`El id debe ser ${language.id}.`);
+              throw new Error(tr(
+                `The id must be ${language.id}.`,
+                `El id debe ser ${language.id}.`,
+              ));
             }
             language.embeddedDescriptor = imported;
             language.descriptorPath = "";
@@ -556,15 +568,20 @@ export class SyntaxSettingTab extends PluginSettingTab {
             this.display();
           } catch (error) {
             new Notice(
-              error instanceof Error ? error.message : "No se pudo importar el descriptor.",
+              error instanceof Error
+                ? error.message
+                : tr(
+                    "Could not import the descriptor.",
+                    "No se pudo importar el descriptor.",
+                  ),
             );
           }
         }),
       );
 
     card.createEl("p", {
-      text: `Bloques: ${descriptor.fences.join(", ") || "ninguno"} · Extensiones: ${
-        descriptor.extensions.join(", ") || "ninguna"
+      text: `${tr("Blocks", "Bloques")}: ${descriptor.fences.join(", ") || tr("none", "ninguno")} · ${tr("Extensions", "Extensiones")}: ${
+        descriptor.extensions.join(", ") || tr("none", "ninguna")
       }`,
       cls: "setting-item-description",
     });
@@ -576,10 +593,13 @@ export class SyntaxSettingTab extends PluginSettingTab {
       this.renderGrammarFields(card, language);
     }
     const actions = new Setting(card)
-      .setName("Validación")
-      .setDesc("Conserva el último descriptor y la última gramática válidos si la recarga falla.")
+      .setName(tr("Validation", "Validación"))
+      .setDesc(tr(
+        "Keeps the last valid descriptor and grammar if reloading fails.",
+        "Conserva el último descriptor y la última gramática válidos si la recarga falla.",
+      ))
       .addButton((button) =>
-        button.setButtonText("Validar y recargar").onClick(async () => {
+        button.setButtonText(tr("Validate and reload", "Validar y recargar")).onClick(async () => {
           await this.plugin.reloadLanguage(language.id, true);
           this.display();
         }),
@@ -630,7 +650,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
     }
     if (!["mud", "ebnf", "asdl", "toml"].includes(language.id)) {
       actions.addButton((button) =>
-        button.setButtonText("Eliminar perfil").setWarning().onClick(async () => {
+        button.setButtonText(tr("Delete profile", "Eliminar perfil")).setWarning().onClick(async () => {
           this.plugin.pluginSettings.languages =
             this.plugin.pluginSettings.languages.filter(({ id }) => id !== language.id);
           await this.plugin.commitSettings(false);
@@ -644,10 +664,15 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
     const details = card.createEl("details", { cls: "mud-syntax-colors" });
-    details.createEl("summary", { text: "Descriptor integrado" });
+    details.createEl("summary", { text: tr("Embedded descriptor", "Descriptor integrado") });
     details.createEl("p", {
-      text: "Se usa cuando no hay una ruta externa. Puedes editar nombres, categorías, aliases, mapeos y ejemplo sin recompilar.",
+      text: tr(
+        "Used when there is no external path. You can edit names, categories, aliases, mappings, and the example without recompiling.",
+        "Se usa cuando no hay una ruta externa. Puedes editar nombres, categorías, aliases, mapeos y ejemplo sin recompilar.",
+      ),
       cls: "setting-item-description",
     });
     let draft = JSON.stringify(language.embeddedDescriptor, null, 2);
@@ -658,11 +683,14 @@ export class SyntaxSettingTab extends PluginSettingTab {
       }),
     );
     new Setting(details).addButton((button) =>
-      button.setButtonText("Aplicar descriptor").setCta().onClick(async () => {
+      button.setButtonText(tr("Apply descriptor", "Aplicar descriptor")).setCta().onClick(async () => {
         try {
           const descriptor = validateLanguageDescriptor(JSON.parse(draft));
           if (descriptor.id !== language.id) {
-            throw new Error(`El id debe ser ${language.id}.`);
+            throw new Error(tr(
+              `The id must be ${language.id}.`,
+              `El id debe ser ${language.id}.`,
+            ));
           }
           language.embeddedDescriptor = descriptor;
           await this.plugin.commitSettings(false);
@@ -670,7 +698,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
           this.display();
         } catch (error) {
           new Notice(
-            error instanceof Error ? error.message : "Descriptor JSON inválido.",
+            error instanceof Error
+              ? error.message
+              : tr("Invalid JSON descriptor.", "Descriptor JSON inválido."),
           );
         }
       }),
@@ -681,18 +711,20 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
-    new Setting(card).setName("Gramática léxica").addText((text) =>
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
+    new Setting(card).setName(tr("Lexical grammar", "Gramática léxica")).addText((text) =>
       text
-        .setPlaceholder("ruta/lexico.ebnf")
+        .setPlaceholder(tr("path/lexicon.ebnf", "ruta/lexico.ebnf"))
         .setValue(language.lexicalGrammarPath)
         .onChange(async (value) => {
           language.lexicalGrammarPath = value.trim();
           await this.plugin.commitSettings(false);
         }),
     );
-    new Setting(card).setName("Gramática sintáctica").addText((text) =>
+    new Setting(card).setName(tr("Syntax grammar", "Gramática sintáctica")).addText((text) =>
       text
-        .setPlaceholder("ruta/lenguaje.ebnf")
+        .setPlaceholder(tr("path/language.ebnf", "ruta/lenguaje.ebnf"))
         .setValue(language.syntaxGrammarPath)
         .onChange(async (value) => {
           language.syntaxGrammarPath = value.trim();
@@ -702,8 +734,8 @@ export class SyntaxSettingTab extends PluginSettingTab {
     const descriptor = this.plugin.registry.get(language.id)?.descriptor;
     if (descriptor?.engine === "grammar") {
       new Setting(card)
-        .setName("Símbolos iniciales")
-        .setDesc("Producciones raíz léxica y sintáctica.")
+        .setName(tr("Start symbols", "Símbolos iniciales"))
+        .setDesc(tr("Lexical and syntax root productions.", "Producciones raíz léxica y sintáctica."))
         .addText((text) =>
           text.setValue(language.lexicalStart).onChange(async (value) => {
             language.lexicalStart = value.trim();
@@ -723,18 +755,20 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
     const descriptor = this.plugin.registry.get(language.id)?.descriptor;
     if (descriptor === undefined) return;
     let dropdownControl: DropdownComponent | undefined;
     let nameControl: TextComponent | undefined;
     let saveButton: ButtonComponent | undefined;
-    new Setting(card).setName("Plantilla de tema").addDropdown((dropdown) => {
+    new Setting(card).setName(tr("Theme preset", "Plantilla de tema")).addDropdown((dropdown) => {
       dropdownControl = dropdown;
       for (const theme of THEME_PRESETS) dropdown.addOption(theme.id, theme.name);
       for (const theme of this.plugin.pluginSettings.customThemes) {
-        dropdown.addOption(theme.id, `${theme.name} · guardado`);
+        dropdown.addOption(theme.id, `${theme.name} · ${tr("saved", "guardado")}`);
       }
-      dropdown.addOption("custom", "Personalizado sin guardar");
+      dropdown.addOption("custom", tr("Unsaved custom theme", "Personalizado sin guardar"));
       dropdown.setValue(language.themePreset).onChange(async (value) => {
         language.themePreset = value;
         const selected = themeById(this.plugin.pluginSettings, value);
@@ -749,12 +783,15 @@ export class SyntaxSettingTab extends PluginSettingTab {
     });
 
     new Setting(card)
-      .setName("Guardar tema personalizado")
-      .setDesc("Guarda la paleta común y sus excepciones por lenguaje y categoría.")
+      .setName(tr("Save custom theme", "Guardar tema personalizado"))
+      .setDesc(tr(
+        "Saves the common palette and its per-language and per-category exceptions.",
+        "Guarda la paleta común y sus excepciones por lenguaje y categoría.",
+      ))
       .addText((text) => {
         nameControl = text;
         text
-          .setPlaceholder("Nombre del tema")
+          .setPlaceholder(tr("Theme name", "Nombre del tema"))
           .setValue(language.customThemeName)
           .onChange((value) => {
             language.customThemeName = value;
@@ -763,12 +800,15 @@ export class SyntaxSettingTab extends PluginSettingTab {
       .addButton((button) => {
         saveButton = button;
         button
-          .setButtonText("Guardar tema")
+          .setButtonText(tr("Save theme", "Guardar tema"))
           .setDisabled(language.themePreset !== "custom")
           .onClick(async () => {
             const name = language.customThemeName.trim();
             if (!name) {
-              new Notice("Escribe un nombre para guardar el tema.");
+              new Notice(tr(
+                "Enter a name to save the theme.",
+                "Escribe un nombre para guardar el tema.",
+              ));
               return;
             }
             const existing = this.plugin.pluginSettings.customThemes.find(
@@ -849,7 +889,12 @@ export class SyntaxSettingTab extends PluginSettingTab {
     );
 
     const colors = card.createEl("details", { cls: "mud-syntax-colors" });
-    colors.createEl("summary", { text: "Personalizar categorías de este lenguaje" });
+    colors.createEl("summary", {
+      text: tr(
+        "Customize categories for this language",
+        "Personalizar categorías de este lenguaje",
+      ),
+    });
     for (const group of descriptor.groups) {
       const categories = descriptor.categories.filter(
         (category) => category.group === group.id,
@@ -882,7 +927,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
             mode,
           );
           new Setting(row)
-            .setName(mode === "light" ? "Claro" : "Oscuro")
+            .setName(
+              mode === "light" ? tr("Light", "Claro") : tr("Dark", "Oscuro"),
+            )
             .addColorPicker((picker) =>
               picker
                 .setValue(currentColor)
@@ -893,7 +940,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
                   );
                   if (language.themePreset !== "custom") {
                     language.customThemeName =
-                      selected === undefined ? "" : `${selected.name} personalizado`;
+                      selected === undefined
+                        ? ""
+                        : `${selected.name} ${tr("custom", "personalizado")}`;
                     nameControl?.setValue(language.customThemeName);
                   }
                   const languageOverrides =
@@ -939,12 +988,17 @@ export class SyntaxSettingTab extends PluginSettingTab {
     card: HTMLElement,
     language: LanguageProfileSettings,
   ): void {
+    const tr = (en: string, es: string): string =>
+      translate(this.plugin.pluginSettings, en, es);
     const runtime = this.plugin.registry.get(language.id);
     if (runtime === undefined) return;
     const section = card.createDiv("syntax-preview");
-    section.createEl("h4", { text: "Vista previa" });
+    section.createEl("h4", { text: tr("Preview", "Vista previa") });
     section.createEl("p", {
-      text: "Edita el ejemplo para comprobar inmediatamente las categorías y el tema.",
+      text: tr(
+        "Edit the example to check the categories and theme immediately.",
+        "Edita el ejemplo para comprobar inmediatamente las categorías y el tema.",
+      ),
       cls: "setting-item-description",
     });
     const output = section.createDiv("syntax-preview-output");
@@ -958,7 +1012,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
       .addTextArea((text) => {
         text
           .setValue(source())
-          .setPlaceholder("Escribe un fragmento de código…")
+          .setPlaceholder(tr("Enter a code snippet…", "Escribe un fragmento de código…"))
           .onChange(async (value) => {
             language.previewSource = value;
             await this.plugin.commitSettings(false);
@@ -968,7 +1022,7 @@ export class SyntaxSettingTab extends PluginSettingTab {
         text.inputEl.addClass("syntax-preview-editor");
       })
       .addButton((button) =>
-        button.setButtonText("Restaurar ejemplo").onClick(async () => {
+        button.setButtonText(tr("Restore example", "Restaurar ejemplo")).onClick(async () => {
           language.previewSource = null;
           await this.plugin.commitSettings(false);
           this.display();
