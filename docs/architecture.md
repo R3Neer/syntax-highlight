@@ -114,15 +114,16 @@ runtime package is accidentally bundled.
 
 ## Theme and contrast ownership
 
-Source-mode CodeMirror DOM belongs to Obsidian. Syntax Highlight styles its own
-source line/token classes through CSS variables and never uses JavaScript to
-rewrite those spans.
+Markdown source/Live Preview CodeMirror DOM belongs to Obsidian. Syntax Highlight
+styles its line/token decorations through CSS variables and never uses JavaScript
+to rewrite that host-owned DOM.
 
-Rendered output belongs to Syntax Highlight inside `.syntax-highlight-frame`.
-Only that owned DOM is eligible for the runtime common-language contrast
-normalizer. The normalizer leaves colors that already reach WCAG AA `4.5:1`
-unchanged and adjusts only failing foreground colors; it never changes
-backgrounds.
+Rendered output inside `.syntax-highlight-frame` and the dedicated source-file
+editor inside `.syntax-source-editor` belong to Syntax Highlight. Those owned
+surfaces are eligible for runtime contrast normalization. In source files this
+covers base editor text, common-language semantic tokens, and configured-language
+tokens. The normalizer leaves colors that already reach WCAG AA `4.5:1` unchanged
+and adjusts only failing foreground colors; it never changes backgrounds.
 
 See [`theme-integration.md`](theme-integration.md) for the semantic classes,
 quoted-source palette and public Obsidian CSS-variable bridge.

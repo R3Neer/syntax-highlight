@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CommonContrastManager } from "../src/contrast-manager";
+import { SyntaxContrastManager } from "../src/contrast-manager";
 import {
   MINIMUM_TEXT_CONTRAST,
   contrastRatioCss,
@@ -25,14 +25,44 @@ function mountedToken(
   return token;
 }
 
+function mountedSourceTarget(
+  foreground: string,
+  background: string,
+  className: string,
+): HTMLElement {
+  const sourceEditor = document.createElement("div");
+  sourceEditor.className = "syntax-source-editor";
+  const editor = document.createElement("div");
+  editor.className = "cm-editor";
+  editor.style.backgroundColor = background;
+  const content = document.createElement("div");
+  content.className = "cm-content";
+  content.style.color = foreground;
+  editor.append(content);
+  sourceEditor.append(editor);
+  document.body.append(sourceEditor);
+
+  if (className === "cm-content") {
+    content.textContent = "source";
+    return content;
+  }
+
+  const target = document.createElement("span");
+  target.className = className;
+  target.style.color = foreground;
+  target.textContent = "source";
+  content.append(target);
+  return target;
+}
+
 afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("CommonContrastManager", () => {
+describe("SyntaxContrastManager", () => {
   it("adjusts only a low-contrast common token in plugin-owned rendered DOM", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
 
     manager.normalize(document.body);
 
@@ -52,7 +82,7 @@ describe("CommonContrastManager", () => {
     );
     const host = token.parentElement!;
     const originalBackground = host.style.backgroundColor;
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
 
     manager.normalize(document.body);
 
@@ -66,7 +96,7 @@ describe("CommonContrastManager", () => {
 
   it("leaves a theme color alone when it already passes", () => {
     const token = mountedToken("rgb(35, 35, 35)", "rgb(245, 245, 245)");
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
 
     manager.normalize(document.body);
 
@@ -77,7 +107,7 @@ describe("CommonContrastManager", () => {
   it("recomputes from the original theme color after the rendered background changes", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const host = token.parentElement!;
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
 
     manager.normalize(document.body);
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(true);
@@ -91,7 +121,7 @@ describe("CommonContrastManager", () => {
 
   it("restores the theme color when owned rendered DOM reuses a span for non-syntax text", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
     manager.normalize(token);
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(true);
 
@@ -113,16 +143,68 @@ describe("CommonContrastManager", () => {
     editor.append(token);
     document.body.append(editor);
 
-    new CommonContrastManager().normalize(document.body);
+    new SyntaxContrastManager().normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
     expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
     expect(token.style.getPropertyPriority("color")).toBe("");
   });
 
+  it("normalizes base text in the plugin-owned source-file editor", () => {
+    const content = mountedSourceTarget(
+      "rgb(229, 192, 123)",
+      "rgb(221, 216, 199)",
+      "cm-content",
+    );
+    const editor = content.parentElement!;
+    const originalBackground = editor.style.backgroundColor;
+
+    new SyntaxContrastManager().normalize(document.body);
+
+    expect(content.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(contrastRatioCss(
+      content.style.getPropertyValue("color"),
+      originalBackground,
+    )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+    expect(editor.style.backgroundColor).toBe(originalBackground);
+  });
+
+  it.each([
+    "syntax-common-keyword cm-keyword",
+    "syntax-common-invalid cm-invalid",
+    "syntax-token-declaration syntax-color-mud-declaration-keyword",
+  ])("normalizes %s in the plugin-owned source-file editor", (className) => {
+    const token = mountedSourceTarget(
+      "rgb(229, 192, 123)",
+      "rgb(221, 216, 199)",
+      className,
+    );
+
+    new SyntaxContrastManager().normalize(document.body);
+
+    expect(token.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(contrastRatioCss(
+      token.style.getPropertyValue("color"),
+      "rgb(221, 216, 199)",
+    )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+  });
+
+  it("leaves passing source-file token colors untouched", () => {
+    const token = mountedSourceTarget(
+      "rgb(35, 35, 35)",
+      "rgb(245, 245, 245)",
+      "syntax-common-keyword cm-keyword",
+    );
+
+    new SyntaxContrastManager().normalize(document.body);
+
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(35, 35, 35)");
+  });
+
   it("restores a pre-existing inline theme color when disposed", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
-    const manager = new CommonContrastManager();
+    const manager = new SyntaxContrastManager();
     manager.normalize(document.body);
 
     manager.dispose();
@@ -145,7 +227,7 @@ describe("CommonContrastManager", () => {
     preview.append(frame);
     document.body.append(preview);
 
-    new CommonContrastManager().normalize(document.body);
+    new SyntaxContrastManager().normalize(document.body);
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
     expect(token.style.getPropertyValue("color")).toBe("rgb(245, 245, 245)");

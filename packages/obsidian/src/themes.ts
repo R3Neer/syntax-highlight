@@ -1,5 +1,5 @@
 import { buildBlockPresentationCss } from "./block-presentation";
-import { CommonContrastManager } from "./contrast-manager";
+import { SyntaxContrastManager } from "./contrast-manager";
 import { BUILTIN_DESCRIPTORS, type LanguageDescriptor } from "./descriptor";
 import type { LanguageRegistry } from "./languages";
 import {
@@ -65,7 +65,7 @@ export function buildThemeCss(
 
 export class ThemeManager {
   private readonly element = document.createElement("style");
-  private readonly contrastManager = new CommonContrastManager();
+  private readonly contrastManager = new SyntaxContrastManager();
 
   constructor() {
     this.element.dataset.syntaxHighlightThemes = "true";

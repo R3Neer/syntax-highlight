@@ -23,13 +23,26 @@ const COMMON_TOKEN_SELECTORS = [
   ".syntax-common-delimiter",
   ".syntax-common-punctuation",
   ".syntax-common-meta",
+  ".syntax-common-invalid",
 ] as const;
 
-const COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS.join(",");
 const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
-const OWNED_COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS
+const SOURCE_EDITOR_SELECTOR = ".syntax-source-editor";
+const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${SOURCE_EDITOR_SELECTOR}`;
+const RENDERED_COMMON_TOKEN_SELECTORS = COMMON_TOKEN_SELECTORS
   .map((selector) => `${OWNED_FRAME_SELECTOR} ${selector}`)
   .join(",");
+const SOURCE_CONTRAST_TARGET_SELECTORS = [
+  `${SOURCE_EDITOR_SELECTOR} .cm-content`,
+  ...COMMON_TOKEN_SELECTORS.map(
+    (selector) => `${SOURCE_EDITOR_SELECTOR} ${selector}`,
+  ),
+  `${SOURCE_EDITOR_SELECTOR} [class*="syntax-token-"]`,
+] as const;
+const OWNED_CONTRAST_TARGET_SELECTOR = [
+  RENDERED_COMMON_TOKEN_SELECTORS,
+  ...SOURCE_CONTRAST_TARGET_SELECTORS,
+].join(",");
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
 const resolvedColorCache = new Map<string, RgbaColor | undefined>();
@@ -89,24 +102,33 @@ function effectiveBackground(element: Element): RgbaColor {
   return compositeOver(result, { r: 1, g: 1, b: 1, a: 1 });
 }
 
-function isInsideOwnedFrame(element: Element): boolean {
-  return element.closest(OWNED_FRAME_SELECTOR) !== null;
-}
-
-function commonTokens(root: ParentNode): HTMLElement[] {
+function contrastTargets(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
   if (
     root instanceof HTMLElement &&
-    root.matches(OWNED_COMMON_TOKEN_SELECTOR)
+    root.matches(OWNED_CONTRAST_TARGET_SELECTOR)
   ) {
     result.push(root);
   }
   for (const element of root.querySelectorAll<HTMLElement>(
-    OWNED_COMMON_TOKEN_SELECTOR,
+    OWNED_CONTRAST_TARGET_SELECTOR,
   )) {
     result.push(element);
   }
-  return result;
+  // Source tokens are descendants of `.cm-content`. Normalize the leaves first
+  // so DOM implementations that simplify inherited styles cannot hide a token's
+  // own foreground behind the adjusted base editor color.
+  return result.sort((left, right) => elementDepth(right) - elementDepth(left));
+}
+
+function elementDepth(element: Element): number {
+  let depth = 0;
+  let current = element.parentElement;
+  while (current !== null) {
+    depth += 1;
+    current = current.parentElement;
+  }
+  return depth;
 }
 
 function parentNode(value: Node): ParentNode | undefined {
@@ -115,18 +137,18 @@ function parentNode(value: Node): ParentNode | undefined {
     : undefined;
 }
 
-function touchesOwnedFrame(root: ParentNode): boolean {
+function touchesOwnedSurface(root: ParentNode): boolean {
   if (root instanceof HTMLElement) {
     return (
-      isInsideOwnedFrame(root) ||
-      root.matches(OWNED_FRAME_SELECTOR) ||
-      root.querySelector(OWNED_FRAME_SELECTOR) !== null
+      root.closest(OWNED_SURFACE_SELECTOR) !== null ||
+      root.matches(OWNED_SURFACE_SELECTOR) ||
+      root.querySelector(OWNED_SURFACE_SELECTOR) !== null
     );
   }
-  return root.querySelector(OWNED_FRAME_SELECTOR) !== null;
+  return root.querySelector(OWNED_SURFACE_SELECTOR) !== null;
 }
 
-export class CommonContrastManager {
+export class SyntaxContrastManager {
   private readonly observer: MutationObserver;
   private readonly rootObserver: MutationObserver;
   private readonly headObserver: MutationObserver;
@@ -140,14 +162,14 @@ export class CommonContrastManager {
       for (const record of records) {
         if (record.type === "attributes") {
           const root = parentNode(record.target);
-          if (root !== undefined && touchesOwnedFrame(root)) {
+          if (root !== undefined && touchesOwnedSurface(root)) {
             this.pendingRoots.add(root);
           }
           continue;
         }
         for (const node of record.addedNodes) {
           const root = parentNode(node);
-          if (root !== undefined && touchesOwnedFrame(root)) {
+          if (root !== undefined && touchesOwnedSurface(root)) {
             this.pendingRoots.add(root);
           }
         }
@@ -193,12 +215,11 @@ export class CommonContrastManager {
     if (
       root instanceof HTMLElement &&
       root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
-      isInsideOwnedFrame(root) &&
-      !root.matches(COMMON_TOKEN_SELECTOR)
+      !root.matches(OWNED_CONTRAST_TARGET_SELECTOR)
     ) {
       this.restoreThemeColor(root);
     }
-    for (const element of commonTokens(root)) this.normalizeElement(element);
+    for (const element of contrastTargets(root)) this.normalizeElement(element);
   }
 
   refreshAll(): void {
@@ -215,14 +236,14 @@ export class CommonContrastManager {
     this.fullRefreshPending = false;
     this.scheduled = false;
     for (const element of document.querySelectorAll<HTMLElement>(
-      `${OWNED_FRAME_SELECTOR} [${ADJUSTED_ATTRIBUTE}]`,
+      `[${ADJUSTED_ATTRIBUTE}]`,
     )) {
       this.restoreThemeColor(element);
     }
   }
 
   private normalizeElement(element: HTMLElement): void {
-    if (!isInsideOwnedFrame(element)) return;
+    if (!element.matches(OWNED_CONTRAST_TARGET_SELECTOR)) return;
 
     // Settings previews intentionally show their selected semantic preset rather
     // than the active vault theme, so runtime normalization must not rewrite it.

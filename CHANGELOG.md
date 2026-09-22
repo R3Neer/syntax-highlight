@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extended automatic WCAG AA contrast normalization to the plugin-owned source-file
+  editor. Base text, common-language roles, configured-language tokens, and invalid
+  tokens now use the same foreground-only `4.5:1` policy as rendered code blocks;
+  Obsidian-owned Markdown source/Live Preview remains untouched.
 - Completed the bilingual Obsidian interface coverage for settings, source-editor
   status messages, block editing, validation actions, and theme controls. User-facing
   strings now go through the locale helper instead of being fixed in Spanish, while
