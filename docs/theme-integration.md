@@ -183,6 +183,12 @@ colors remain unchanged. Failing colors are adjusted by the smallest viable
 OKLab-lightness move, searching both lighter and darker directions and reducing
 chroma only when needed to remain in gamut. Backgrounds are never modified.
 
+Rendered blocks receive foreground adjustments directly because that DOM is owned
+by Syntax Highlight. The source-file editor instead receives generated per-editor
+CSS rules scoped from `.syntax-source-editor`; CodeMirror-managed content nodes are
+never mutated. Base and active-line backgrounds are measured independently, and
+the rules are regenerated after theme, token, focus, or active-line changes.
+
 The effective background is built by alpha-compositing computed
 `background-color` values through ancestors. CSS Color 4 values that Chromium
 does not serialize as `rgb()`/`rgba()` are converted through a one-pixel sRGB

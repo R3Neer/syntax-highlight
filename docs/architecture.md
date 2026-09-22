@@ -125,6 +125,12 @@ covers base editor text, common-language semantic tokens, and configured-languag
 tokens. The normalizer leaves colors that already reach WCAG AA `4.5:1` unchanged
 and adjusts only failing foreground colors; it never changes backgrounds.
 
+Source-file corrections are emitted as per-editor CSS rules scoped by an attribute
+on `.syntax-source-editor`, which is plugin-owned. The normalizer does not attach
+styles or bookkeeping attributes to `.cm-content`, `.cm-line`, or token spans.
+Normal and active-line backgrounds are evaluated separately, so CodeMirror can
+freely reconcile its content DOM during focus, selection, and document updates.
+
 See [`theme-integration.md`](theme-integration.md) for the semantic classes,
 quoted-source palette and public Obsidian CSS-variable bridge.
 

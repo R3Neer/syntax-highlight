@@ -29,20 +29,11 @@ const COMMON_TOKEN_SELECTORS = [
 const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
 const SOURCE_EDITOR_SELECTOR = ".syntax-source-editor";
 const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${SOURCE_EDITOR_SELECTOR}`;
-const RENDERED_COMMON_TOKEN_SELECTORS = COMMON_TOKEN_SELECTORS
+const RENDERED_COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS
   .map((selector) => `${OWNED_FRAME_SELECTOR} ${selector}`)
   .join(",");
-const SOURCE_CONTRAST_TARGET_SELECTORS = [
-  `${SOURCE_EDITOR_SELECTOR} .cm-content`,
-  ...COMMON_TOKEN_SELECTORS.map(
-    (selector) => `${SOURCE_EDITOR_SELECTOR} ${selector}`,
-  ),
-  `${SOURCE_EDITOR_SELECTOR} [class*="syntax-token-"]`,
-] as const;
-const OWNED_CONTRAST_TARGET_SELECTOR = [
-  RENDERED_COMMON_TOKEN_SELECTORS,
-  ...SOURCE_CONTRAST_TARGET_SELECTORS,
-].join(",");
+const SOURCE_TOKEN_SELECTOR = '[class*="syntax-common-"],[class*="syntax-color-"]';
+const SOURCE_SCOPE_ATTRIBUTE = "data-syntax-contrast-source";
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
 const resolvedColorCache = new Map<string, RgbaColor | undefined>();
@@ -102,33 +93,47 @@ function effectiveBackground(element: Element): RgbaColor {
   return compositeOver(result, { r: 1, g: 1, b: 1, a: 1 });
 }
 
-function contrastTargets(root: ParentNode): HTMLElement[] {
+function renderedContrastTargets(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
   if (
     root instanceof HTMLElement &&
-    root.matches(OWNED_CONTRAST_TARGET_SELECTOR)
+    root.matches(RENDERED_COMMON_TOKEN_SELECTOR)
   ) {
     result.push(root);
   }
   for (const element of root.querySelectorAll<HTMLElement>(
-    OWNED_CONTRAST_TARGET_SELECTOR,
+    RENDERED_COMMON_TOKEN_SELECTOR,
   )) {
     result.push(element);
   }
-  // Source tokens are descendants of `.cm-content`. Normalize the leaves first
-  // so DOM implementations that simplify inherited styles cannot hide a token's
-  // own foreground behind the adjusted base editor color.
-  return result.sort((left, right) => elementDepth(right) - elementDepth(left));
+  return result;
 }
 
-function elementDepth(element: Element): number {
-  let depth = 0;
-  let current = element.parentElement;
-  while (current !== null) {
-    depth += 1;
-    current = current.parentElement;
+function sourceEditors(root: ParentNode): HTMLElement[] {
+  const result: HTMLElement[] = [];
+  if (root instanceof HTMLElement) {
+    const owner = root.closest<HTMLElement>(SOURCE_EDITOR_SELECTOR);
+    if (owner !== null) result.push(owner);
   }
-  return depth;
+  for (const editor of root.querySelectorAll<HTMLElement>(SOURCE_EDITOR_SELECTOR)) {
+    if (!result.includes(editor)) result.push(editor);
+  }
+  return result;
+}
+
+function sourceTokenClasses(editor: HTMLElement): Map<string, HTMLElement> {
+  const result = new Map<string, HTMLElement>();
+  for (const element of editor.querySelectorAll<HTMLElement>(SOURCE_TOKEN_SELECTOR)) {
+    for (const className of element.classList) {
+      if (
+        /^(?:syntax-common|syntax-color)-[a-z0-9_-]+$/i.test(className) &&
+        !result.has(className)
+      ) {
+        result.set(className, element);
+      }
+    }
+  }
+  return result;
 }
 
 function parentNode(value: Node): ParentNode | undefined {
@@ -153,9 +158,14 @@ export class SyntaxContrastManager {
   private readonly rootObserver: MutationObserver;
   private readonly headObserver: MutationObserver;
   private readonly originalInlineColors = new WeakMap<HTMLElement, InlineColor>();
+  private readonly sourceStyleElement = document.createElement("style");
+  private readonly sourceRules = new Map<HTMLElement, string>();
+  private readonly sourceIds = new WeakMap<HTMLElement, string>();
   private readonly pendingRoots = new Set<ParentNode>();
   private fullRefreshPending = false;
   private scheduled = false;
+  private animationFrame?: number;
+  private nextSourceId = 1;
 
   constructor(private readonly minimumContrast = MINIMUM_TEXT_CONTRAST) {
     this.observer = new MutationObserver((records) => {
@@ -177,10 +187,15 @@ export class SyntaxContrastManager {
       if (this.pendingRoots.size > 0) this.schedule();
     });
     this.rootObserver = new MutationObserver(() => this.scheduleFullRefresh());
-    this.headObserver = new MutationObserver(() => {
+    this.headObserver = new MutationObserver((records) => {
+      if (records.every((record) =>
+        record.target === this.sourceStyleElement ||
+        this.sourceStyleElement.contains(record.target)
+      )) return;
       resolvedColorCache.clear();
       this.scheduleFullRefresh();
     });
+    this.sourceStyleElement.dataset.syntaxHighlightSourceContrast = "true";
   }
 
   start(): void {
@@ -200,6 +215,7 @@ export class SyntaxContrastManager {
       attributeFilter: ["class", "style"],
     });
     if (document.head !== null) {
+      document.head.append(this.sourceStyleElement);
       this.headObserver.observe(document.head, {
         childList: true,
         subtree: true,
@@ -212,19 +228,14 @@ export class SyntaxContrastManager {
   }
 
   normalize(root: ParentNode): void {
-    if (
-      root instanceof HTMLElement &&
-      root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
-      !root.matches(OWNED_CONTRAST_TARGET_SELECTOR)
-    ) {
-      this.restoreThemeColor(root);
-    }
-    for (const element of contrastTargets(root)) this.normalizeElement(element);
+    this.normalizeRoots([root]);
   }
 
   refreshAll(): void {
     this.pendingRoots.clear();
     this.fullRefreshPending = false;
+    this.sourceRules.clear();
+    this.renderSourceRules();
     this.normalize(document);
   }
 
@@ -235,15 +246,26 @@ export class SyntaxContrastManager {
     this.pendingRoots.clear();
     this.fullRefreshPending = false;
     this.scheduled = false;
+    if (this.animationFrame !== undefined) {
+      window.cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = undefined;
+    }
     for (const element of document.querySelectorAll<HTMLElement>(
       `[${ADJUSTED_ATTRIBUTE}]`,
     )) {
       this.restoreThemeColor(element);
     }
+    for (const editor of document.querySelectorAll<HTMLElement>(
+      `[${SOURCE_SCOPE_ATTRIBUTE}]`,
+    )) {
+      editor.removeAttribute(SOURCE_SCOPE_ATTRIBUTE);
+    }
+    this.sourceRules.clear();
+    this.sourceStyleElement.remove();
   }
 
-  private normalizeElement(element: HTMLElement): void {
-    if (!element.matches(OWNED_CONTRAST_TARGET_SELECTOR)) return;
+  private normalizeRenderedElement(element: HTMLElement): void {
+    if (!element.matches(RENDERED_COMMON_TOKEN_SELECTOR)) return;
 
     // Settings previews intentionally show their selected semantic preset rather
     // than the active vault theme, so runtime normalization must not rewrite it.
@@ -271,6 +293,119 @@ export class SyntaxContrastManager {
     element.setAttribute(ADJUSTED_ATTRIBUTE, "true");
   }
 
+  private normalizeSourceEditor(editor: HTMLElement): void {
+    if (!editor.isConnected) {
+      this.sourceRules.delete(editor);
+      this.renderSourceRules();
+      return;
+    }
+
+    // Remove our previous rules before reading computed colors. The resulting
+    // rules are scoped to the plugin-owned editor host, never written onto
+    // CodeMirror's managed content DOM.
+    this.sourceRules.delete(editor);
+    this.renderSourceRules();
+
+    const content = editor.querySelector<HTMLElement>(".cm-content");
+    if (content === null || (content.textContent ?? "").trim().length === 0) return;
+
+    let id = this.sourceIds.get(editor);
+    if (id === undefined) {
+      id = String(this.nextSourceId++);
+      this.sourceIds.set(editor, id);
+      editor.setAttribute(SOURCE_SCOPE_ATTRIBUTE, id);
+    }
+    const scope = `${SOURCE_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}="${id}"]`;
+    const background = effectiveBackground(content);
+    const activeLine = editor.querySelector<HTMLElement>(".cm-activeLine");
+    const activeBackground = activeLine === null
+      ? background
+      : effectiveBackground(activeLine);
+    const rules: string[] = [];
+
+    this.appendSourceColorRules(
+      rules,
+      scope,
+      ".cm-content",
+      getComputedStyle(content).color,
+      background,
+      activeBackground,
+      ".cm-activeLine",
+    );
+
+    for (const [className, element] of sourceTokenClasses(editor)) {
+      this.appendSourceColorRules(
+        rules,
+        scope,
+        `.${className}`,
+        getComputedStyle(element).color,
+        background,
+        activeBackground,
+        `.cm-activeLine .${className}`,
+      );
+    }
+
+    this.sourceRules.set(editor, rules.join("\n"));
+    this.renderSourceRules();
+  }
+
+  private appendSourceColorRules(
+    rules: string[],
+    scope: string,
+    selector: string,
+    foregroundCss: string,
+    background: RgbaColor,
+    activeBackground: RgbaColor,
+    activeSelector: string,
+  ): void {
+    const foreground = resolveCssColor(foregroundCss);
+    if (foreground === undefined) return;
+
+    const normal = ensureContrast(foreground, background, this.minimumContrast);
+    if (normal.changed) {
+      rules.push(`${scope} ${selector}{color:${toCssColor(normal.adjusted)}!important}`);
+    }
+
+    const active = ensureContrast(
+      foreground,
+      activeBackground,
+      this.minimumContrast,
+    );
+    if (toCssColor(active.adjusted) !== toCssColor(normal.adjusted)) {
+      rules.push(`${scope} ${activeSelector}{color:${toCssColor(active.adjusted)}!important}`);
+    }
+  }
+
+  private renderSourceRules(): void {
+    if (!this.sourceStyleElement.isConnected && document.head !== null) {
+      document.head.append(this.sourceStyleElement);
+    }
+    for (const editor of [...this.sourceRules.keys()]) {
+      if (!editor.isConnected) this.sourceRules.delete(editor);
+    }
+    this.sourceStyleElement.textContent = [...this.sourceRules.values()]
+      .filter((value) => value.length > 0)
+      .join("\n");
+  }
+
+  private normalizeRoots(roots: Iterable<ParentNode>): void {
+    const editors = new Set<HTMLElement>();
+    for (const root of roots) {
+      if (
+        root instanceof HTMLElement &&
+        root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
+        !root.matches(RENDERED_COMMON_TOKEN_SELECTOR)
+      ) {
+        this.restoreThemeColor(root);
+      }
+      for (const element of renderedContrastTargets(root)) {
+        this.normalizeRenderedElement(element);
+      }
+      for (const editor of sourceEditors(root)) editors.add(editor);
+    }
+    for (const editor of editors) this.normalizeSourceEditor(editor);
+  }
+
   private restoreThemeColor(element: HTMLElement): void {
     if (!element.hasAttribute(ADJUSTED_ATTRIBUTE)) return;
     const original = this.originalInlineColors.get(element);
@@ -293,7 +428,8 @@ export class SyntaxContrastManager {
   private schedule(): void {
     if (this.scheduled) return;
     this.scheduled = true;
-    window.requestAnimationFrame(() => {
+    this.animationFrame = window.requestAnimationFrame(() => {
+      this.animationFrame = undefined;
       this.scheduled = false;
       if (this.fullRefreshPending) {
         this.refreshAll();
@@ -301,7 +437,7 @@ export class SyntaxContrastManager {
       }
       const roots = [...this.pendingRoots];
       this.pendingRoots.clear();
-      for (const root of roots) this.normalize(root);
+      this.normalizeRoots(roots);
     });
   }
 }

@@ -57,6 +57,9 @@ function mountedSourceTarget(
 
 afterEach(() => {
   document.body.replaceChildren();
+  document.head
+    .querySelectorAll("style[data-syntax-highlight-source-contrast]")
+    .forEach((element) => element.remove());
 });
 
 describe("SyntaxContrastManager", () => {
@@ -161,9 +164,10 @@ describe("SyntaxContrastManager", () => {
 
     new SyntaxContrastManager().normalize(document.body);
 
-    expect(content.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(content.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(content.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
     expect(contrastRatioCss(
-      content.style.getPropertyValue("color"),
+      getComputedStyle(content).color,
       originalBackground,
     )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
     expect(editor.style.backgroundColor).toBe(originalBackground);
@@ -182,9 +186,10 @@ describe("SyntaxContrastManager", () => {
 
     new SyntaxContrastManager().normalize(document.body);
 
-    expect(token.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
+    expect(token.style.getPropertyValue("color")).toBe("rgb(229, 192, 123)");
     expect(contrastRatioCss(
-      token.style.getPropertyValue("color"),
+      getComputedStyle(token).color,
       "rgb(221, 216, 199)",
     )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
   });
@@ -200,6 +205,27 @@ describe("SyntaxContrastManager", () => {
 
     expect(token.hasAttribute("data-syntax-contrast-adjusted")).toBe(false);
     expect(token.style.getPropertyValue("color")).toBe("rgb(35, 35, 35)");
+    expect(getComputedStyle(token).color).toBe("rgb(35, 35, 35)");
+  });
+
+  it("removes source-file contrast rules and scope when disposed", () => {
+    const token = mountedSourceTarget(
+      "rgb(229, 192, 123)",
+      "rgb(221, 216, 199)",
+      "syntax-common-keyword cm-keyword",
+    );
+    const sourceEditor = token.closest<HTMLElement>(".syntax-source-editor")!;
+    const manager = new SyntaxContrastManager();
+    manager.normalize(document.body);
+    expect(sourceEditor.hasAttribute("data-syntax-contrast-source")).toBe(true);
+    expect(getComputedStyle(token).color).not.toBe("rgb(229, 192, 123)");
+
+    manager.dispose();
+
+    expect(sourceEditor.hasAttribute("data-syntax-contrast-source")).toBe(false);
+    expect(getComputedStyle(token).color).toBe("rgb(229, 192, 123)");
+    expect(document.querySelector("[data-syntax-highlight-source-contrast]"))
+      .toBeNull();
   });
 
   it("restores a pre-existing inline theme color when disposed", () => {

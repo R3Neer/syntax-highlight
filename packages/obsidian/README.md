@@ -74,11 +74,12 @@ owned by Obsidian's Markdown editor.
 Common languages use stable plugin semantic classes (`syntax-common-*`) and
 public Obsidian CSS variables. No community theme is hardcoded.
 
-JavaScript contrast normalization is restricted to rendered DOM owned by Syntax
-Highlight under `.syntax-highlight-frame`; CodeMirror source DOM is never
-rewritten by JavaScript. Passing colors are left unchanged, while failing
-rendered common-language foregrounds are adjusted toward WCAG AA `4.5:1` without
-changing backgrounds.
+JavaScript contrast normalization is restricted to surfaces owned by Syntax
+Highlight. Rendered blocks under `.syntax-highlight-frame` may receive direct
+foreground adjustments. The dedicated source-file editor receives per-editor CSS
+rules scoped from `.syntax-source-editor`, without rewriting CodeMirror's content
+DOM. Passing colors are left unchanged, while failing foregrounds are adjusted
+toward WCAG AA `4.5:1` without changing backgrounds.
 
 ## Local installation
 
