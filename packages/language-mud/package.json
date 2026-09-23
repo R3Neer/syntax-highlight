@@ -1,6 +1,6 @@
 {
   "name": "@r3nner/syntax-highlight-language-mud",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "MUD language pack, tokenizer, and formatter.",
   "type": "module",
   "license": "MIT",
@@ -24,7 +24,7 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@r3nner/syntax-highlight-core": "1.2.1"
+    "@r3nner/syntax-highlight-core": "1.2.2"
   },
   "sideEffects": false
 }

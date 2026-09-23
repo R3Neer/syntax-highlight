@@ -27,7 +27,9 @@ parsing and semantic ranges are mapped back to physical document offsets, so
 While Markdown source is editable, CodeMirror owns the DOM. Syntax Highlight
 uses a `ViewPlugin` and contributes documented CodeMirror decorations for token
 ranges, quoted-code line surfaces, presentation and line numbers. It does not
-mutate CodeMirror DOM or depend on private `.cm-embed-block` structure.
+mutate CodeMirror DOM. In Live Preview, scoped CSS places Obsidian's native edit
+control to the left of the plugin's language badge; this depends on Obsidian's
+current rendered-block markup and is limited to Syntax Highlight blocks.
 
 Rendered fences use Obsidian's Markdown processing APIs. Registered code-block
 processors are the primary path; a structural Markdown postprocessor provides a
@@ -35,6 +37,20 @@ fail-closed fallback for recognized native `<pre><code class="language-…">`
 blocks that remain unclaimed in rendered Markdown. Unknown/ambiguous structures
 stay native, direct host furniture such as copy controls is preserved, and
 processed output is idempotent.
+
+Highlighted code blocks show a language badge and one plugin-owned copy button.
+The badge uses the language descriptor's display name, including for configured
+custom languages. Copy sits below the badge in the code body's upper-right
+corner, without changing its vertical spacing. In Live Preview, the badge hides
+while the pointer is over the block, allowing Obsidian's native edit icon to
+occupy that corner; copy remains below it.
+The button copies the original fence body (without decorative line numbers) and
+briefly changes to a non-interactive check mark. It resets after one second, or
+immediately when the pointer leaves and re-enters the button. Any duplicate
+native copy button retained inside a Reading View block is hidden so it does
+not overlap the badge. Text/Markdown presentation blocks
+retain their furniture-free appearance. Normal editor selection shortcuts,
+including Ctrl+A, are unchanged.
 
 Quoted source uses a plugin-owned dark code surface and semantic palette. The
 surface is bridged through Obsidian's public `--blockquote-background-color`

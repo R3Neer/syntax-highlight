@@ -3,6 +3,7 @@ import { commonSemanticRanges } from "./common-semantic-ranges";
 import type { CommonLanguage } from "./common-languages";
 import type { MudHighlightConfig } from "./config";
 import type { LanguageRuntime } from "./languages";
+import type { UiLocale } from "./i18n";
 import {
   tokenClass,
   tokenColorClass,
@@ -97,7 +98,11 @@ function appendLine(
   code.append(element);
 }
 
-function appendLanguageBadge(frame: HTMLElement, badge: LanguageBadge): void {
+function appendLanguageBadge(
+  frame: HTMLElement,
+  pre: HTMLPreElement,
+  badge: LanguageBadge,
+): void {
   frame.classList.add("has-language-badge");
   const element = document.createElement("span");
   element.className = "syntax-language-badge";
@@ -122,7 +127,73 @@ function appendLanguageBadge(frame: HTMLElement, badge: LanguageBadge): void {
     element.textContent = badge.label;
   }
 
-  frame.append(element);
+  pre.append(element);
+}
+
+function setCopyButtonIcon(button: HTMLButtonElement, copied: boolean): void {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute(
+    "d",
+    copied
+      ? "M20 6 9 17l-5-5"
+      : "M8 4h11a2 2 0 0 1 2 2v11M5 8h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Z",
+  );
+  svg.append(path);
+  button.replaceChildren(svg);
+}
+
+function appendCopyButton(pre: HTMLPreElement, source: string, locale: UiLocale): void {
+  const copyLabel = locale === "es" ? "Copiar código" : "Copy code";
+  const copiedLabel = locale === "es" ? "Código copiado" : "Code copied";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "syntax-copy-button";
+  button.setAttribute("aria-label", copyLabel);
+  button.title = copyLabel;
+  setCopyButtonIcon(button, false);
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+  let copied = false;
+  let leftAfterCopy = false;
+  const reset = (): void => {
+    if (resetTimer !== undefined) clearTimeout(resetTimer);
+    resetTimer = undefined;
+    copied = false;
+    leftAfterCopy = false;
+    button.classList.remove("is-copied");
+    button.removeAttribute("aria-disabled");
+    button.setAttribute("aria-label", copyLabel);
+    button.title = copyLabel;
+    setCopyButtonIcon(button, false);
+  };
+  button.addEventListener("pointerleave", () => {
+    if (copied) leftAfterCopy = true;
+  });
+  button.addEventListener("pointerenter", () => {
+    if (copied && leftAfterCopy) reset();
+  });
+  button.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (copied) return;
+    try {
+      await navigator.clipboard.writeText(source);
+    } catch (error) {
+      console.error("[Syntax Highlight] Failed to copy code block.", error);
+      return;
+    }
+    if (resetTimer !== undefined) clearTimeout(resetTimer);
+    copied = true;
+    leftAfterCopy = false;
+    button.classList.add("is-copied");
+    button.setAttribute("aria-disabled", "true");
+    button.setAttribute("aria-label", copiedLabel);
+    button.title = copiedLabel;
+    setCopyButtonIcon(button, true);
+    resetTimer = setTimeout(reset, 1000);
+  });
+  pre.append(button);
 }
 
 function renderRanges(
@@ -134,12 +205,12 @@ function renderRanges(
   badge?: LanguageBadge,
   plainClass?: string,
   frameClasses: readonly string[] = [],
+  locale: UiLocale = "en",
 ): void {
   container.replaceChildren();
   const frame = document.createElement("div");
   frame.className = "syntax-highlight-frame";
   if (frameClasses.length > 0) frame.classList.add(...frameClasses);
-  if (badge !== undefined) appendLanguageBadge(frame, badge);
   const pre = document.createElement("pre");
   const code = document.createElement("code");
   pre.className = "syntax-highlight-block";
@@ -161,6 +232,10 @@ function renderRanges(
     );
   });
   pre.append(code);
+  if (badge !== undefined) {
+    appendLanguageBadge(frame, pre, badge);
+    appendCopyButton(pre, source, locale);
+  }
   frame.append(pre);
   container.append(frame);
 }
@@ -181,6 +256,7 @@ export function renderSyntaxCode(
   container: HTMLElement,
   runtime: LanguageRuntime,
   showLineNumbers = true,
+  locale: UiLocale = "en",
 ): void {
   renderRanges(
     source,
@@ -192,6 +268,9 @@ export function renderSyntaxCode(
       label: runtime.descriptor.name,
       mud: runtime.settings.id === "mud",
     },
+    undefined,
+    [],
+    locale,
   );
 }
 
@@ -201,6 +280,7 @@ export function renderCommonCode(
   language: CommonLanguage,
   showLineNumbers = true,
   fence = language.fences[0] ?? language.id,
+  locale: UiLocale = "en",
 ): void {
   const ranges = commonSemanticRanges(language, source);
   const effectiveLineNumbers =
@@ -219,6 +299,7 @@ export function renderCommonCode(
     badge,
     "syntax-common-plain",
     frameClasses,
+    locale,
   );
 }
 

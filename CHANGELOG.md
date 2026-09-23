@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.2
+
+- Added a Reading View and Live Preview code-block copy button. It copies the
+  original fence source, shows a brief non-interactive confirmation checkmark,
+  and follows the configured English/Spanish interface language.
+- Added descriptor-backed language badges for supported common and configured
+  languages, including user-defined language profiles.
+- Refined Live Preview code-block controls so the language badge yields its
+  upper-right position to Obsidian's native edit affordance on hover, while the
+  copy control remains available beneath it without adding vertical space above
+  the source.
+
 ## 1.2.1
 
 - Extended automatic contrast normalization to source files and Markdown editing.

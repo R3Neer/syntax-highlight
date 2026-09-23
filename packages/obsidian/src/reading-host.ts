@@ -5,6 +5,7 @@ import type {
 
 import { commonFenceMatch } from "./block-presentation";
 import type { LanguageRegistry } from "./languages";
+import { effectiveLocale } from "./i18n";
 import { renderCommonCode, renderSyntaxCode } from "./reading";
 import {
   RENDERED_PROCESSED_ATTRIBUTE,
@@ -57,7 +58,7 @@ export function renderResolvedFence(
   if (runtime === undefined && common === undefined) return false;
 
   if (runtime !== undefined) {
-    renderSyntaxCode(source, element, runtime, settings.lineNumbers);
+    renderSyntaxCode(source, element, runtime, settings.lineNumbers, effectiveLocale(settings));
   } else {
     renderCommonCode(
       source,
@@ -65,6 +66,7 @@ export function renderResolvedFence(
       common!.language,
       settings.lineNumbers,
       normalizedFence,
+      effectiveLocale(settings),
     );
   }
   return true;

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { commonLanguageByFence } from "../src/common-languages";
 import { LanguageRegistry } from "../src/languages";
@@ -8,6 +8,51 @@ import { renderCommonCode, renderMudCode, renderSyntaxCode } from "../src/readin
 import { DEFAULT_SETTINGS } from "../src/settings";
 
 describe("reading view rendering", () => {
+  it("copies the exact fenced source and briefly confirms the action without editing", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    try {
+      const source = "from collections import deque\n\nprint('hola')\n";
+      const container = document.createElement("div");
+      const language = commonLanguageByFence("python")!;
+      renderCommonCode(source, container, language, true, "python", "es");
+      const frame = container.querySelector<HTMLElement>(".syntax-highlight-frame")!;
+      const edit = vi.fn();
+      frame.addEventListener("click", edit);
+      const button = frame.querySelector<HTMLButtonElement>(".syntax-copy-button")!;
+
+      expect(button.getAttribute("aria-label")).toBe("Copiar código");
+      button.click();
+      await Promise.resolve();
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(source);
+      expect(edit).not.toHaveBeenCalled();
+      expect(button.getAttribute("aria-label")).toBe("Código copiado");
+      expect(button.getAttribute("aria-disabled")).toBe("true");
+      expect(button.classList.contains("is-copied")).toBe(true);
+      expect(button.querySelector("path")?.getAttribute("d")).toContain("M20 6");
+
+      button.click();
+      expect(writeText).toHaveBeenCalledTimes(1);
+      button.dispatchEvent(new Event("pointerleave"));
+      button.dispatchEvent(new Event("pointerenter"));
+      expect(button.getAttribute("aria-label")).toBe("Copiar código");
+      expect(button.hasAttribute("aria-disabled")).toBe(false);
+      expect(button.classList.contains("is-copied")).toBe(false);
+
+      button.click();
+      await Promise.resolve();
+      expect(writeText).toHaveBeenCalledTimes(2);
+      expect(button.getAttribute("aria-label")).toBe("Código copiado");
+
+      vi.advanceTimersByTime(1000);
+      expect(button.getAttribute("aria-label")).toBe("Copiar código");
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("renders decorative line numbers and the exact Mud badge", () => {
     const container = document.createElement("div");
     renderMudCode("thing A {}\nrule Ready { true }", container);
@@ -51,6 +96,7 @@ describe("reading view rendering", () => {
 
     expect(container.querySelector("code")?.classList.contains("language-text")).toBe(true);
     expect(container.querySelector(".syntax-language-badge")).toBeNull();
+    expect(container.querySelector(".syntax-copy-button")).toBeNull();
     expect(container.querySelector(".has-language-badge")).toBeNull();
     expect(container.querySelector(".syntax-highlight-block")?.classList.contains("has-line-numbers"))
       .toBe(false);
@@ -227,5 +273,23 @@ describe("reading view rendering", () => {
     expect(container.querySelector(".syntax-color-toml-string")).not.toBeNull();
     expect(container.querySelector(".syntax-color-toml-number")).not.toBeNull();
     expect(container.querySelector(".syntax-color-toml-comment")).not.toBeNull();
+  });
+
+  it("uses a configured language display name beside a separate copy control", () => {
+    const registry = new LanguageRegistry(
+      structuredClone(DEFAULT_SETTINGS),
+      () => Promise.resolve(""),
+    );
+    const runtime = registry.get("toml")!;
+    runtime.descriptor.name = "Custom configuration language";
+    const container = document.createElement("div");
+
+    renderSyntaxCode("answer = 42", container, runtime);
+
+    expect(container.querySelector(".syntax-language-badge")?.textContent)
+      .toBe("Custom configuration language");
+    expect(container.querySelector(".syntax-copy-button")).not.toBeNull();
+    expect(container.querySelector(".syntax-highlight-frame")?.classList.contains("has-language-badge"))
+      .toBe(true);
   });
 });

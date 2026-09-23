@@ -1022,7 +1022,9 @@ export class SyntaxSettingTab extends PluginSettingTab {
     }
     const source = (): string =>
       language.previewSource ?? runtime.descriptor.previewSource;
-    const updateOutput = (): void => renderSyntaxCode(source(), output, runtime);
+    const updateOutput = (): void => renderSyntaxCode(
+      source(), output, runtime, true, effectiveLocale(this.plugin.pluginSettings),
+    );
     new Setting(section)
       .addTextArea((text) => {
         text
