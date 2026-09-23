@@ -81,7 +81,7 @@ export class ThemeManager {
       ]) ?? [],
     );
     this.element.textContent = buildThemeCss(settings, descriptors);
-    this.contrastManager.refreshAll();
+    this.contrastManager.setMinimumContrast(settings.minimumContrast);
   }
 
   dispose(): void {

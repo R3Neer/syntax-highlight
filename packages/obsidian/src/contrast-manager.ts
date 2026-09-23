@@ -28,12 +28,15 @@ const COMMON_TOKEN_SELECTORS = [
 
 const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
 const SOURCE_EDITOR_SELECTOR = ".syntax-source-editor";
-const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${SOURCE_EDITOR_SELECTOR}`;
+const MARKDOWN_EDITOR_SELECTOR = ".markdown-source-view .cm-editor";
+const MARKDOWN_TOKEN_SELECTOR = '.cm-line [class*="syntax-common-"],.cm-line [class*="syntax-color-"]';
+const MARKDOWN_CODE_LINE_SELECTOR = '.cm-line:has([class*="syntax-common-"],[class*="syntax-color-"])';
+const SOURCE_SCOPE_ATTRIBUTE = "data-syntax-contrast-source";
+const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${SOURCE_EDITOR_SELECTOR},${MARKDOWN_EDITOR_SELECTOR}:has(${MARKDOWN_TOKEN_SELECTOR}),${MARKDOWN_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}]`;
 const RENDERED_COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS
   .map((selector) => `${OWNED_FRAME_SELECTOR} ${selector}`)
   .join(",");
 const SOURCE_TOKEN_SELECTOR = '[class*="syntax-common-"],[class*="syntax-color-"]';
-const SOURCE_SCOPE_ATTRIBUTE = "data-syntax-contrast-source";
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
 const resolvedColorCache = new Map<string, RgbaColor | undefined>();
@@ -112,10 +115,14 @@ function renderedContrastTargets(root: ParentNode): HTMLElement[] {
 function sourceEditors(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
   if (root instanceof HTMLElement) {
-    const owner = root.closest<HTMLElement>(SOURCE_EDITOR_SELECTOR);
+    const owner = root.closest<HTMLElement>(
+      `${SOURCE_EDITOR_SELECTOR},${MARKDOWN_EDITOR_SELECTOR}`,
+    );
     if (owner !== null) result.push(owner);
   }
-  for (const editor of root.querySelectorAll<HTMLElement>(SOURCE_EDITOR_SELECTOR)) {
+  for (const editor of root.querySelectorAll<HTMLElement>(
+    `${SOURCE_EDITOR_SELECTOR},${MARKDOWN_EDITOR_SELECTOR}`,
+  )) {
     if (!result.includes(editor)) result.push(editor);
   }
   return result;
@@ -167,7 +174,7 @@ export class SyntaxContrastManager {
   private animationFrame?: number;
   private nextSourceId = 1;
 
-  constructor(private readonly minimumContrast = MINIMUM_TEXT_CONTRAST) {
+  constructor(private minimumContrast = MINIMUM_TEXT_CONTRAST) {
     this.observer = new MutationObserver((records) => {
       for (const record of records) {
         if (record.type === "attributes") {
@@ -239,6 +246,11 @@ export class SyntaxContrastManager {
     this.normalize(document);
   }
 
+  setMinimumContrast(value: number): void {
+    this.minimumContrast = value;
+    this.refreshAll();
+  }
+
   dispose(): void {
     this.observer.disconnect();
     this.rootObserver.disconnect();
@@ -294,6 +306,10 @@ export class SyntaxContrastManager {
   }
 
   private normalizeSourceEditor(editor: HTMLElement): void {
+    if (editor.matches(MARKDOWN_EDITOR_SELECTOR)) {
+      this.normalizeMarkdownEditor(editor);
+      return;
+    }
     if (!editor.isConnected) {
       this.sourceRules.delete(editor);
       this.renderSourceRules();
@@ -342,6 +358,82 @@ export class SyntaxContrastManager {
         background,
         activeBackground,
         `.cm-activeLine .${className}`,
+      );
+    }
+
+    this.sourceRules.set(editor, rules.join("\n"));
+    this.renderSourceRules();
+  }
+
+  private normalizeMarkdownEditor(editor: HTMLElement): void {
+    this.sourceRules.delete(editor);
+    this.renderSourceRules();
+
+    const tokens = editor.querySelectorAll<HTMLElement>(MARKDOWN_TOKEN_SELECTOR);
+    if (tokens.length === 0) {
+      editor.removeAttribute(SOURCE_SCOPE_ATTRIBUTE);
+      return;
+    }
+
+    let id = this.sourceIds.get(editor);
+    if (id === undefined) {
+      id = String(this.nextSourceId++);
+      this.sourceIds.set(editor, id);
+    }
+    editor.setAttribute(SOURCE_SCOPE_ATTRIBUTE, id);
+    const scope = `${MARKDOWN_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}="${id}"]`;
+    const rules: string[] = [];
+    const samples = new Map<string, HTMLElement>();
+
+    for (const token of tokens) {
+      for (const className of token.classList) {
+        if (!/^(?:syntax-common|syntax-color)-[a-z0-9_-]+$/i.test(className)) continue;
+        const previous = samples.get(className);
+        if (previous === undefined ||
+            (previous.closest(".cm-activeLine") !== null &&
+             token.closest(".cm-activeLine") === null)) {
+          samples.set(className, token);
+        }
+      }
+    }
+
+    const activeCodeLine = editor.querySelector<HTMLElement>(
+      `.cm-line.cm-activeLine.syntax-editor-code-source, ${MARKDOWN_CODE_LINE_SELECTOR}.cm-activeLine`,
+    );
+    for (const [className, token] of samples) {
+      const background = effectiveBackground(token);
+      const activeBackground = activeCodeLine === null
+        ? background
+        : effectiveBackground(activeCodeLine);
+      this.appendSourceColorRules(
+        rules,
+        scope,
+        `.cm-line .${className}`,
+        getComputedStyle(token).color,
+        background,
+        activeBackground,
+        `.cm-line.cm-activeLine .${className}`,
+      );
+    }
+
+    for (const selector of [
+      ".cm-line.syntax-editor-code-source",
+      MARKDOWN_CODE_LINE_SELECTOR,
+    ]) {
+      const line = editor.querySelector<HTMLElement>(selector);
+      if (line === null) continue;
+      const background = effectiveBackground(line);
+      const activeLine = editor.querySelector<HTMLElement>(
+        `${selector}.cm-activeLine`,
+      );
+      this.appendSourceColorRules(
+        rules,
+        scope,
+        selector,
+        getComputedStyle(line).color,
+        background,
+        activeLine === null ? background : effectiveBackground(activeLine),
+        `${selector}.cm-activeLine`,
       );
     }
 

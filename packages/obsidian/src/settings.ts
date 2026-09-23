@@ -7,6 +7,7 @@ import {
   type VisualRole,
 } from "./descriptor";
 import type { BlockPresentationSettings } from "./block-presentation";
+import { MINIMUM_TEXT_CONTRAST } from "./contrast";
 
 export type ColorMode = "light" | "dark";
 export type ThemeColors = Record<VisualRole, string>;
@@ -60,6 +61,7 @@ export interface SyntaxPluginSettings {
   continueLineComments: boolean;
   previewMode: "auto" | "light" | "dark";
   contrastWarnings: boolean;
+  minimumContrast: number;
   showTechnicalIds: boolean;
   lastBackup: string | null;
   customThemes: ThemePreset[];
@@ -518,6 +520,7 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
   continueLineComments: true,
   previewMode: "auto",
   contrastWarnings: true,
+  minimumContrast: MINIMUM_TEXT_CONTRAST,
   showTechnicalIds: false,
   lastBackup: null,
   customThemes: [],
@@ -992,6 +995,13 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       typeof object.contrastWarnings === "boolean"
         ? object.contrastWarnings
         : true,
+    minimumContrast:
+      typeof object.minimumContrast === "number" &&
+      Number.isFinite(object.minimumContrast) &&
+      object.minimumContrast >= 1 &&
+      object.minimumContrast <= 21
+        ? object.minimumContrast
+        : MINIMUM_TEXT_CONTRAST,
     showTechnicalIds:
       typeof object.showTechnicalIds === "boolean"
         ? object.showTechnicalIds

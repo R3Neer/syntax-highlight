@@ -55,6 +55,38 @@ function mountedSourceTarget(
   return target;
 }
 
+function mountedMarkdownCode(): {
+  editor: HTMLElement;
+  normal: HTMLElement;
+  active: HTMLElement;
+} {
+  const view = document.createElement("div");
+  view.className = "markdown-source-view";
+  const editor = document.createElement("div");
+  editor.className = "cm-editor";
+  const content = document.createElement("div");
+  content.className = "cm-content";
+  for (const activeLine of [false, true]) {
+    const line = document.createElement("div");
+    line.className = `cm-line${activeLine ? " cm-activeLine" : ""}`;
+    line.style.backgroundColor = activeLine ? "rgb(34, 34, 34)" : "rgb(0, 0, 0)";
+    const token = document.createElement("span");
+    token.className = "syntax-common-variable";
+    token.style.color = "rgb(85, 85, 85)";
+    token.textContent = activeLine ? "active" : "normal";
+    line.append(token);
+    content.append(line);
+  }
+  editor.append(content);
+  view.append(editor);
+  document.body.append(view);
+  return {
+    editor,
+    normal: content.querySelectorAll<HTMLElement>(".syntax-common-variable")[0]!,
+    active: content.querySelectorAll<HTMLElement>(".syntax-common-variable")[1]!,
+  };
+}
+
 afterEach(() => {
   document.body.replaceChildren();
   document.head
@@ -171,6 +203,36 @@ describe("SyntaxContrastManager", () => {
       originalBackground,
     )).toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
     expect(editor.style.backgroundColor).toBe(originalBackground);
+  });
+
+  it("enforces contrast on Markdown editing tokens against their actual code-line backgrounds", () => {
+    const { editor, normal, active } = mountedMarkdownCode();
+    const manager = new SyntaxContrastManager();
+    manager.normalize(document.body);
+
+    expect(editor.hasAttribute("data-syntax-contrast-source")).toBe(true);
+    expect(normal.style.color).toBe("rgb(85, 85, 85)");
+    expect(active.style.color).toBe("rgb(85, 85, 85)");
+    expect(contrastRatioCss(getComputedStyle(normal).color, "rgb(0, 0, 0)"))
+      .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+    expect(contrastRatioCss(getComputedStyle(active).color, "rgb(34, 34, 34)"))
+      .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+
+    manager.dispose();
+    expect(getComputedStyle(normal).color).toBe("rgb(85, 85, 85)");
+  });
+
+  it("recalculates Markdown editing colors when the selected contrast changes", () => {
+    const { normal } = mountedMarkdownCode();
+    normal.style.color = "rgb(119, 119, 119)";
+    const manager = new SyntaxContrastManager();
+    manager.normalize(document.body);
+    expect(getComputedStyle(normal).color).toBe("rgb(119, 119, 119)");
+
+    manager.setMinimumContrast(7);
+    expect(contrastRatioCss(getComputedStyle(normal).color, "rgb(0, 0, 0)"))
+      .toBeGreaterThanOrEqual(6.99);
+    manager.dispose();
   });
 
   it.each([

@@ -43,6 +43,14 @@ describe("settings, descriptors and themes", () => {
     expect(loadSettings({ indentSize: 20 }).indentSize).toBe(4);
   });
 
+  it("defaults, preserves, and validates the minimum contrast ratio", () => {
+    expect(loadSettings({ schemaVersion: 8 }).minimumContrast).toBe(4.5);
+    expect(loadSettings({ minimumContrast: 7 }).minimumContrast).toBe(7);
+    for (const minimumContrast of [0, 22, Infinity, NaN, "7"]) {
+      expect(loadSettings({ minimumContrast }).minimumContrast).toBe(4.5);
+    }
+  });
+
   it("loads block presentation defaults safely from old and partial settings", () => {
     expect(loadSettings({ schemaVersion: 7 }).blockPresentation).toEqual({
       text: { alignment: "left", flow: "ragged" },

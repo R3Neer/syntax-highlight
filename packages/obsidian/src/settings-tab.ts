@@ -106,6 +106,20 @@ export class SyntaxSettingTab extends PluginSettingTab {
     this.behaviorToggle(general, "markdownEditor", tr("Highlight Markdown editor", "Resaltar en el editor Markdown"));
     this.behaviorToggle(general, "sourceEditor", tr("Open source files in the code editor", "Abrir archivos fuente con el editor de código"));
     new Setting(general)
+      .setName(tr("Minimum code contrast", "Contraste mínimo del código"))
+      .setDesc(tr(
+        "Target text-to-background ratio in reading and editing views. Default: 4.5:1. Very high targets may be impossible without changing the background.",
+        "Relación objetivo entre texto y fondo en lectura y edición. Valor predeterminado: 4,5:1. Los valores muy altos pueden ser imposibles sin cambiar el fondo.",
+      ))
+      .addSlider((slider) => slider
+        .setLimits(1, 21, 0.5)
+        .setValue(this.plugin.pluginSettings.minimumContrast)
+        .setDynamicTooltip()
+        .onChange(async (value) => {
+          this.plugin.pluginSettings.minimumContrast = value;
+          await this.plugin.commitSettings(false);
+        }));
+    new Setting(general)
       .setName(tr("Indentation", "Sangría"))
       .addDropdown((dropdown) =>
         dropdown
@@ -969,13 +983,14 @@ export class SyntaxSettingTab extends PluginSettingTab {
         });
         if (
           this.plugin.pluginSettings.contrastWarnings &&
-          this.minimumContrast(language, descriptor, category.id) < 4.5
+          this.minimumContrast(language, descriptor, category.id) <
+            this.plugin.pluginSettings.minimumContrast
         ) {
           row.createEl("small", {
             text: translate(
               this.plugin.pluginSettings,
-              "Contrast below WCAG AA (4.5:1).",
-              "Contraste inferior a WCAG AA (4,5:1).",
+              `Contrast below the selected minimum (${this.plugin.pluginSettings.minimumContrast}:1).`,
+              `Contraste inferior al mínimo elegido (${this.plugin.pluginSettings.minimumContrast}:1).`,
             ),
             cls: "syntax-contrast-warning",
           });
