@@ -1,15 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.2.1
 
-- Extended automatic WCAG AA contrast normalization to the plugin-owned source-file
-  editor. Base text, common-language roles, configured-language tokens, and invalid
-  tokens now use the same foreground-only `4.5:1` policy as rendered code blocks;
-  Obsidian-owned Markdown source/Live Preview remains untouched.
-- Kept source-file contrast stable while the editor is focused. Corrections now use
-  per-editor CSS rules scoped outside CodeMirror's managed content DOM, including a
-  separate active-line result, so focus, cursor movement, and redraws cannot discard
-  them.
+- Extended automatic contrast normalization to source files and Markdown editing.
+  Base text and semantic tokens are measured against the actual normal and active
+  code-line backgrounds; corrections use scoped CSS rules so CodeMirror redraws do
+  not discard them.
+- Added a bilingual **Minimum code contrast** slider. It defaults to WCAG AA
+  `4.5:1`, applies immediately in reading and editing views, and also controls
+  contrast warnings in the language-theme editor.
 - Completed the bilingual Obsidian interface coverage for settings, source-editor
   status messages, block editing, validation actions, and theme controls. User-facing
   strings now go through the locale helper instead of being fixed in Spanish, while

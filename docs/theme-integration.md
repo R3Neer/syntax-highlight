@@ -171,23 +171,25 @@ extensions are `.ps1`, `.psm1`, and `.psd1`.
 
 ## Automatic contrast normalization
 
-Runtime contrast normalization is limited to DOM owned by Syntax Highlight:
-rendered blocks under `.syntax-highlight-frame` and the plugin's dedicated
-source-file editor under `.syntax-source-editor`. Obsidian-owned Markdown
-source/Live Preview CodeMirror DOM is never rewritten by JavaScript.
+Runtime contrast normalization covers rendered blocks under
+`.syntax-highlight-frame`, the dedicated source-file editor under
+`.syntax-source-editor`, and semantic tokens in Markdown editing. It never
+rewrites CodeMirror content nodes.
 
-For rendered common-language tokens and source-file base text/common/configured
-tokens, the normalizer compares the resolved foreground against the effective CSS
-background and targets WCAG AA normal-text contrast (`4.5:1`). Passing theme
-colors remain unchanged. Failing colors are adjusted by the smallest viable
-OKLab-lightness move, searching both lighter and darker directions and reducing
-chroma only when needed to remain in gamut. Backgrounds are never modified.
+For rendered common-language tokens, source-file base text/common/configured
+tokens, and Markdown editor tokens, the normalizer compares the resolved
+foreground against the effective CSS background. It applies the ratio selected in
+the plugin settings, which defaults to WCAG AA normal-text contrast (`4.5:1`).
+Passing colors remain unchanged. Failing colors are adjusted by the smallest
+viable OKLab-lightness move, searching both lighter and darker directions and
+reducing chroma only when needed to remain in gamut. Backgrounds are never
+modified.
 
 Rendered blocks receive foreground adjustments directly because that DOM is owned
-by Syntax Highlight. The source-file editor instead receives generated per-editor
-CSS rules scoped from `.syntax-source-editor`; CodeMirror-managed content nodes are
-never mutated. Base and active-line backgrounds are measured independently, and
-the rules are regenerated after theme, token, focus, or active-line changes.
+by Syntax Highlight. Source-file and Markdown editors receive generated scoped CSS
+rules; CodeMirror-managed content nodes are never mutated. Base and active-line
+backgrounds are measured independently, and the rules are regenerated after theme,
+token, focus, or active-line changes.
 
 The effective background is built by alpha-compositing computed
 `background-color` values through ancestors. CSS Color 4 values that Chromium
