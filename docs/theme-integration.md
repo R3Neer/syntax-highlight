@@ -172,11 +172,11 @@ extensions are `.ps1`, `.psm1`, and `.psd1`.
 ## Automatic contrast normalization
 
 Runtime contrast normalization covers rendered blocks under
-`.syntax-highlight-frame`, the dedicated source-file editor under
-`.syntax-source-editor`, and semantic tokens in Markdown editing. It never
+`.syntax-highlight-frame`, native rendered Markdown code blocks, the dedicated source-file editor under
+`.syntax-source-editor`, and plugin or native code tokens in Markdown editing. It never
 rewrites CodeMirror content nodes.
 
-For rendered common-language tokens, source-file base text/common/configured
+For rendered common-language and native Markdown tokens, source-file base text/common/configured
 tokens, and Markdown editor tokens, the normalizer compares the resolved
 foreground against the effective CSS background. It applies the ratio selected in
 the plugin settings, which defaults to WCAG AA normal-text contrast (`4.5:1`).

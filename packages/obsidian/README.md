@@ -8,13 +8,28 @@ smart editing for configured languages such as MUD.
 ## Languages and Markdown fences
 
 Common languages include JavaScript/TypeScript, JSON, HTML, CSS, Bash, Nushell,
-PowerShell, Python, Java, C/C++, C#, SQL, YAML, Markdown, and Text. Configured
+PowerShell, Python, Haskell, Prolog, Java, C/C++, C#, SQL, YAML, Markdown, and Text. Configured
 language profiles such as MUD use the same host pipeline but keep their own
 language-pack semantics.
 
 PowerShell accepts `powershell`, `pwsh`, and `ps1` fences plus `.ps1`, `.psm1`,
-and `.psd1` source extensions. Its stream parser is mapped into the same
-`syntax-common-*` semantic taxonomy used by tree-backed common languages.
+and `.psd1` source extensions. Haskell accepts `haskell` and `hs` fences
+and `.hs` files. Prolog accepts `prolog` and `pl` fences and `.pl`/`.pro`
+files. Their stream parsers map into the same `syntax-common-*` semantic taxonomy
+used by tree-backed common languages.
+
+Other Markdown fence languages keep Obsidian's native highlighter. Syntax
+Highlight applies the same code-block overflow and tab width, and checks the
+resolved foreground of native code and tokens against the active theme
+background in Reading View and Markdown editing. In the editor, native fences
+also receive the configured line numbers. This does not add a parser for an
+unknown language or change Obsidian's chosen token categories.
+
+The common-language catalog in settings has a source-file switch for each
+language whose extension the plugin can claim. Switches start on. Turning one
+off keeps its Markdown fences highlighted while releasing its source-file
+extensions after a plugin reload. Obsidian or another plugin must handle an
+extension for its file to remain visible in the vault.
 
 Fenced blocks inside Markdown blockquotes use the same logical language body as
 top-level blocks. This includes Obsidian callouts because their Markdown body is
@@ -90,10 +105,11 @@ owned by Obsidian's Markdown editor.
 Common languages use stable plugin semantic classes (`syntax-common-*`) and
 public Obsidian CSS variables. No community theme is hardcoded.
 
-JavaScript contrast normalization is restricted to code surfaces highlighted by
-Syntax Highlight. Rendered blocks under `.syntax-highlight-frame` may receive
-direct foreground adjustments. Markdown editing and the dedicated source-file
-editor receive scoped CSS rules without rewriting CodeMirror's content DOM.
+JavaScript contrast normalization covers rendered blocks under
+`.syntax-highlight-frame` and native rendered Markdown code blocks. These may
+receive direct foreground adjustments. Markdown editing and the dedicated
+source-file editor receive scoped CSS rules without rewriting CodeMirror's
+content DOM.
 Passing colors are left unchanged, while failing foregrounds are adjusted to
 the ratio selected in settings (default `4.5:1`) without changing backgrounds.
 Very high targets may be unreachable on some backgrounds.

@@ -8,6 +8,7 @@ import {
 } from "./descriptor";
 import type { BlockPresentationSettings } from "./block-presentation";
 import { MINIMUM_TEXT_CONTRAST } from "./contrast";
+import { enabledCommonSourceLanguages } from "./common-languages";
 
 export type ColorMode = "light" | "dark";
 export type ThemeColors = Record<VisualRole, string>;
@@ -52,6 +53,7 @@ export interface SyntaxPluginSettings {
   markdownReading: boolean;
   markdownEditor: boolean;
   sourceEditor: boolean;
+  disabledCommonSourceLanguages: string[];
   blockPresentation: BlockPresentationSettings;
   indentStyle: "spaces" | "tabs";
   indentSize: number;
@@ -511,6 +513,7 @@ export const DEFAULT_SETTINGS: SyntaxPluginSettings = {
   markdownReading: true,
   markdownEditor: true,
   sourceEditor: true,
+  disabledCommonSourceLanguages: [],
   blockPresentation: structuredClone(DEFAULT_BLOCK_PRESENTATION),
   indentStyle: "spaces",
   indentSize: 4,
@@ -898,6 +901,12 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
     return structuredClone(DEFAULT_SETTINGS);
   }
   const object = value as Record<string, unknown>;
+  const commonIds = new Set(enabledCommonSourceLanguages(new Set()).map(({ id }) => id));
+  const disabledCommonSourceLanguages = Array.isArray(object.disabledCommonSourceLanguages)
+    ? [...new Set(object.disabledCommonSourceLanguages.filter(
+        (id): id is string => typeof id === "string" && commonIds.has(id),
+      ))]
+    : [];
   const storedSchemaVersion =
     typeof object.schemaVersion === "number" ? object.schemaVersion : 0;
   const migrateLegacyPaletteValues = storedSchemaVersion < 5;
@@ -966,6 +975,7 @@ export function loadSettings(value: unknown): SyntaxPluginSettings {
       typeof object.markdownEditor === "boolean" ? object.markdownEditor : true,
     sourceEditor:
       typeof object.sourceEditor === "boolean" ? object.sourceEditor : true,
+    disabledCommonSourceLanguages,
     blockPresentation: mergeBlockPresentationSettings(object.blockPresentation),
     indentStyle: object.indentStyle === "tabs" ? "tabs" : "spaces",
     indentSize:

@@ -250,6 +250,7 @@ export function findCodeBlockBodyStartLine(
 export function findCodeBlocks(
   source: string,
   acceptedLanguages: ReadonlySet<string>,
+  includeUnknown = false,
 ): MudCodeBlock[] {
   const lines = sourceLines(source);
   const blocks: MudCodeBlock[] = [];
@@ -304,7 +305,7 @@ export function findCodeBlocks(
     // the requested ones. This prevents false positives inside unrelated fences.
     index = closingIndex !== undefined ? closingIndex : resumeIndex;
 
-    if (!language || !acceptedLanguages.has(language)) continue;
+    if (!language || (!includeUnknown && !acceptedLanguages.has(language))) continue;
     blocks.push({
       from: bodyFrom,
       to: bodyTo,

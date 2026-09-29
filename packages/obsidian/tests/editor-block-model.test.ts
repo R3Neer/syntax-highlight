@@ -51,6 +51,15 @@ function tomlRuntime(languages: LanguageRegistry) {
 const withClosingLineEnding = (value: string) => `${value}\n`;
 
 describe("Markdown editor block model", () => {
+  it("keeps unknown fences in the visual pipeline without inventing semantics", () => {
+    const source = "```rust\nfn main() {}\n```";
+    const model = buildEditorBlockModel(source, registry(), true);
+    expect(model.blocks).toHaveLength(1);
+    expect(model.blocks[0]?.showLineNumbers).toBe(true);
+    expect(model.blocks[0]?.lineSemantics[0]?.classes).toContain("syntax-editor-native-code");
+    expect(buildEditorBlockSemantics(model.blocks[0]!)).toEqual([]);
+  });
+
   it("discovers top-level and quoted blocks without DOM ownership", () => {
     const source = [
       "```toml",

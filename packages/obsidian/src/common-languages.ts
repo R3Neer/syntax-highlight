@@ -15,6 +15,7 @@ import {
   StreamLanguage,
   type StreamParser,
 } from "@codemirror/language";
+import { haskell } from "@codemirror/legacy-modes/mode/haskell";
 import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import {
@@ -23,6 +24,8 @@ import {
   type Highlighter,
   type Tag,
 } from "@lezer/highlight";
+
+import { prolog } from "./prolog-mode";
 
 export type CommonPresentationFamily = "text" | "markdown";
 
@@ -105,6 +108,31 @@ const POWERSHELL_TOKEN_TAGS: CommonStreamTokenTable = {
   error: tags.invalid,
 };
 
+const HASKELL_TOKEN_TAGS: CommonStreamTokenTable = {
+  comment: tags.comment,
+  string: tags.string,
+  keyword: tags.keyword,
+  builtin: tags.standard(tags.variableName),
+  type: tags.typeName,
+  qualifier: tags.namespace,
+  variable: tags.variableName,
+  integer: tags.integer,
+  number: tags.number,
+  operator: tags.operator,
+  error: tags.invalid,
+};
+
+const PROLOG_TOKEN_TAGS: CommonStreamTokenTable = {
+  comment: tags.comment,
+  string: tags.string,
+  atom: tags.function(tags.variableName),
+  variable: tags.variableName,
+  number: tags.number,
+  keyword: tags.keyword,
+  operator: tags.operator,
+  punctuation: tags.punctuation,
+};
+
 const COMMON_LANGUAGES: readonly CommonLanguage[] = [
   {
     id: "javascript",
@@ -168,6 +196,20 @@ const COMMON_LANGUAGES: readonly CommonLanguage[] = [
     fences: ["py", "python"],
     extensions: ["py"],
     engine: treeEngine(python),
+  },
+  {
+    id: "haskell",
+    name: "Haskell",
+    fences: ["haskell", "hs"],
+    extensions: ["hs"],
+    engine: streamEngine(haskell, HASKELL_TOKEN_TAGS),
+  },
+  {
+    id: "prolog",
+    name: "Prolog",
+    fences: ["prolog", "pl"],
+    extensions: ["pl", "pro"],
+    engine: streamEngine(prolog, PROLOG_TOKEN_TAGS),
   },
   {
     id: "java",
@@ -385,6 +427,16 @@ export function effectiveCommonStreamParser(
 
 export function commonLanguages(): readonly CommonLanguage[] {
   return COMMON_LANGUAGES;
+}
+
+export function enabledCommonSourceLanguages(
+  disabledIds: ReadonlySet<string>,
+): readonly CommonLanguage[] {
+  return COMMON_LANGUAGES.filter((language) =>
+    language.extensions.length > 0 &&
+    language.id !== "markdown" &&
+    !disabledIds.has(language.id),
+  );
 }
 
 export function commonLanguageByFence(

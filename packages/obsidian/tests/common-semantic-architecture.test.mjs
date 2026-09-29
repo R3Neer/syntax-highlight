@@ -38,7 +38,7 @@ describe("common semantic architecture", () => {
     expect(catalog).not.toContain("COMMON_READING_HIGHLIGHT_STYLE");
     expect(catalog).not.toContain("COMMON_EDITOR_HIGHLIGHT_STYLE");
     expect(reading).toContain("commonSemanticRanges(language, source)");
-    expect(editor).toContain("commonSemanticRanges(common!.language, block.body)");
+    expect(editor).toContain("commonSemanticRanges(common.language, block.body)");
   });
 
   it("does not add a PowerShell renderer branch", () => {

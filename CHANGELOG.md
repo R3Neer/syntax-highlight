@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.0
+
+- Added Haskell (`haskell`, `hs`) and Prolog (`prolog`, `pl`) highlighting for
+  Markdown fences, plus `.hs`, `.pl`, and `.pro` source-file support. Both use
+  the shared common-language semantic colors and theme integration.
+- Extended code-block presentation and automatic contrast correction to
+  languages highlighted natively by Obsidian. Unknown fences keep Obsidian's
+  token categories, while Markdown editing gains configured line numbers and
+  theme-aware contrast for their native tokens.
+- Added default-on source-file switches for individual common languages.
+  Disabling one releases its file extensions after a plugin reload without
+  changing its Markdown fence highlighting; settings remain vault-specific.
+
 ## 1.2.2
 
 - Added a Reading View and Live Preview code-block copy button. It copies the

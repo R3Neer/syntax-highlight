@@ -60,7 +60,11 @@ The fallback is host-neutral: it validates direct PRE/CODE structure, accepted
 language metadata and ambiguity before replacing anything. Existing direct host
 furniture such as copy controls is preserved. Unknown or ambiguous blocks remain
 native, and processed output is marked so repeated postprocessor passes are
-idempotent.
+idempotent. Native rendered code still receives the shared tab width, overflow
+handling and contrast check; its token semantics remain owned by Obsidian.
+
+Unknown editable fences receive line decorations for configured line numbers and
+contrast scoping. They retain Obsidian's native token markup and categories.
 
 Both paths converge on the same configured/common renderers, so language
 semantics, Text/Markdown presentation and line-number policy do not fork based on
@@ -118,8 +122,9 @@ Markdown source/Live Preview CodeMirror DOM belongs to Obsidian. Syntax Highligh
 uses decorations for semantics and generated scoped CSS rules for contrast; it
 never mutates CodeMirror content nodes.
 
-Rendered output inside `.syntax-highlight-frame`, the dedicated source-file editor
-inside `.syntax-source-editor`, and semantic tokens in Markdown editing are
+Rendered output inside `.syntax-highlight-frame`, native rendered Markdown code,
+the dedicated source-file editor inside `.syntax-source-editor`, and semantic
+tokens in Markdown editing are
 eligible for runtime contrast normalization. The selected ratio defaults to WCAG
 AA `4.5:1`; passing colors remain unchanged, while only failing foregrounds are
 adjusted. Backgrounds are never changed.
@@ -145,3 +150,7 @@ Configured source extensions use Syntax Highlight's dedicated CodeMirror source
 view. Common source extensions use their CodeMirror language support plus the
 same semantic highlighter; Markdown and `.txt` remain owned by Obsidian unless a
 specific feature says otherwise.
+
+Each common source-file registration has a default-on setting. Disabling one
+leaves Markdown fences untouched and skips its extension registration on the
+next plugin load. Already registered extensions are released on plugin unload.

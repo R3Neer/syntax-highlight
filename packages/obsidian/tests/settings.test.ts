@@ -51,6 +51,13 @@ describe("settings, descriptors and themes", () => {
     }
   });
 
+  it("defaults common source-file claims on and validates disabled ids", () => {
+    expect(loadSettings({ schemaVersion: 8 }).disabledCommonSourceLanguages).toEqual([]);
+    expect(loadSettings({
+      disabledCommonSourceLanguages: ["python", "haskell", "python", "unknown", 42],
+    }).disabledCommonSourceLanguages).toEqual(["python", "haskell"]);
+  });
+
   it("loads block presentation defaults safely from old and partial settings", () => {
     expect(loadSettings({ schemaVersion: 7 }).blockPresentation).toEqual({
       text: { alignment: "left", flow: "ragged" },

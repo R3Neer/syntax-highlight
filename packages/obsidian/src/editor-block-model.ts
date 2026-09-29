@@ -68,6 +68,7 @@ function semanticKey(
 function lineSemantics(
   block: MudCodeBlock,
   common: CommonFenceMatch | undefined,
+  native: boolean,
 ): EditorLineSemantic[] {
   const classes = new Map<number, Set<string>>();
   const add = (from: number, ...values: readonly string[]): void => {
@@ -104,6 +105,10 @@ function lineSemantics(
     for (const line of block.bodyLines) add(line.lineFrom, ...presentation);
   }
 
+  if (native) {
+    for (const line of block.bodyLines) add(line.lineFrom, "syntax-editor-native-code");
+  }
+
   return [...classes.entries()]
     .sort(([left], [right]) => left - right)
     .map(([from, values]) => ({ from, classes: [...values] }));
@@ -115,11 +120,9 @@ export function buildEditorBlockModel(
   lineNumbers: boolean,
 ): EditorBlockModel {
   const blocks: ResolvedEditorBlock[] = [];
-  for (const block of findCodeBlocks(source, acceptedEditorFenceNames(registry))) {
+  for (const block of findCodeBlocks(source, acceptedEditorFenceNames(registry), true)) {
     const runtime = registry.byFence(block.language);
     const common = runtime === undefined ? commonFenceMatch(block.language) : undefined;
-    if (runtime === undefined && common === undefined) continue;
-
     blocks.push({
       block,
       runtime,
@@ -128,7 +131,7 @@ export function buildEditorBlockModel(
       showLineNumbers:
         lineNumbers &&
         (runtime !== undefined || common?.language.presentation?.lineNumbers !== false),
-      lineSemantics: lineSemantics(block, common),
+      lineSemantics: lineSemantics(block, common, runtime === undefined && common === undefined),
     });
   }
   return { source, blocks };
@@ -167,7 +170,8 @@ export function buildEditorBlockSemantics(
     return spans;
   }
 
-  for (const range of commonSemanticRanges(common!.language, block.body)) {
+  if (common === undefined) return spans;
+  for (const range of commonSemanticRanges(common.language, block.body)) {
     if (range.from >= range.to) continue;
     spans.push(...mappedSpans(block, range.from, range.to, range.classes));
   }

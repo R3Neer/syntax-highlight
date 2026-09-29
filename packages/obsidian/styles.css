@@ -1,5 +1,6 @@
 .syntax-highlight-block,
-.mud-syntax-block {
+.mud-syntax-block,
+.markdown-rendered pre:not(.syntax-highlight-block) {
   overflow-x: auto;
   tab-size: 4;
 }
@@ -458,6 +459,20 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1.3;
+}
+
+.syntax-common-language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+}
+
+.syntax-common-language-toggle input {
+  accent-color: var(--interactive-accent);
+  cursor: pointer;
 }
 
 .mud-syntax-colors {

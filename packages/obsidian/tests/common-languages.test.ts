@@ -5,6 +5,7 @@ import {
   commonLanguageByFence,
   commonLanguages,
   commonLanguageSupport,
+  enabledCommonSourceLanguages,
 } from "../src/common-languages";
 
 describe("common language catalog", () => {
@@ -18,6 +19,9 @@ describe("common language catalog", () => {
     expect(commonLanguageByFence("POWERSHELL")?.id).toBe("powershell");
     expect(commonLanguageByFence("pwsh")?.id).toBe("powershell");
     expect(commonLanguageByFence("ps1")?.id).toBe("powershell");
+    expect(commonLanguageByFence("HS")?.id).toBe("haskell");
+    expect(commonLanguageByFence("PROLOG")?.id).toBe("prolog");
+    expect(commonLanguageByFence("pl")?.id).toBe("prolog");
     expect(commonLanguageByFence("TEXT")?.id).toBe("text");
     expect(commonLanguageByFence("plaintext")?.id).toBe("text");
     expect(commonLanguageByFence("txt")?.id).toBe("text");
@@ -26,6 +30,8 @@ describe("common language catalog", () => {
     expect(commonLanguageByExtension(".sh")?.id).toBe("bash");
     expect(commonLanguageByExtension(".nu")?.id).toBe("nu");
     expect(commonLanguageByExtension(".PS1")?.id).toBe("powershell");
+    expect(commonLanguageByExtension(".hs")?.id).toBe("haskell");
+    expect(commonLanguageByExtension(".pl")?.id).toBe("prolog");
     expect(commonLanguageByExtension("psm1")?.id).toBe("powershell");
     expect(commonLanguageByExtension(".psd1")?.id).toBe("powershell");
     expect(commonLanguageByExtension(".txt")).toBeUndefined();
@@ -70,5 +76,13 @@ describe("common language catalog", () => {
     expect(powerShell?.engine.kind).toBe("stream");
     expect(commonLanguageSupport(powerShell!)?.language).toBeDefined();
     expect(powerShell?.presentation).toBeUndefined();
+  });
+
+  it("filters only source-file claims while keeping Markdown fence support", () => {
+    const enabled = enabledCommonSourceLanguages(new Set(["python", "haskell"]));
+    expect(enabled.some(({ id }) => id === "python" || id === "haskell")).toBe(false);
+    expect(enabled.some(({ id }) => id === "prolog")).toBe(true);
+    expect(commonLanguageByFence("python")?.id).toBe("python");
+    expect(commonLanguageByFence("haskell")?.id).toBe("haskell");
   });
 });

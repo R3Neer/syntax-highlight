@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 
 import { commonFenceNames } from "./block-presentation";
-import { commonLanguages } from "./common-languages";
+import { enabledCommonSourceLanguages } from "./common-languages";
 import {
   findCodeBlockBodyStartLine,
   isSafeMarkdownProcessorLanguage,
@@ -331,7 +331,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
 
   private registerCommonExtensions(): void {
     if (!this.pluginSettings.sourceEditor) return;
-    for (const language of commonLanguages()) {
+    for (const language of enabledCommonSourceLanguages(
+      new Set(this.pluginSettings.disabledCommonSourceLanguages),
+    )) {
       for (const rawExtension of language.extensions) {
         const extension = rawExtension.toLocaleLowerCase().replace(/^\./, "");
         if (

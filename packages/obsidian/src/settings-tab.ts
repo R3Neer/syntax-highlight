@@ -181,7 +181,24 @@ export class SyntaxSettingTab extends PluginSettingTab {
       this.renderLanguage(language, languages);
     }
 
-    renderCommonLanguageCatalog(languages, tr);
+    renderCommonLanguageCatalog(
+      languages,
+      tr,
+      new Set(this.plugin.pluginSettings.disabledCommonSourceLanguages),
+      async (languageId, enabled) => {
+        const disabled = new Set(this.plugin.pluginSettings.disabledCommonSourceLanguages);
+        if (enabled) disabled.delete(languageId);
+        else disabled.add(languageId);
+        this.plugin.pluginSettings.disabledCommonSourceLanguages = [...disabled];
+        await this.plugin.commitSettings(false);
+        if (!enabled) {
+          new Notice(tr(
+            "Reload the plugin to release this language's registered file extensions. Markdown blocks stay highlighted.",
+            "Recarga el plugin para liberar las extensiones registradas de este lenguaje. Los bloques Markdown siguen resaltados.",
+          ));
+        }
+      },
+    );
 
     new Setting(languages)
       .setName(tr("Add language", "Añadir lenguaje"))

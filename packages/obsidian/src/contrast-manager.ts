@@ -29,13 +29,16 @@ const COMMON_TOKEN_SELECTORS = [
 const OWNED_FRAME_SELECTOR = ".syntax-highlight-frame";
 const SOURCE_EDITOR_SELECTOR = ".syntax-source-editor";
 const MARKDOWN_EDITOR_SELECTOR = ".markdown-source-view .cm-editor";
-const MARKDOWN_TOKEN_SELECTOR = '.cm-line [class*="syntax-common-"],.cm-line [class*="syntax-color-"]';
+const NATIVE_MARKDOWN_LINE_SELECTOR = ".cm-line.syntax-editor-native-code";
+const MARKDOWN_TOKEN_SELECTOR = `.cm-line [class*="syntax-common-"],.cm-line [class*="syntax-color-"],${NATIVE_MARKDOWN_LINE_SELECTOR},${NATIVE_MARKDOWN_LINE_SELECTOR} span[class]`;
 const MARKDOWN_CODE_LINE_SELECTOR = '.cm-line:has([class*="syntax-common-"],[class*="syntax-color-"])';
 const SOURCE_SCOPE_ATTRIBUTE = "data-syntax-contrast-source";
-const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${SOURCE_EDITOR_SELECTOR},${MARKDOWN_EDITOR_SELECTOR}:has(${MARKDOWN_TOKEN_SELECTOR}),${MARKDOWN_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}]`;
+const NATIVE_CODE_SELECTOR = ".markdown-rendered pre:not(.syntax-highlight-block) > code";
+const OWNED_SURFACE_SELECTOR = `${OWNED_FRAME_SELECTOR},${NATIVE_CODE_SELECTOR},${SOURCE_EDITOR_SELECTOR},${MARKDOWN_EDITOR_SELECTOR}:has(${MARKDOWN_TOKEN_SELECTOR}),${MARKDOWN_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}]`;
 const RENDERED_COMMON_TOKEN_SELECTOR = COMMON_TOKEN_SELECTORS
   .map((selector) => `${OWNED_FRAME_SELECTOR} ${selector}`)
   .join(",");
+const RENDERED_TOKEN_SELECTOR = `${RENDERED_COMMON_TOKEN_SELECTOR},${NATIVE_CODE_SELECTOR},${NATIVE_CODE_SELECTOR} span`;
 const SOURCE_TOKEN_SELECTOR = '[class*="syntax-common-"],[class*="syntax-color-"]';
 const ADJUSTED_ATTRIBUTE = "data-syntax-contrast-adjusted";
 const OPAQUE_EPSILON = 0.999;
@@ -100,12 +103,12 @@ function renderedContrastTargets(root: ParentNode): HTMLElement[] {
   const result: HTMLElement[] = [];
   if (
     root instanceof HTMLElement &&
-    root.matches(RENDERED_COMMON_TOKEN_SELECTOR)
+    root.matches(RENDERED_TOKEN_SELECTOR)
   ) {
     result.push(root);
   }
   for (const element of root.querySelectorAll<HTMLElement>(
-    RENDERED_COMMON_TOKEN_SELECTOR,
+    RENDERED_TOKEN_SELECTOR,
   )) {
     result.push(element);
   }
@@ -277,7 +280,7 @@ export class SyntaxContrastManager {
   }
 
   private normalizeRenderedElement(element: HTMLElement): void {
-    if (!element.matches(RENDERED_COMMON_TOKEN_SELECTOR)) return;
+    if (!element.matches(RENDERED_TOKEN_SELECTOR)) return;
 
     // Settings previews intentionally show their selected semantic preset rather
     // than the active vault theme, so runtime normalization must not rewrite it.
@@ -383,24 +386,31 @@ export class SyntaxContrastManager {
     editor.setAttribute(SOURCE_SCOPE_ATTRIBUTE, id);
     const scope = `${MARKDOWN_EDITOR_SELECTOR}[${SOURCE_SCOPE_ATTRIBUTE}="${id}"]`;
     const rules: string[] = [];
-    const samples = new Map<string, HTMLElement>();
+    const samples = new Map<string, { element: HTMLElement; selector: string }>();
 
     for (const token of tokens) {
+      if (token.matches(NATIVE_MARKDOWN_LINE_SELECTOR)) continue;
       for (const className of token.classList) {
-        if (!/^(?:syntax-common|syntax-color)-[a-z0-9_-]+$/i.test(className)) continue;
-        const previous = samples.get(className);
+        const native = token.closest(NATIVE_MARKDOWN_LINE_SELECTOR) !== null;
+        if (!/^(?:syntax-common|syntax-color)-[a-z0-9_-]+$/i.test(className) &&
+            !(native && /^cm-[a-z0-9_-]+$/i.test(className))) continue;
+        const selector = native
+          ? `${NATIVE_MARKDOWN_LINE_SELECTOR} .${className}`
+          : `.cm-line .${className}`;
+        const key = `${native ? "native" : "plugin"}:${className}`;
+        const previous = samples.get(key)?.element;
         if (previous === undefined ||
             (previous.closest(".cm-activeLine") !== null &&
              token.closest(".cm-activeLine") === null)) {
-          samples.set(className, token);
+          samples.set(key, { element: token, selector });
         }
       }
     }
 
     const activeCodeLine = editor.querySelector<HTMLElement>(
-      `.cm-line.cm-activeLine.syntax-editor-code-source, ${MARKDOWN_CODE_LINE_SELECTOR}.cm-activeLine`,
+      `.cm-line.cm-activeLine.syntax-editor-code-source, ${MARKDOWN_CODE_LINE_SELECTOR}.cm-activeLine, ${NATIVE_MARKDOWN_LINE_SELECTOR}.cm-activeLine`,
     );
-    for (const [className, token] of samples) {
+    for (const { element: token, selector } of samples.values()) {
       const background = effectiveBackground(token);
       const activeBackground = activeCodeLine === null
         ? background
@@ -408,17 +418,18 @@ export class SyntaxContrastManager {
       this.appendSourceColorRules(
         rules,
         scope,
-        `.cm-line .${className}`,
+        selector,
         getComputedStyle(token).color,
         background,
         activeBackground,
-        `.cm-line.cm-activeLine .${className}`,
+        selector.replace(".cm-line", ".cm-line.cm-activeLine"),
       );
     }
 
     for (const selector of [
       ".cm-line.syntax-editor-code-source",
       MARKDOWN_CODE_LINE_SELECTOR,
+      NATIVE_MARKDOWN_LINE_SELECTOR,
     ]) {
       const line = editor.querySelector<HTMLElement>(selector);
       if (line === null) continue;
@@ -486,7 +497,7 @@ export class SyntaxContrastManager {
       if (
         root instanceof HTMLElement &&
         root.hasAttribute(ADJUSTED_ATTRIBUTE) &&
-        !root.matches(RENDERED_COMMON_TOKEN_SELECTOR)
+        !root.matches(RENDERED_TOKEN_SELECTOR)
       ) {
         this.restoreThemeColor(root);
       }

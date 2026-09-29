@@ -132,6 +132,7 @@ export function diagnosticSettings(settings: SyntaxPluginSettings): object {
     markdownReading: settings.markdownReading,
     markdownEditor: settings.markdownEditor,
     sourceEditor: settings.sourceEditor,
+    disabledCommonSourceLanguages: settings.disabledCommonSourceLanguages,
     indentStyle: settings.indentStyle,
     indentSize: settings.indentSize,
     lineNumbers: settings.lineNumbers,

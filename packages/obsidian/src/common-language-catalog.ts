@@ -16,6 +16,8 @@ function append<K extends keyof HTMLElementTagNameMap>(
 export function renderCommonLanguageCatalog(
   parent: HTMLElement,
   tr: Translate,
+  disabledSourceLanguages: ReadonlySet<string>,
+  onSourceFileToggle: (languageId: string, enabled: boolean) => void | Promise<void>,
 ): void {
   const languages = commonLanguages();
   const details = append(parent, "details", "syntax-common-language-catalog");
@@ -27,8 +29,8 @@ export function renderCommonLanguageCatalog(
   )} (${languages.length})`;
   const description = append(details, "p", "setting-item-description");
   description.textContent = tr(
-    "Available directly in Markdown code blocks. Parser-backed languages with file extensions also integrate with the source-file editor; Markdown keeps Obsidian's native editor.",
-    "Disponibles directamente en bloques de código Markdown. Los lenguajes con parser y extensiones de archivo también se integran con el editor de archivos fuente; Markdown conserva el editor nativo de Obsidian.",
+    "Markdown code blocks remain highlighted. Turn off a source-file switch to release that language's extensions after a plugin reload. Another handler can then take them; without one, Obsidian may hide those files. Markdown keeps Obsidian's native editor.",
+    "Los bloques de código Markdown siguen resaltados. Desactiva un interruptor de archivos fuente para liberar esas extensiones tras recargar el plugin. Podrá encargarse otro editor; sin uno, Obsidian podría ocultar los archivos. Markdown conserva el editor nativo de Obsidian.",
   );
   const grid = append(details, "div", "syntax-common-language-grid");
   for (const language of languages) {
@@ -45,5 +47,15 @@ export function renderCommonLanguageCatalog(
             .map((extension) => `.${extension}`)
             .join(", ")}`;
     metadata.textContent = `${tr("blocks", "bloques")}: ${language.fences.join(", ")} · ${extensionText}`;
+    if (language.extensions.length === 0 || language.id === "markdown") continue;
+    const label = append(item, "label", "syntax-common-language-toggle");
+    const toggle = append(label, "input");
+    toggle.type = "checkbox";
+    toggle.setAttribute("role", "switch");
+    toggle.checked = !disabledSourceLanguages.has(language.id);
+    toggle.setAttribute("aria-label", `${tr("Open source files with Syntax Highlight", "Abrir archivos fuente con Syntax Highlight")}: ${language.name}`);
+    toggle.addEventListener("change", () => void onSourceFileToggle(language.id, toggle.checked));
+    const text = append(label, "span");
+    text.textContent = tr("Open source files", "Abrir archivos fuente");
   }
 }

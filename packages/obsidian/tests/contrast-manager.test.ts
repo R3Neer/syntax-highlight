@@ -95,6 +95,35 @@ afterEach(() => {
 });
 
 describe("SyntaxContrastManager", () => {
+  it("corrects native Markdown code without claiming its language or replacing tokens", () => {
+    const markdown = document.createElement("div");
+    markdown.className = "markdown-rendered";
+    const pre = document.createElement("pre");
+    pre.style.backgroundColor = "rgb(245, 245, 245)";
+    const code = document.createElement("code");
+    code.className = "language-rust";
+    code.style.color = "rgb(45, 45, 45)";
+    const token = document.createElement("span");
+    token.className = "token keyword";
+    token.style.color = "rgb(210, 180, 120)";
+    token.textContent = "fn";
+    code.append(token);
+    pre.append(code);
+    markdown.append(pre);
+    document.body.append(markdown);
+
+    const manager = new SyntaxContrastManager();
+    manager.normalize(document.body);
+
+    expect(token.className).toBe("token keyword");
+    expect(token.getAttribute("data-syntax-contrast-adjusted")).toBe("true");
+    expect(contrastRatioCss(getComputedStyle(token).color, pre.style.backgroundColor))
+      .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+    expect(pre.style.backgroundColor).toBe("rgb(245, 245, 245)");
+    manager.dispose();
+    expect(token.style.color).toBe("rgb(210, 180, 120)");
+  });
+
   it("adjusts only a low-contrast common token in plugin-owned rendered DOM", () => {
     const token = mountedToken("rgb(229, 192, 123)", "rgb(221, 216, 199)");
     const manager = new SyntaxContrastManager();
@@ -220,6 +249,35 @@ describe("SyntaxContrastManager", () => {
 
     manager.dispose();
     expect(getComputedStyle(normal).color).toBe("rgb(85, 85, 85)");
+  });
+
+  it("corrects native Markdown editor token colors with scoped rules", () => {
+    const view = document.createElement("div");
+    view.className = "markdown-source-view";
+    const editor = document.createElement("div");
+    editor.className = "cm-editor";
+    const content = document.createElement("div");
+    content.className = "cm-content";
+    const line = document.createElement("div");
+    line.className = "cm-line syntax-editor-native-code";
+    line.style.backgroundColor = "rgb(245, 245, 245)";
+    const token = document.createElement("span");
+    token.className = "cm-keyword";
+    token.style.color = "rgb(210, 180, 120)";
+    token.textContent = "fn";
+    line.append(token);
+    content.append(line);
+    editor.append(content);
+    view.append(editor);
+    document.body.append(view);
+
+    const manager = new SyntaxContrastManager();
+    manager.normalize(document.body);
+
+    expect(token.style.color).toBe("rgb(210, 180, 120)");
+    expect(contrastRatioCss(getComputedStyle(token).color, line.style.backgroundColor))
+      .toBeGreaterThanOrEqual(MINIMUM_TEXT_CONTRAST - 0.01);
+    manager.dispose();
   });
 
   it("recalculates Markdown editing colors when the selected contrast changes", () => {
