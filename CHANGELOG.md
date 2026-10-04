@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0
+
+- Obsidian: Python notebooks open as highlighted, editable cells with rendered Markdown and saved outputs. Notebook metadata and output data survive source edits; no Python execution is provided.
+
+
 ## 1.3.0
 
 - Added Haskell (`haskell`, `hs`) and Prolog (`prolog`, `pl`) highlighting for

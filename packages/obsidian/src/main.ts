@@ -26,6 +26,7 @@ import {
 } from "./settings";
 import { SyntaxSettingTab } from "./settings-tab";
 import { SOURCE_VIEW_TYPE, SyntaxSourceView } from "./source-view";
+import { NOTEBOOK_VIEW_TYPE, SyntaxNotebookView } from "./notebook-view";
 import { ThemeManager } from "./themes";
 
 export default class SyntaxHighlightPlugin extends Plugin {
@@ -57,6 +58,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
       (leaf) =>
         new SyntaxSourceView(leaf, this.registry, () => this.pluginSettings),
     );
+    this.registerView(NOTEBOOK_VIEW_TYPE, (leaf) => new SyntaxNotebookView(leaf, () => this.pluginSettings));
     this.registerConfiguredFences();
     this.registerCommonFences();
     this.registerReadingFallback();
@@ -331,6 +333,9 @@ export default class SyntaxHighlightPlugin extends Plugin {
 
   private registerCommonExtensions(): void {
     if (!this.pluginSettings.sourceEditor) return;
+    if (!this.pluginSettings.disabledCommonSourceLanguages.includes("python")) {
+      this.registerSourceExtension("ipynb", NOTEBOOK_VIEW_TYPE);
+    }
     for (const language of enabledCommonSourceLanguages(
       new Set(this.pluginSettings.disabledCommonSourceLanguages),
     )) {
@@ -350,7 +355,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
     }
   }
 
-  private registerSourceExtension(extension: string): void {
+  private registerSourceExtension(extension: string, viewType = SOURCE_VIEW_TYPE): void {
     if (
       this.registeredExtensions.has(extension) ||
       this.occupiedExtensions.has(extension)
@@ -358,7 +363,7 @@ export default class SyntaxHighlightPlugin extends Plugin {
       return;
     }
     try {
-      this.registerExtensions([extension], SOURCE_VIEW_TYPE);
+      this.registerExtensions([extension], viewType);
       this.registeredExtensions.add(extension);
     } catch (error) {
       this.occupiedExtensions.add(extension);

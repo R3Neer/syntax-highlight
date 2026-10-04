@@ -706,3 +706,15 @@
 .syntax-source-editor .cm-activeLineGutter {
   background: var(--background-modifier-hover);
 }
+
+/* Notebook cells share the source-editor semantic palette. */
+.syntax-notebook-cells { overflow: auto; flex: 1; min-height: 0; padding: 12px; }
+.syntax-notebook-cell { margin-bottom: 18px; border: 1px solid var(--background-modifier-border); border-radius: 6px; overflow: hidden; }
+.syntax-notebook-cell-label, .syntax-notebook-output-label { padding: 6px 10px; color: var(--text-muted); font-size: var(--font-smallest); }
+.syntax-notebook-editor { flex: none; min-height: 0; }
+.syntax-notebook-editor .cm-editor { height: auto; }
+.syntax-notebook-editor .cm-scroller { max-height: 650px; }
+.syntax-notebook-markdown, .syntax-notebook-outputs { padding: 10px; }
+.syntax-notebook-outputs { border-top: 1px solid var(--background-modifier-border); }
+.syntax-notebook-outputs pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.syntax-notebook-outputs img { max-width: 100%; height: auto; }
