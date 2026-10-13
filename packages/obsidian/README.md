@@ -14,6 +14,8 @@ The common-language catalog in settings has a source-file switch for each langua
 
 Fenced blocks inside Markdown blockquotes use the same logical language body as top-level blocks. This includes Obsidian callouts because their Markdown body is a blockquote. Quote markers are container syntax: they are stripped before parsing and semantic ranges are mapped back to physical document offsets, so `>` is never colored as source code.
 
+Typing `_` or `*` inside any fenced code block inserts a single character with the cursor after it. This applies to every language, including unknown languages and blocks without a language label, as well as blocks inside blockquotes and callouts. Markdown emphasis pairing remains available outside code blocks.
+
 ## Live Preview and Reading View
 
 While Markdown source is editable, CodeMirror owns the DOM. Syntax Highlight uses a `ViewPlugin` and contributes documented CodeMirror decorations for token ranges, quoted-code line surfaces, presentation and line numbers. It does not mutate CodeMirror DOM. In Live Preview, scoped CSS places Obsidian's native edit control to the left of the plugin's language badge; this depends on Obsidian's current rendered-block markup and is limited to Syntax Highlight blocks.

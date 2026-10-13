@@ -320,6 +320,16 @@ export function createMarkdownEditorExtensions(
             };
       },
       getSettings,
+      (state, position) => {
+        // An empty accepted label explicitly includes unlabelled code fences.
+        const block = findCodeBlocks(state.doc.toString(), new Set([""]), true)
+          .find((candidate) => isCodeBlockContentPosition(candidate, position));
+        return block === undefined ? undefined : {
+          from: block.bodyLines[0]?.sourceFrom ?? block.from,
+          to: block.bodyLines.at(-1)?.sourceTo ?? block.to,
+          languageId: block.language,
+        };
+      },
     ),
   ];
 }

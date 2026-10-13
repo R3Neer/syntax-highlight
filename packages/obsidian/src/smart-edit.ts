@@ -1229,6 +1229,7 @@ function deletePair(
 export function createSmartEditingExtensions(
   resolver: EditingContextResolver,
   getSettings: () => SyntaxPluginSettings,
+  literalContextResolver: EditingContextResolver = resolver,
 ): Extension[] {
   const settings = getSettings();
   return [
@@ -1240,6 +1241,19 @@ export function createSmartEditingExtensions(
         ? [{ commentTokens: { line: "#", block: { open: "###", close: "###" } } }]
         : [];
     }),
+    // Keep Markdown emphasis pairing out of code, including unknown fences.
+    Prec.highest(EditorView.inputHandler.of((view, _from, _to, text) => {
+      if (text !== "_" && text !== "*") return false;
+      for (const range of view.state.selection.ranges) {
+        const context = literalContextResolver(view.state, range.from);
+        if (context === undefined || range.to > context.to) return false;
+      }
+      view.dispatch(view.state.replaceSelection(text), {
+        userEvent: "input.type",
+        scrollIntoView: true,
+      });
+      return true;
+    })),
     EditorView.inputHandler.of((view, _from, _to, text) => {
       if (text.length !== 1) return false;
       const proposals: EditProposal[] = [];

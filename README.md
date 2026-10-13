@@ -27,6 +27,8 @@ APIs; rendered Markdown uses Obsidian's code-block processors plus a structural
 Reading fallback. Theme integration is based on stable `syntax-common-*` classes
 and public Obsidian CSS variables rather than private Live Preview DOM.
 
+Typing `_` or `*` inside any fenced code block inserts a single character with the cursor after it. This applies to every language, including unknown languages and blocks without a language label, as well as blocks inside blockquotes and callouts. Markdown emphasis pairing remains available outside code blocks.
+
 See:
 
 - [`packages/obsidian/README.md`](packages/obsidian/README.md) for usage and local installation;

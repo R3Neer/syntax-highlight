@@ -305,7 +305,8 @@ export function findCodeBlocks(
     // the requested ones. This prevents false positives inside unrelated fences.
     index = closingIndex !== undefined ? closingIndex : resumeIndex;
 
-    if (!language || (!includeUnknown && !acceptedLanguages.has(language))) continue;
+    if ((!language && !acceptedLanguages.has("")) ||
+        (!includeUnknown && !acceptedLanguages.has(language))) continue;
     blocks.push({
       from: bodyFrom,
       to: bodyTo,

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+
+- Obsidian: typing `_` or `*` inserts one literal character in every fenced code block, including unknown languages and fences without a language label. Ordinary Markdown emphasis pairing remains available outside code blocks.
+
 ## 1.4.0
 
 - Obsidian: Python notebooks open as highlighted, editable cells with rendered Markdown and saved outputs. Notebook metadata and output data survive source edits; no Python execution is provided.
