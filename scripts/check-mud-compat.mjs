@@ -10,8 +10,8 @@ if (!mudRoot) {
 }
 
 const pairs = [
-  ["mud-lexico.ebnf", "especificacion/gramatica/mud-lexico.ebnf"],
-  ["mud.ebnf", "especificacion/gramatica/mud.ebnf"],
+  ["mud-lexico.ebnf", "specification/grammar/mud-lexico.ebnf"],
+  ["mud.ebnf", "specification/grammar/mud.ebnf"],
 ];
 let current = true;
 for (const [embedded, canonical] of pairs) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.2
+
+- Mud: restore semantic highlighting for `let` and `foreach`, including filtered iteration and pure comprehensions.
+- Refresh bundled Mud grammars and canonical grammar paths; preserve type highlighting in callable receiver tuples.
+
 ## 1.4.1
 
 - Obsidian: typing `_` or `*` inserts one literal character in every fenced code block, including unknown languages and fences without a language label. Ordinary Markdown emphasis pairing remains available outside code blocks.

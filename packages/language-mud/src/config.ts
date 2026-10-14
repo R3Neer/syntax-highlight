@@ -55,12 +55,12 @@ const MUD_SEMANTIC_KEYWORDS: readonly {
     category: "declaration-keyword",
     words: [
       "using", "thing", "alias", "family", "magnitude", "rule", "action",
-      "subaction", "look", "message", "test", "start", "unit",
+      "subaction", "look", "sublook", "message", "submessage", "test", "start", "unit",
     ],
   },
   {
     category: "declaration-modifier",
-    words: ["mut", "cycle", "unique", "ordered"],
+    words: ["let", "mut", "cycle", "unique", "ordered"],
   },
   {
     category: "top-level-declaration-modifier",
@@ -72,11 +72,11 @@ const MUD_SEMANTIC_KEYWORDS: readonly {
   },
   {
     category: "quantifier-keyword",
-    words: ["each", "exists", "forall", "count", "min", "max"],
+    words: ["foreach", "each", "exists", "forall", "count", "min", "max"],
   },
   {
     category: "effect-keyword",
-    words: ["create", "destroy", "add", "remove", "take"],
+    words: ["create", "destroy", "add", "remove", "take", "raise"],
   },
   {
     category: "clause-keyword",
@@ -255,7 +255,8 @@ export function compileGrammarHighlightConfig(
     declarationHeads:
       declaration === undefined
         ? []
-        : sorted(literalsBeforeReference(syntax, declaration.production)),
+        : sorted(literalsBeforeReference(syntax, declaration.production))
+            .filter((head) => descriptor.id !== "mud" || /^[A-Za-z_][A-Za-z_0-9]*$/.test(head)),
     contextualKeywords:
       contextual === undefined
         ? []
@@ -303,6 +304,6 @@ export const DEFAULT_HIGHLIGHT_CONFIG = compileMudHighlightConfig(
 );
 
 export const DEFAULT_MUD_GRAMMAR_PATHS = {
-  lexical: "especificacion/gramatica/mud-lexico.ebnf",
-  syntax: "especificacion/gramatica/mud.ebnf",
+  lexical: "specification/grammar/mud-lexico.ebnf",
+  syntax: "specification/grammar/mud.ebnf",
 } as const;

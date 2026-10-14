@@ -265,8 +265,9 @@ function isForEachMembership(tokens: RawToken[], index: number): boolean {
   const bindingStart = iterationBindingStartBefore(tokens, index);
   return (
     bindingStart !== undefined &&
-    tokens[bindingStart - 1]?.text === "each" &&
-    tokens[bindingStart - 2]?.text === "for"
+    (tokens[bindingStart - 1]?.text === "foreach" ||
+      (tokens[bindingStart - 1]?.text === "each" &&
+        tokens[bindingStart - 2]?.text === "for"))
   );
 }
 

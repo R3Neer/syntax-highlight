@@ -126,8 +126,8 @@ describe("MUD horizontal spacing", () => {
     expect(formatMudHorizontalSpacing("forall x in 1..10:x is A")).toBe(
       "forall x in 1..10 : x is A",
     );
-    expect(formatMudHorizontalSpacing("for each x in values:destroy x")).toBe(
-      "for each x in values : destroy x",
+    expect(formatMudHorizontalSpacing("foreach x in values:destroy x")).toBe(
+      "foreach x in values : destroy x",
     );
     expect(formatMudHorizontalSpacing("value : Score")).toBe("value: Score");
   });

@@ -40,8 +40,7 @@ describe("MUD language pack", () => {
     expect(category("if ready then destroy target", "then")).toBe("control-flow");
     expect(category("if ready then destroy target", "destroy")).toBe("effect-keyword");
     expect(category("exists items", "exists")).toBe("quantifier-keyword");
-    expect(category("for each item in items: destroy item", "for")).toBe("quantifier-keyword");
-    expect(category("for each item in items: destroy item", "each")).toBe("quantifier-keyword");
+    expect(category("foreach item in items: destroy item", "foreach")).toBe("quantifier-keyword");
     expect(category("action Move for actor: Thing {}", "for")).toBe("clause-keyword");
     expect(category("abstract thing Place {}", "abstract")).toBe("top-level-declaration-modifier");
     expect(category("always rule Stable { true }", "always")).toBe("top-level-declaration-modifier");
@@ -54,7 +53,27 @@ describe("MUD language pack", () => {
     }
   });
 
+  it("highlights current immutable bindings and foreach comprehensions", () => {
+    for (const source of ["let cost: Nat = 1", "let cost := price * 2",
+      "alias Vector2 { let x: Num; let y: Num }", "let (left, right) := pair"]) {
+      expect(category(source, "let"), source).toBe("declaration-modifier");
+    }
+    for (const source of ["foreach item in items --> item.price",
+      "foreach item in items if item.active --> item.price",
+      "foreach (key, item) in items if item.active --> item.price"]) {
+      expect(category(source, "foreach"), source).toBe("quantifier-keyword");
+      expect(category(source, "in"), source).toBe("quantifier-keyword");
+      if (source.includes(" if ")) expect(category(source, "if"), source).toBe("quantifier-keyword");
+    }
+    expect(category("let letter := text", "letter")).not.toBe("declaration-modifier");
+    expect(category("foreachItem", "foreachItem")).toBeUndefined();
+    expect(category("# let foreach", "# let foreach")).toBe("comment");
+    expect(category('"let foreach"', '"let foreach"')).toBe("text");
+  });
+
   it("highlights callable receiver tuple types", () => {
+    expect(DEFAULT_HIGHLIGHT_CONFIG.declarationHeads).not.toContain(",");
+    expect(DEFAULT_HIGHLIGHT_CONFIG.declarationHeads).not.toContain("(");
     const document = highlight("(Player, Room).action(Text)", adapter);
     const types = document.spans
       .filter(({ categoryId }) => categoryId === "type-reference")
@@ -70,15 +89,15 @@ describe("MUD language pack", () => {
   });
 
   it("distinguishes iteration body colons from type annotations", () => {
-    const multiline = "for each item in items if item.taxable:\n    total += item.price";
-    const inline = "for each item in items if item.taxable: total += item.price";
-    expect(category(multiline, "for")).toBe("quantifier-keyword");
-    expect(category(multiline, "each")).toBe("quantifier-keyword");
+    const multiline = "foreach item in items if item.taxable:\n    total += item.price";
+    const inline = "foreach item in items if item.taxable: total += item.price";
+    expect(category(multiline, "foreach")).toBe("quantifier-keyword");
+    expect(category(multiline, "foreach")).toBe("quantifier-keyword");
     expect(category(multiline, "in")).toBe("quantifier-keyword");
     expect(category(multiline, "if")).toBe("quantifier-keyword");
     expect(category(multiline, "total")).toBeUndefined();
     expect(category(inline, "total")).toBeUndefined();
-    expect(category("for each item in items if { ready }: changed", "changed")).toBeUndefined();
+    expect(category("foreach item in items if { ready }: changed", "changed")).toBeUndefined();
     expect(category("item in items: selected", "selected")).toBeUndefined();
     expect(category("exists item in items: candidate", "candidate")).toBeUndefined();
     expect(category("total: Score = initial", "Score")).toBe("type-reference");
@@ -96,7 +115,7 @@ describe("MUD language pack", () => {
 
   it("separates iteration body colons without changing type annotations", () => {
     for (const source of [
-      "for each x in values: destroy x",
+      "foreach x in values: destroy x",
       "forall x in 1..10: x is A",
       "exists x in values: allowed(x)",
       "count x in values: x.active",

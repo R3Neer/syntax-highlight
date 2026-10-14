@@ -47,7 +47,7 @@ npm run check
 npm run pack:all
 ```
 
-The MUD pack embeds a tested grammar snapshot. Check it against a MUD checkout:
+The MUD pack highlights current `let` declarations and `foreach` iteration/comprehensions using semantic categories. It embeds a tested grammar snapshot. Check it against a MUD checkout:
 
 ```sh
 node scripts/check-mud-compat.mjs --mud-root ../Mud

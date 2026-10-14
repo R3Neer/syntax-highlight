@@ -484,8 +484,8 @@ function defaultProfile(
     enabled: true,
     descriptorPath: "",
     lexicalGrammarPath:
-      id === "mud" ? "especificacion/gramatica/mud-lexico.ebnf" : "",
-    syntaxGrammarPath: id === "mud" ? "especificacion/gramatica/mud.ebnf" : "",
+      id === "mud" ? "specification/grammar/mud-lexico.ebnf" : "",
+    syntaxGrammarPath: id === "mud" ? "specification/grammar/mud.ebnf" : "",
     lexicalStart: id === "mud" ? "mud-source" : "",
     syntaxStart: id === "mud" ? "mud-file" : "",
     themePreset,

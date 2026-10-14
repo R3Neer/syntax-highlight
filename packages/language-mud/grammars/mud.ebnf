@@ -1,9 +1,24 @@
-(* MUD 1.0 — gramática concreta normativa.
-   Los terminales en MAYÚSCULAS proceden de mud-lexico.ebnf o del
-   clasificador contextual descrito en 06-lexico.md. *)
+(* MUD 1.0 — normative concrete grammar.
+   Upper-case terminals come from mud-lexico.ebnf or the contextual
+   classifier described in 07-lexicon.md. NEWLINE is classified as
+   TERMINATOR or continuation whitespace by the grammatical-context
+   boundary contract in 08-concrete-grammar.md before these productions. *)
+
+mud-input
+    ::= mud-file | part-file ;
+
+part-file
+    ::= layout , [ uses-declaration , { required-separation , uses-declaration } , [ required-separation ] ] , EOF ;
+
+uses-declaration
+    ::= "uses" , mud-path ;
+
+part-only-directive
+    ::= "part" , "only" ;
 
 mud-file
     ::= layout
+        , [ part-only-directive , required-separation ]
         , [ file-metadata-assignment , { required-separation , file-metadata-assignment } , required-separation ]
         , [ using-file-body | declaration-file-body ]
         , EOF
@@ -39,13 +54,15 @@ top-level-declaration
       | action-declaration
       | subaction-declaration
       | look-declaration
+      | sublook-declaration
       | message-declaration
+      | submessage-declaration
       | test-declaration
-      | module-start-declaration
+      | part-start-declaration
       ;
 
 (* ------------------------------------------------------------------ *)
-(* Nombres y referencias                                               *)
+(* Names and references                                               *)
 (* ------------------------------------------------------------------ *)
 
 mud-path
@@ -59,7 +76,7 @@ lower-name        ::= identifier ;
 member-name       ::= identifier ;
 field-name        ::= identifier ;
 metadata-name     ::= identifier | "for" | "on" | "given" ;
-order-key-path    ::= field-name , { "." , field-name } ;
+collection-key-path    ::= field-name , { "." , field-name } ;
 role-name         ::= identifier ;
 given-name        ::= identifier ;
 component-name    ::= identifier ;
@@ -69,15 +86,85 @@ type-reference    ::= qualified-name ;
 
 identifier ::= IDENTIFIER ;
 
-(* PascalCase/lowerCamelCase y palabras prohibidas son reglas estáticas. *)
+(* PascalCase/lowerCamelCase and forbidden words are static rules. *)
 
 (* ------------------------------------------------------------------ *)
 (* Declaraciones nominales                                             *)
 (* ------------------------------------------------------------------ *)
 
+ancestor-clause
+    ::= "as" , ancestor-list ;
+
+ancestor-list
+    ::= nominal-type , { "," , nominal-type }
+      | "[" , nominal-type , { "," , nominal-type } , "]" ;
+
+generic-parameter-group
+    ::= HEADER_WITH , type-parameter-list , [ "as" , generic-bound-list ] ;
+
+type-parameter-list
+    ::= nominal-name , { "," , nominal-name }
+      | "[" , nominal-name , { "," , nominal-name } , "]" ;
+
+generic-bound-list
+    ::= nominal-type , { "," , nominal-type }
+      | "[" , nominal-type , { "," , nominal-type } , "]" ;
+
+nominal-type
+    ::= type-reference | generic-type-application | "(" , nominal-type , ")" ;
+
+generic-constructor
+    ::= type-reference | "Interval" ;
+
+generic-type-application
+    ::= explicit-generic-type-application | postfix-generic-type-application ;
+
+explicit-generic-type-application
+    ::= generic-constructor , "with" , generic-argument-list ;
+
+postfix-generic-type-application
+    ::= generic-argument-head
+        , { generic-constructor | callable-type-suffix }
+        , generic-constructor ;
+
+generic-argument-head
+    ::= type-reference | explicit-generic-type-application
+      | reflected-type | product-type
+      | "(" , generic-union-argument , ")" ;
+
+grouped-postfix-generic-type-application
+    ::= ( product-type | "(" , generic-union-argument , ")" )
+        , { generic-constructor | callable-type-suffix }
+        , generic-constructor ;
+
+expression-generic-suffix
+    ::= { callable-type-suffix } , generic-constructor ;
+
+generic-argument-list
+    ::= generic-argument , { "," , generic-argument } ;
+
+generic-argument
+    ::= generic-argument-head , { generic-constructor | callable-type-suffix } ;
+
+generic-union-argument
+    ::= declared-type , { "|" , declared-type } ;
+
+generic-call-suffix
+    ::= "with" , generic-argument-list ;
+
+generic-family-member
+    ::= explicit-generic-type-application , "." , member-name ;
+
+structural-type-comparison
+    ::= type-expression , structural-type-equality-operator , type-expression ;
+
+structural-type-equality-operator
+    ::= "===" | "!==" ;
+
 thing-declaration
     ::= [ "abstract" ] , "thing" , nominal-name
-        , [ "as" , type-reference , { "," , type-reference } ]
+        , [ ancestor-clause ]
+        , { generic-parameter-group }
         , [ thing-body ]
         ;
 
@@ -103,14 +190,14 @@ thing-initializer
 file-metadata-assignment
     ::= "~" , metadata-name
         , ( "=" , constant-expression
-          | ":" , type-expression , [ "=" , constant-expression ]
+          | ":" , stored-type-expression , [ "=" , constant-expression ]
           )
         ;
 
 metadata-assignment
     ::= "~" , metadata-name
         , ( "=" , value-body
-          | ":" , type-expression , [ "=" , value-body ]
+          | ":" , stored-type-expression , [ "=" , value-body ]
           | [ derived-value-shape ] , ":=" , value-body
           )
         ;
@@ -125,7 +212,7 @@ metadata-body
         ;
 
 descriptor-value-body
-    ::= value-expression , [ metadata-body ]
+    ::= ( value-expression , [ metadata-body ]
       | "{" , declaration-layout
         , [ metadata-assignment
             , { required-separation , metadata-assignment }
@@ -133,12 +220,13 @@ descriptor-value-body
           ]
         , value-block
         , [ required-separation ]
-        , "}"
+        , "}" ) , { otherwise-clause }
         ;
 
 alias-declaration
-    ::= "alias" , nominal-name
-        , [ "as" , type-reference , { "," , type-reference } ]
+    ::= [ "abstract" ] , "alias" , nominal-name
+        , [ ancestor-clause ]
+        , { generic-parameter-group }
         , [ alias-definition ]
         ;
 
@@ -147,8 +235,9 @@ alias-definition
         , [ "{" , declaration-layout
             , [ metadata-assignment
                 , { required-separation , metadata-assignment }
-                , [ required-separation ]
+                , required-separation
               ]
+            , [ operator-declaration , { required-separation , operator-declaration } , [ required-separation ] ]
             , "}"
           ]
       | structural-alias-body
@@ -168,10 +257,24 @@ alias-body-declaration
     ::= component-declaration
       | calculated-field-declaration
       | inherited-default-override
+      | operator-declaration
         ;
 
+operator-declaration
+    ::= operator-operand , overload-binary-operator , operator-operand
+        , [ ":" , type-expression ] , ":=" , descriptor-value-body
+      | overload-unary-operator , operator-operand
+        , [ ":" , type-expression ] , ":=" , descriptor-value-body ;
+
+operator-operand
+    ::= variable-name | "(" , variable-name , ":" , type-expression , ")" ;
+
+overload-unary-operator ::= "+" | "-" ;
+
+overload-binary-operator ::= "+" | "-" | "*" | "/" | "%" | "|" | "&" | "^" | "--" ;
+
 component-declaration
-    ::= component-name , ":" , type-expression
+    ::= "let" , component-name , ":" , stored-type-expression
         , ( "=" , descriptor-value-body | [ metadata-body ] )
         ;
 
@@ -180,6 +283,7 @@ inherited-default-override
 
 family-declaration
     ::= [ "ordered" ] , "family" , nominal-name
+        , { generic-parameter-group }
         , "{" , declaration-layout
         , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
         , { family-data-declaration , required-separation }
@@ -195,13 +299,12 @@ family-data-declaration
       ;
 
 stored-family-data-declaration
-    ::= field-name , ":" , type-expression
+    ::= field-name , ":" , stored-type-expression
         , ( "=" , descriptor-value-body | [ metadata-body ] )
         ;
 
 calculated-family-data-declaration
-    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
-        ;
+    ::= "let" , field-name , [ derived-value-shape ] , ":=" , descriptor-value-body ;
 
 family-member
     ::= member-name , [ family-member-body ] ;
@@ -227,7 +330,7 @@ family-data-assignment
     ::= field-name , "=" , value-body ;
 
 (* ------------------------------------------------------------------ *)
-(* Magnitudes y unidades                                               *)
+(* Magnitudes and units                                                *)
 (* ------------------------------------------------------------------ *)
 
 magnitude-declaration
@@ -316,7 +419,7 @@ dimension-factor
       ;
 
 (* ------------------------------------------------------------------ *)
-(* Campos y tipos                                                      *)
+(* Fields and types                                                     *)
 (* ------------------------------------------------------------------ *)
 
 field-declaration
@@ -325,17 +428,14 @@ field-declaration
       ;
 
 stored-field-declaration
-    ::= [ "mut" ] , field-name , ":" , type-expression
-        , ( "=" , descriptor-value-body | [ metadata-body ] )
-        ;
+    ::= ( "let" | "mut" ) , field-name , [ stored-value-shape ]
+        , "=" , descriptor-value-body ;
 
 calculated-field-declaration
-    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
-        ;
+    ::= "let" , field-name , [ derived-value-shape ] , ":=" , descriptor-value-body ;
 
 public-field-declaration
-    ::= field-name , [ derived-value-shape ] , ":=" , descriptor-value-body
-        ;
+    ::= "let" , field-name , [ derived-value-shape ] , ":=" , descriptor-value-body ;
 
 derived-value-shape
     ::= ":" , type-expression
@@ -343,9 +443,109 @@ derived-value-shape
       | collection-specification
         ;
 
+stored-value-shape
+    ::= ":" , stored-type-expression
+      | "in" , type-alternative-domain , [ collection-specification ]
+      | collection-specification ;
+
+type-inference-hole
+    ::= "_" ;
+
+stored-type-expression
+    ::= stored-union-type-expression
+        , ( { collection-specification } | stored-dictionary-type )
+        ;
+
+stored-union-type-expression
+    ::= stored-type-alternative , { "|" , stored-type-alternative }
+        ;
+
+stored-type-alternative
+    ::= stored-declared-type , [ "in" , type-alternative-domain ]
+      | "(" , stored-type-expression , ")"
+        ;
+
+stored-declared-type
+    ::= type-inference-hole
+      | type-reference
+      | stored-callable-type
+      | reflected-type
+      | stored-generic-type-application
+      | stored-product-type
+      ;
+
+stored-callable-type
+    ::= stored-callable-receiver , stored-callable-type-suffix ;
+
+stored-callable-type-suffix
+    ::= "." , callable-kind
+        , "(" , [ stored-type-expression , { "," , stored-type-expression } ] , ")" ;
+
+stored-callable-receiver
+    ::= stored-nominal-type ;
+
+stored-nominal-type
+    ::= stored-generic-argument-head
+        , { generic-constructor | stored-callable-type-suffix } ;
+
+stored-generic-type-application
+    ::= stored-explicit-generic-type-application | stored-postfix-generic-type-application ;
+
+stored-explicit-generic-type-application
+    ::= generic-constructor , "with" , stored-generic-argument-list ;
+
+stored-postfix-generic-type-application
+    ::= stored-generic-argument-head
+        , { generic-constructor | stored-callable-type-suffix }
+        , generic-constructor ;
+
+stored-generic-argument-head
+    ::= type-inference-hole | type-reference | stored-explicit-generic-type-application
+      | reflected-type | stored-product-type
+      | "(" , stored-generic-union-argument , ")" ;
+
+stored-generic-argument-list
+    ::= stored-generic-argument , { "," , stored-generic-argument } ;
+
+stored-generic-argument
+    ::= stored-generic-argument-head , { generic-constructor | stored-callable-type-suffix } ;
+
+stored-generic-union-argument
+    ::= stored-declared-type , { "|" , stored-declared-type } ;
+
+stored-product-type
+    ::= stored-positional-product-type
+      | stored-named-product-type
+      ;
+
+stored-positional-product-type
+    ::= "(" , stored-type-expression , "," , stored-type-expression
+        , { "," , stored-type-expression } , ")"
+      ;
+
+stored-named-product-type
+    ::= "(" , stored-named-product-component
+        , "," , stored-named-product-component
+        , { "," , stored-named-product-component } , ")"
+      ;
+
+stored-named-product-component
+    ::= component-name , ":" , stored-type-expression ;
+
+stored-dictionary-type
+    ::= stored-dictionary-link , { stored-dictionary-link } ;
+
+stored-dictionary-link
+    ::= dictionary-arrow , stored-dictionary-value-type
+        , [ collection-specification ]
+      ;
+
+stored-dictionary-value-type
+    ::= stored-union-type-expression ;
+
 type-expression
     ::= union-type-expression
-        , [ collection-specification | dictionary-type ]
+        , ( { collection-specification } | dictionary-type )
         ;
 
 union-type-expression
@@ -369,29 +569,26 @@ declared-type
     ::= type-reference
       | callable-type
       | reflected-type
-      | interval-type
+      | generic-type-application
       | product-type
       ;
 
 callable-type
-    ::= callable-receiver , "." , callable-kind
-        , "(" , [ type-expression , { "," , type-expression } ] , ")"
-        ;
+    ::= callable-receiver , callable-type-suffix ;
+
+callable-type-suffix
+    ::= "." , callable-kind
+        , "(" , [ type-expression , { "," , type-expression } ] , ")" ;
 
 callable-receiver
-    ::= type-reference
-      | "(" , type-reference , "," , type-reference
-          , { "," , type-reference } , ")"
-      ;
+    ::= generic-argument-head
+        , { generic-constructor | callable-type-suffix } ;
 
 callable-kind
     ::= "action" | "rule" | "look" ;
 
 reflected-type
     ::= postfix-expression , "~" , "type" ;
-
-interval-type
-    ::= type-reference , "Interval" ;
 
 product-type
     ::= positional-product-type
@@ -447,15 +644,15 @@ cardinality-bound
     ::= exact-integer | "*" ;
 
 collection-modifier
-    ::= "unique"
-      | "ordered" , [ "by" , order-key-path ]
+    ::= "unique" , [ "by" , collection-key-path ]
+      | "ordered" , [ "by" , collection-key-path ]
       | "mut"
       ;
 
 optional-comma ::= [ "," ] ;
 
 (* ------------------------------------------------------------------ *)
-(* Participantes, given y declaraciones de comportamiento              *)
+(* Participants, given and behaviour declarations                       *)
 (* ------------------------------------------------------------------ *)
 
 for-clause
@@ -487,6 +684,7 @@ given-declaration
 
 boolean-rule-declaration
     ::= "rule" , nominal-name
+        , { generic-parameter-group }
         , [ for-clause ]
         , [ given-clause ]
         , boolean-body
@@ -503,18 +701,16 @@ boolean-body
         ;
 
 expression-block
-    ::= { local-value-declaration , required-separation }
+    ::= { pure-preamble-statement , required-separation }
         , expression
         ;
 
 value-body
-    ::= value-expression
-      | value-block-body
-      ;
+    ::= value-expression , { otherwise-clause } | value-block-body ;
 
 value-block-body
     ::= "{" , declaration-layout , value-block
-        , [ required-separation ] , "}"
+        , [ required-separation ] , "}" , { otherwise-clause }
         ;
 
 value-block
@@ -526,20 +722,22 @@ value-statement
     ::= value-local-declaration
       | local-mutation
       | local-for-each
+      | foreign-block
+      | raise-statement
       ;
 
 value-local-declaration
     ::= local-calculated-declaration
       | local-stored-declaration
+      | local-pattern-declaration
       ;
 
 local-calculated-declaration
-    ::= variable-name , [ derived-value-shape ] , ":=" , value-body ;
+    ::= "let" , variable-name , [ derived-value-shape ] , ":=" , value-body ;
 
 local-stored-declaration
-    ::= [ "mut" ] , variable-name , ":" , type-expression
-        , "=" , value-body
-        ;
+    ::= ( "let" | "mut" ) , variable-name , [ stored-value-shape ]
+        , "=" , value-body ;
 
 local-mutation
     ::= local-assignment
@@ -557,7 +755,7 @@ local-remove
     ::= "remove" , expression , "from" , assignable-expression ;
 
 local-for-each
-    ::= "for" , "each" , iteration-binding , "in" , expression
+    ::= "foreach" , iteration-binding , "in" , expression
         , [ "by" , expression ]
         , [ "if" , expression-body ]
         , ":"
@@ -578,7 +776,7 @@ reactive-rule-declaration
         , [ on-clause ]
         , "{" , declaration-layout
         , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
-        , { local-value-declaration , required-separation }
+        , { behaviour-preamble-statement , required-separation }
         , when-clause
         , required-separation
         , [ if-clause , required-separation ]
@@ -591,7 +789,7 @@ always-rule-declaration
     ::= "always" , "rule" , nominal-name
         , [ on-clause ]
         , invariant-body
-        , [ diagnostic-tail ]
+        , { otherwise-clause }
         ;
 
 invariant-body
@@ -610,11 +808,12 @@ subaction-declaration
 
 action-signature-body
     ::= nominal-name
+        , { generic-parameter-group }
         , [ for-clause ]
         , [ given-clause ]
         , "{" , declaration-layout
         , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
-        , { local-value-declaration , required-separation }
+        , { behaviour-preamble-statement , required-separation }
         , [ action-if-clause , required-separation ]
         , then-clause
         , [ required-separation , action-after-clause ]
@@ -623,7 +822,14 @@ action-signature-body
         ;
 
 look-declaration
-    ::= "look" , nominal-name
+    ::= "look" , look-signature-body ;
+
+sublook-declaration
+    ::= "sublook" , look-signature-body ;
+
+look-signature-body
+    ::= nominal-name
+        , { generic-parameter-group }
         , [ for-clause ]
         , [ given-clause ]
         , "{" , declaration-layout
@@ -636,11 +842,17 @@ look-declaration
         ;
 
 message-declaration
-    ::= "message" , nominal-name
+    ::= "message" , message-signature-body ;
+
+submessage-declaration
+    ::= "submessage" , message-signature-body ;
+
+message-signature-body
+    ::= nominal-name
         , [ on-clause ]
         , "{" , declaration-layout
         , [ metadata-assignment , { required-separation , metadata-assignment } , required-separation ]
-        , { local-value-declaration , required-separation }
+        , { behaviour-preamble-statement , required-separation }
         , when-clause
         , [ required-separation , if-clause ]
         , [ required-separation , public-field-declaration
@@ -657,33 +869,45 @@ if-clause
     ::= "if" , expression-body ;
 
 action-if-clause
-    ::= "if" , expression-body , [ diagnostic-tail ] ;
+    ::= "if" , expression-body ;
 
 action-after-clause
-    ::= "after" , expression-body , [ diagnostic-tail ] ;
+    ::= "after" , expression-body ;
 
-diagnostic-tail
-    ::= [ required-separation ] , "otherwise" , text-expression ;
+otherwise-clause
+    ::= [ required-separation ] , "otherwise"
+        , ( "raise" , value-body
+          | [ on-clause ] , recovery-handler-body ) ;
+
+recovery-handler-body
+    ::= recovery-branch
+      | "{" , declaration-layout
+        , [ if-clause , required-separation ]
+        , recovery-branch , [ required-separation ] , "}" ;
+
+recovery-branch
+    ::= "then" , recovery-body
+      | "raise" , value-body ;
+
+recovery-body
+    ::= expression-body | value-block-body | effect-block | effect ;
 
 expression-body
-    ::= expression
-      | "{" , declaration-layout , expression-block
-          , [ required-separation ] , "}"
+    ::= ( expression
+        | "{" , declaration-layout , expression-block
+          , [ required-separation ] , "}" )
+        , { otherwise-clause }
       ;
 
 then-clause
-    ::= ( "then" , effect
-        | "then" , effect-block
-        )
-        , [ diagnostic-tail ]
-      ;
+    ::= "then" , ( effect , { otherwise-clause } | effect-block ) ;
 
 effect-block
     ::= "{" , declaration-layout
         , then-statement
         , { required-separation , then-statement }
         , [ required-separation ]
-        , "}"
+        , "}" , { otherwise-clause }
         ;
 
 then-statement
@@ -691,14 +915,67 @@ then-statement
       | value-local-declaration
       ;
 
+behaviour-preamble-statement
+    ::= local-calculated-declaration
+      | immutable-local-stored-declaration
+      | local-pattern-declaration
+      | foreign-block
+        ;
+
+immutable-local-stored-declaration
+    ::= "let" , variable-name , [ stored-value-shape ] , "=" , value-body ;
+
+local-pattern-declaration
+    ::= "let" , positional-binding-pattern , ( "=" | ":=" ) , value-body ;
+
+pure-pattern-declaration
+    ::= "let" , positional-binding-pattern , ":=" , value-expression , { otherwise-clause } ;
+
+binding-pattern
+    ::= variable-name | "_" | positional-binding-pattern ;
+
+positional-binding-pattern
+    ::= "(" , binding-pattern , "," , binding-pattern
+        , { "," , binding-pattern } , ")" ;
+
+pure-preamble-statement
+    ::= local-value-declaration | pure-pattern-declaration | foreign-block ;
+
+foreign-block
+    ::= "from" , foreign-language-name , foreign-body ;
+
+foreign-language-name
+    ::= nominal-name ;
+
+foreign-body
+    ::= foreign-item
+      | "{" , declaration-layout , foreign-item
+          , { required-separation , foreign-item }
+          , [ required-separation ] , "}"
+      ;
+
+foreign-item
+    ::= foreign-code-statement | foreign-value-export ;
+
+foreign-code-statement
+    ::= FOREIGN_STATEMENT ;
+
+foreign-value-export
+    ::= "mud" , variable-name , [ ":" , type-expression ]
+        , "<-" , foreign-code-expression
+        ;
+
+foreign-code-expression
+    ::= FOREIGN_EXPRESSION ;
+
 local-value-declaration
-    ::= variable-name , [ derived-value-shape ] , ":=" , value-expression ;
+    ::= "let" , variable-name , [ derived-value-shape ] , ":=" , value-expression , { otherwise-clause } ;
 
 (* ------------------------------------------------------------------ *)
-(* Activación inicial y tests                                          *)
+(* Initial activation and tests                                         *)
 (* ------------------------------------------------------------------ *)
 
-module-start-declaration
+part-start-declaration
     ::= start-with-declaration ;
 
 start-with-declaration
@@ -731,7 +1008,7 @@ test-after-clause
     ::= "after" , test-assertion
       | "after" , "{"
           , declaration-layout
-          , { local-value-declaration , required-separation }
+          , { pure-preamble-statement , required-separation }
           , test-assertion
           , { required-separation , test-assertion }
           , [ required-separation ]
@@ -739,21 +1016,27 @@ test-after-clause
       ;
 
 test-assertion
-    ::= boolean-expression , [ diagnostic-tail ] ;
+    ::= expression-body ;
 
 (* ------------------------------------------------------------------ *)
 (* Efectos                                                             *)
 (* ------------------------------------------------------------------ *)
 
 effect
-    ::= assignment-effect
+    ::= foreign-block
+      | assignment-effect
       | add-effect
       | remove-effect
       | create-effect
       | destroy-effect
       | action-call-effect
       | for-each-effect
+      | raise-effect
       ;
+
+raise-expression ::= "raise" , value-body ;
+raise-effect ::= raise-expression ;
+raise-statement ::= raise-expression ;
 
 assignment-effect
     ::= assignable-expression , assignment-operator , value-expression ;
@@ -764,9 +1047,7 @@ assignment-operator
       ;
 
 add-effect
-    ::= "add" , expression , "to" , assignable-expression
-      | "add" , [ "mut" ] , field-name , ":" , type-expression , [ "=" , constant-expression ] , "to" , declaration-reference
-      ;
+    ::= "add" , expression , "to" , assignable-expression ;
 
 remove-effect
     ::= "remove" , expression , "from" , assignable-expression ;
@@ -781,7 +1062,7 @@ action-call-effect
     ::= postfix-expression ;
 
 for-each-effect
-    ::= "for" , "each" , iteration-binding , "in" , expression
+    ::= "foreach" , iteration-binding , "in" , expression
         , [ "by" , expression ]
         , [ "if" , expression-body ]
         , ":"
@@ -790,9 +1071,7 @@ for-each-effect
         ;
 
 iteration-binding
-    ::= variable-name
-      | "(" , variable-name , "," , variable-name , ")"
-      ;
+    ::= binding-pattern ;
 
 assignable-expression
     ::= primary-expression , { member-access | index-access } ;
@@ -805,7 +1084,25 @@ expression
     ::= mapping-expression ;
 
 mapping-expression
-    ::= mapping-left , [ mapping-arrow , mapping-right ] ;
+    ::= mapping-left , [ mapping-arrow , mapping-right ]
+      | selector-expression , "-->" , mapping-right ;
+
+selector-expression
+    ::= selector-and , { "or" , selector-and } ;
+
+selector-and
+    ::= selector-term , { "and" , selector-term } ;
+
+selector-term
+    ::= "not" , selector-term
+      | selector-comparison , comparison-expression
+      | "is" , [ "not" ] , declared-type
+      | "iis" , [ "not" ] , declared-type
+      | comparison-expression
+      | "(" , selector-expression , ")" ;
+
+selector-comparison
+    ::= "==" | "!=" | "<" | "<=" | ">" | ">=" ;
 
 mapping-left
     ::= eventually-expression
@@ -814,11 +1111,11 @@ mapping-left
 
 mapping-key-body
     ::= "{" , declaration-layout , expression-block
-        , [ required-separation ] , "}"
+        , [ required-separation ] , "}" , { otherwise-clause }
         ;
 
 mapping-right
-    ::= mapping-expression
+    ::= mapping-expression , { otherwise-clause }
       | value-block-body
       ;
 
@@ -828,11 +1125,7 @@ mapping-arrow
 value-expression
     ::= expression , [ "," , expression , { "," , expression } ] ;
 
-boolean-expression
-    ::= expression ;
 
-text-expression
-    ::= expression ;
 
 constant-expression
     ::= value-expression ;
@@ -894,7 +1187,8 @@ change-expression
     ::= comparison-expression , [ "changes" ] ;
 
 comparison-expression
-    ::= restriction-expression , [ comparison-tail ] ;
+    ::= restriction-expression , [ comparison-tail ]
+      | structural-type-comparison ;
 
 restriction-expression
     ::= quantitative-expression , [ "in" , type-alternative-domain ] ;
@@ -918,15 +1212,15 @@ nonchainable-comparison
 membership-has
     ::= "has" , [ "not" ] ;
 
-(* quantitative-expression admite barreras postfix to/in. El parser
-   aplica la tabla de 07-gramatica-concreta y continúa sobre el resultado. *)
+(* quantitative-expression admits postfix to/in barriers. The parser
+   applies the table from 08-concrete-grammar and continues over the result. *)
 quantitative-expression
     ::= arithmetic-expression
         , { conversion-suffix , [ arithmetic-continuation ] }
         ;
 
 conversion-suffix
-    ::= "to" , type-reference
+    ::= "to" , nominal-type
       | "in" , unit-expression
       ;
 
@@ -950,11 +1244,11 @@ prefix-expression
     ::= { prefix-operator } , postfix-expression ;
 
 prefix-operator
-    ::= "not" | "+" | "-" | "old" | "allowed" | "all" ;
+    ::= "not" | "+" | "-" | "old" | "imagine" | "all" ;
 
 postfix-expression
     ::= primary-expression
-        , { member-access | metadata-access | index-access | call-arguments | collection-transform-suffix }
+        , { member-access | metadata-access | index-access | call-arguments | collection-transform-suffix | generic-call-suffix | expression-generic-suffix }
         ;
 
 collection-transform-suffix
@@ -968,7 +1262,9 @@ local-collection-transform
       ;
 
 local-collection-modifier
-    ::= "unique" | "ordered" , [ "by" , order-key-path ] ;
+    ::= "unique" , [ "by" , collection-key-path ]
+      | "ordered" , [ "by" , collection-key-path ]
+      ;
 
 member-access
     ::= "." , identifier ;
@@ -996,9 +1292,15 @@ receiver-entry
       ;
 
 primary-expression
-    ::= literal
+    ::= generic-family-member
+      | explicit-generic-type-application
+      | grouped-postfix-generic-type-application
+      | literal
       | take-expression
+      | raise-expression
       | selection-expression
+      | comprehension-expression
+      | implicit-member-expression
       | qualified-name
       | structural-literal
       | collection-literal
@@ -1008,12 +1310,20 @@ primary-expression
       | quantifier-expression
       | random-expression
       | "thing" | "alias" | "family" | "magnitude" | "rule"
-      | "action" | "subaction" | "look" | "message" | "test"
+      | "action" | "subaction" | "look" | "sublook" | "message" | "submessage" | "test"
       | "(" , expression , ")"
       ;
 
 take-expression
     ::= "take" , expression , "from" , expression ;
+
+comprehension-expression
+    ::= "foreach" , iteration-binding , "in" , expression
+        , [ "by" , expression ] , [ "if" , expression-body ]
+        , "-->" , [ required-separation ] , value-body ;
+
+implicit-member-expression
+    ::= "." , identifier ;
 
 selection-expression
     ::= iteration-binding , "in" , expression
@@ -1095,7 +1405,7 @@ random-expression
     ::= "Rand" , "(" , expression , ")" ;
 
 quantifier-expression
-    ::= quantifier , variable-name , "in" , expression
+    ::= quantifier , iteration-binding , "in" , expression
         , [ "by" , expression ]
         , ":" , [ required-separation ] , expression-body
         ;
@@ -1104,7 +1414,7 @@ quantifier
     ::= "exists" | "forall" | "count" | "min" | "max" ;
 
 (* ------------------------------------------------------------------ *)
-(* Intervalos                                                          *)
+(* Intervals                                                           *)
 (* ------------------------------------------------------------------ *)
 
 interval-expression
@@ -1166,7 +1476,7 @@ expression-without-interval
     ::= quantitative-expression ;
 
 (* ------------------------------------------------------------------ *)
-(* Separación física                                                   *)
+(* Physical separation                                                  *)
 (* ------------------------------------------------------------------ *)
 
 layout

@@ -104,7 +104,7 @@ describe("settings, descriptors and themes", () => {
     expect(ebnf?.categoryColors.ebnf?.["production-definition"]?.light).toBe(
       "#0000ff",
     );
-    expect(BUILTIN_DESCRIPTORS.mud.previewSource).toContain("for each");
+    expect(BUILTIN_DESCRIPTORS.mud.previewSource).toContain("foreach");
     expect(BUILTIN_DESCRIPTORS.ebnf.previewSource).toContain("expression ::=");
     expect(BUILTIN_DESCRIPTORS.asdl.previewSource).toContain("module Mud");
     expect(BUILTIN_DESCRIPTORS.asdl.extensions).toEqual(["asdl"]);

@@ -18,7 +18,7 @@
     { "id": "declaration-modifier", "name": "Modificador de declaración", "description": "Modifica la naturaleza, mutabilidad u orden de una declaración.", "group": "words", "role": "meta" },
     { "id": "top-level-declaration-modifier", "name": "Modificador de declaración de primer nivel", "description": "Modifica la forma de una declaración de primer nivel sin introducir un campo.", "group": "words", "role": "declaration" },
     { "id": "control-flow", "name": "Control de flujo", "description": "Dirige condiciones, transiciones y alternativas de ejecución.", "group": "words", "role": "keyword" },
-    { "id": "quantifier-keyword", "name": "Cuantificador o iterador", "description": "Cuantifica valores o introduce una iteración, incluido «for each».", "group": "words", "role": "keyword" },
+    { "id": "quantifier-keyword", "name": "Cuantificador o iterador", "description": "Cuantifica valores o introduce una iteración, incluido «foreach».", "group": "words", "role": "keyword" },
     { "id": "effect-keyword", "name": "Palabra de efecto", "description": "Introduce una operación que modifica el mundo o el estado.", "group": "words", "role": "keyword" },
     { "id": "clause-keyword", "name": "Palabra de cláusula", "description": "Conecta una cabecera, relación o parte subordinada de una construcción.", "group": "words", "role": "keyword" },
     { "id": "word-operator", "name": "Operador verbal", "description": "Operador escrito como una palabra.", "group": "words", "role": "operator" },
@@ -56,5 +56,5 @@
     { "slot": "contextual", "grammar": "lexical", "production": "contextual-word", "category": "contextual-word" },
     { "slot": "declaration-name", "grammar": "syntax", "production": "nominal-name", "category": "declared-name" }
   ],
-  "previewSource": "abstract thing Place {\n    ~name = \"Place\"\n    mut visits: Nat = 0\n}\n\nfamily Direction { North, South }\n\naction Clear for place: Place {\n    then for each item in all:\n        destroy item\n}"
+  "previewSource": "abstract thing Place {\n    ~name = \"Place\"\n    mut visits: Nat = 0\n}\n\nfamily Direction { North, South }\n\naction Clear for place: Place {\n    then foreach item in all:\n        destroy item\n}"
 }
